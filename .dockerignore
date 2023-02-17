@@ -1,0 +1,5 @@
+/build
+/third-party
+/.git
+**/Dockerfile
+.dockerignore

@@ -1,0 +1,44 @@
+{
+    "includes": [ "<string>" ],
+    "inputs": [
+        "../liboctopus/octopus/general.h",
+        "ode/animation/DocumentAnimation.h"
+    ],
+    "settings": {
+        "jsonIOMode": "NULL_TERMINATED_STRING",
+        "keyFormat": "ANY",
+        "enumFormat": "ANY",
+        "noThrow": true,
+        "verboseErrors": false,
+        "strictSyntaxCheck": true,
+        "checkMissingKeys": false,
+        "checkRepeatingKeys": false,
+        "ignoreExtraKeys": true,
+        "checkIntegerOverflow": true
+    },
+    "parsers": [ {
+        "name": "ode::AnimationParser",
+        "types": [
+            "ode::DocumentAnimation"
+        ],
+        "headerOutput": "ode/animation/AnimationParser.h",
+        "sourceOutput": "ode/animation/AnimationParser.cpp"
+    } ],
+    "serializers": [ {
+        "name": "ode::AnimationSerializer",
+        "types": [
+            "ode::DocumentAnimation"
+        ],
+        "headerOutput": "ode/animation/AnimationSerializer.h",
+        "sourceOutput": "ode/animation/AnimationSerializer.cpp"
+    } ],
+    "optionalContainerTypes": [ {
+        "name": "nonstd::optional<$T>",
+        "api": {
+            "clear": "$S.reset()",
+            "refInitialized": "($S = $T()).value()",
+            "hasValue": "$S.has_value()",
+            "getValue": "$S.value()"
+        }
+    } ]
+}

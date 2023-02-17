@@ -1,0 +1,13 @@
+{
+    "name": "@opendesign/engine",
+    "description": "The Open Design Engine renders designs and provides interface to edit them and query specific information about them and their components.",
+    "type": "module",
+    "version": "0.0.0",
+    "publishConfig": {
+        "access": "public"
+    },
+    "exports": {
+        ".": "./ode.js",
+        "./*": "./*"
+    }
+}

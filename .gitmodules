@@ -1,0 +1,20 @@
+[submodule "liboctopus"]
+	path = liboctopus
+	url = ../liboctopus.git
+[submodule "open-design-text-renderer"]
+	path = open-design-text-renderer
+	url = ../open-design-text-renderer.git
+	branch = main
+[submodule "third-party/skia/src"]
+	path = third-party/skia/src
+	url = https://github.com/google/skia
+[submodule "third-party/imgui"]
+	path = third-party/imgui
+	url = https://github.com/ocornut/imgui.git
+[submodule "third-party/ImGuiFileDialog"]
+	path = third-party/ImGuiFileDialog
+	url = https://github.com/aiekick/ImGuiFileDialog.git
+	branch = Lib_Only
+[submodule "third-party/imnodes"]
+	path = third-party/imnodes
+	url = https://github.com/Nelarius/imnodes.git

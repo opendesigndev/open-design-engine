@@ -1,0 +1,18 @@
+diff --git a/BUILD.gn b/BUILD.gn
+index 98f940e383..5ded7b1a9e 100644
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -1305,12 +1305,7 @@ static_library("pathkit") {
+ }
+ 
+ group("modules") {
+-  deps = [
+-    "modules/particles",
+-    "modules/skottie",
+-    "modules/skparagraph",
+-    "modules/skshaper",
+-  ]
++  deps = [ ]
+ }
+ 
+ config("our_vulkan_headers") {

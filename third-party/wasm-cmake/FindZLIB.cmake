@@ -1,0 +1,5 @@
+set(ZLIB_FOUND TRUE)
+set(ZLIB_INCLUDE_DIR "${EMSCRIPTEN_SYSROOT}/include")
+set(ZLIB_LIBRARY "null")
+add_library(zlib ALIAS null)
+target_include_directories(null PUBLIC "${ZLIB_INCLUDE_DIR}")

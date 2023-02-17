@@ -1,0 +1,126 @@
+
+// Uses stroke and blur shaders to test the complete shadow effect pipeline
+
+#include <crop>
+#include "common.shadron"
+
+#define NO_TESTBED
+
+param int CHOKE_STEPS = 64 : logrange(1, 256, 2);
+param int BLUR_STEPS = 64 : logrange(1, 256, 2);
+param int BLUR_ROTATION = 45 : range(180);
+
+#define STEPS (CHOKE_STEPS/2)
+#include "stroke.shadron"
+#undef STEPS
+
+#define STEPS BLUR_STEPS
+#include "blur.shadron"
+#undef STEPS
+
+#undef NO_TESTBED
+
+#ifndef NO_TESTBED
+
+param float MARGIN_PER_SIGMA = 2.8856349124267571473876066463246112449484013782094917195589559277 : logrange(1, 3); // sqrt(2.0)*invErf(1.0-2.0*1.0/512.0);
+
+param float blur = 0 : range(64);
+param float choke = 0 : range(-32, 32);
+
+image Input = file() : map(clamp);
+
+param bool redIsAlpha = true;
+
+vec4 resolveAlpha(vec2 pos) {
+    vec4 color = texture(Input, pos);
+    return vec4(0.0, 0.0, 0.0, redIsAlpha ? color.r : color.a);
+}
+
+image AlphaInput = glsl(resolveAlpha, sizeof(Input)) : map(clamp), hidden;
+
+const bool fillInside = true, fillOutside = false;
+param float strokeStart = -16 : range(-128, 128);
+param float strokeEnd = 0 : range(-128, 128);
+
+let float sdLow = min(-choke-1.0, 0.0);
+let float sdHigh = max(-choke+1.0, 0.0);
+let float sdRange = sdHigh-sdLow;
+let float invSdRange = 1.0/sdRange;
+watch let vec2 threshold = vec2(-choke, sdHigh+1.0);
+
+watch let int blurMargin = int(ceil(MARGIN_PER_SIGMA*blur));
+
+let Bounds inputBounds = Bounds(vec2(0), vec2(sizeof(Input)));
+let Bounds chokeBounds = Bounds(inputBounds.a-ceil(choke+1.01), inputBounds.b+ceil(choke+1.01));
+let Bounds pass1Bounds = Bounds(vec2(chokeBounds.a.x, inputBounds.a.y), vec2(chokeBounds.b.x, inputBounds.b.y));
+let Bounds blurBounds = Bounds(chokeBounds.a-float(blurMargin), chokeBounds.b+float(blurMargin));
+let ivec2 chokeDimensions = ivec2(chokeBounds.b-chokeBounds.a);
+let ivec2 pass1Dimensions = ivec2(pass1Bounds.b-pass1Bounds.a);
+let ivec2 blurDimensions = ivec2(blurBounds.b-blurBounds.a);
+
+let mat2 pass1VertexFraming = getVertexFraming(pass1Bounds, pass1Bounds);
+let mat2 pass2VertexFraming = getVertexFraming(chokeBounds, chokeBounds);
+let mat2 blurVertexFraming = getVertexFraming(blurBounds, blurBounds);
+let mat2 pass1TextureFraming = getTextureFraming(pass1Bounds, inputBounds);
+let mat2 pass2TextureFraming = getTextureFraming(chokeBounds, pass1Bounds);
+let mat2 pass3TextureFraming = getTextureFraming(blurBounds, chokeBounds);
+let mat2 pass4TextureFraming = getTextureFraming(blurBounds, blurBounds);
+
+let vec2 pass1DistanceFactor = getDistanceFactor(vec2(sizeof(Input)));
+let vec2 pass1DeltaStep = getDeltaStep(vec2(1.0, 0.0), vec2(sizeof(Input)), sdLow, sdHigh);
+
+let float pass2DistanceStep = getDistanceStep(sdLow, sdHigh);
+let vec2 pass2DeltaStep = getDeltaStep(vec2(0.0, 1.0), vec2(chokeDimensions), sdLow, sdHigh);
+
+let vec2 pass3StepFactor = getStepFactor(vec2(cos(radians(BLUR_ROTATION)), sin(radians(BLUR_ROTATION))), vec2(chokeDimensions), blur);
+let vec2 pass4StepFactor = getStepFactor(vec2(-sin(radians(BLUR_ROTATION)), cos(radians(BLUR_ROTATION))), vec2(blurDimensions), blur);
+
+model image FirstPass :
+    vertex(effectVertexShader<pass1VertexFraming, pass1TextureFraming>, triangles, billboard),
+    fragment(linearSdfPass<AlphaInput, pass1DistanceFactor, pass1DeltaStep, sdLow, invSdRange>),
+    dimensions(pass1Dimensions),
+    depth(false),
+    map(clamp),
+    hidden(true);
+
+model image ChokePass :
+    vertex(effectVertexShader<pass2VertexFraming, pass2TextureFraming>, triangles, billboard),
+    fragment(thresholdPass<FirstPass, pass2DistanceStep, pass2DeltaStep, sdLow, sdRange, threshold, vec4(1.0)>),
+    dimensions(chokeDimensions),
+    depth(false),
+    map(clamp);
+
+vec4 chokedInput(vec2 pos) {
+    return choke != 0.0 ? texture(ChokePass, pos) : crop<AlphaInput, CROP_CENTER>(pos);
+}
+
+image SecondPass = glsl(chokedInput, chokeDimensions) : map(clamp), hidden(true);
+
+model image ThirdPass :
+    vertex(effectVertexShader<blurVertexFraming, pass3TextureFraming>, triangles, billboard),
+    fragment(alphaBlur<SecondPass, pass3StepFactor, vec4(1.0)>),
+    dimensions(blurDimensions),
+    depth(false),
+    map(clamp),
+    hidden(true);
+
+model image FourthPass :
+    vertex(effectVertexShader<blurVertexFraming, pass4TextureFraming>, triangles, billboard),
+    fragment(alphaBlur<ThirdPass, pass4StepFactor, vec4(1.0)>),
+    dimensions(blurDimensions),
+    depth(false),
+    map(clamp),
+    hidden(true);
+
+param bool boundsCheck;
+
+vec4 viewShadow(vec2 pos) {
+    float opacity = texture(FourthPass, pos).a;
+    if (boundsCheck && opacity == 0.0)
+        return vec4(1.0, 0.0, 0.0, 1.0);
+    return vec4(vec3(0.0), opacity);
+}
+
+image Shadow = glsl(viewShadow, blurDimensions);
+
+#endif

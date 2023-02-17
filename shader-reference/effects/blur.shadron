@@ -1,0 +1,124 @@
+
+// Gaussian blur shader by Viktor Chlumsky
+
+#include "common.shadron"
+
+// More steps = higher quality, lower performance
+// STEPS MUST BE EVEN
+#ifndef STEPS
+param int STEPS = 64 : logrange(1, 256, 2);
+#endif
+
+// PRECOMPUTED UNIFORMS
+
+#define STEP_WEIGHT (1.0/float(STEPS+1))
+
+vec2 getStepFactor(vec2 direction, vec2 inputDimensions, float sigma) {
+    return sqrt(2.0)*sigma*normalize(direction)/inputDimensions;
+}
+
+// INVERSE ERROR FUNCTION APPROXIMATION
+
+float invErf(float x) {
+    float l = log(1.0-x*x);
+    float g = 4.546884979448284327344753864428+0.5*l;
+    return /* sign(x)* */ sqrt(sqrt(g*g-7.1422302240762540265936395279122*l)-g); // signed not used because input is always positive
+}
+
+// BLUR VERSION (blur all color channels)
+
+template <basis, stepFactor>
+vec4 colorBlur(vec2 texCoord) {
+    vec4 total = texture(basis, texCoord);
+    for (int i = 2; i <= STEPS; i += 2) {
+        float t = STEP_WEIGHT*float(i);
+        vec2 offset = invErf(t)*stepFactor;
+        total += texture(basis, texCoord-offset);
+        total += texture(basis, texCoord+offset);
+    }
+    return STEP_WEIGHT*total;
+}
+
+// SHADOW VERSION (blur alpha, output uniform color)
+
+template <basis, stepFactor, color>
+vec4 alphaBlur(vec2 texCoord) {
+    float total = texture(basis, texCoord).a;
+    for (int i = 2; i <= STEPS; i += 2) {
+        float t = STEP_WEIGHT*float(i);
+        vec2 offset = invErf(t)*stepFactor;
+        total += texture(basis, texCoord-offset).a;
+        total += texture(basis, texCoord+offset).a;
+    }
+    return STEP_WEIGHT*total*color;
+}
+
+// TESTBED
+
+#ifndef NO_TESTBED
+
+param bool shadow;
+
+template <basis, stepFactor, color>
+vec4 switchedBlur(vec2 texCoord) {
+    return shadow ? alphaBlur<basis, stepFactor, color>(texCoord) : colorBlur<basis, stepFactor>(texCoord);
+}
+
+const vec4 color = vec4(1, 0, 0, 1);
+
+param float sigma = 8 : logrange(1, 256);
+
+image Input = file() : map(clamp);
+
+param bool redIsAlpha = false;
+
+vec4 resolveAlpha(vec2 pos) {
+    vec4 color = texture(Input, pos);
+    return shadow ? vec4(0.0, 0.0, 0.0, redIsAlpha ? color.r : color.a) : color;
+}
+
+image ResolvedInput = glsl(resolveAlpha, sizeof(Input)) : map(clamp), hidden;
+
+comment "POSITIONING";
+
+param vec2 inputPosition = 64 : range(256);
+param vec2 inputDimensions = vec2(1280, 720) : range(1536);
+let Bounds inputBounds = Bounds(inputPosition, inputPosition+inputDimensions);
+
+param vec2 outputPosition = 32 : range(256);
+param vec2 outputDimensions = vec2(1280, 720)+64 : range(1536);
+let Bounds outputBounds = Bounds(outputPosition, outputPosition+outputDimensions);
+
+param ivec2 viewportPosition = 16 : range(256);
+param ivec2 viewportDimensions = vec2(1280, 720)+96 : range(1536);
+let Bounds viewport = Bounds(vec2(viewportPosition), vec2(viewportPosition+viewportDimensions));
+
+let mat2 pass1VertexFraming = getVertexFraming(viewport, inputBounds);
+let mat2 pass2VertexFraming = getVertexFraming(viewport, outputBounds);
+let mat2 pass1TextureFraming = getTextureFraming(inputBounds, inputBounds);
+let mat2 pass2TextureFraming = getTextureFraming(outputBounds, viewport);
+
+let vec2 pass1StepFactor = getStepFactor(normalize(vec2(1, 1)), inputDimensions, sigma);
+let vec2 pass2StepFactor = getStepFactor(normalize(vec2(1, -1)), viewportDimensions, sigma);
+
+model image FirstPass :
+    vertex(effectVertexShader<pass1VertexFraming, pass1TextureFraming>, triangles, billboard),
+    fragment(switchedBlur<ResolvedInput, pass1StepFactor, vec4(0.0, 0.0, 0.0, 1.0)>),
+    dimensions(viewportDimensions),
+    depth(false),
+    cull(backface),
+    filter(linear),
+    map(clamp),
+    background(vec4(0.0, 0.5, 0.5, 1.0));
+
+model image SecondPass :
+    vertex(effectVertexShader<pass2VertexFraming, pass2TextureFraming>, triangles, billboard),
+    fragment(switchedBlur<FirstPass, pass2StepFactor, color>),
+    dimensions(viewportDimensions),
+    depth(false),
+    cull(backface),
+    filter(linear),
+    map(clamp),
+    background(vec4(0.5, 0.0, 0.5, 1.0));
+
+#endif

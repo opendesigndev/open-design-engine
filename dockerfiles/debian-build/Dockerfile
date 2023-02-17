@@ -1,0 +1,72 @@
+
+# Cachables
+
+FROM debian:11-slim AS ode-debian-build-base
+
+ENV VCPKG_DEFAULT_TRIPLET x64-linux-release
+ENV VCPKG_DEFAULT_HOST_TRIPLET x64-linux-release
+
+RUN apt update -qq && apt install -qqy curl zip unzip tar clang make cmake wget git python3 bison automake autoconf autoconf-archive libosmesa6-dev pkg-config python3-distutils patchelf
+
+COPY vcpkg.json /tmp/vcpkg.json
+RUN git clone https://github.com/microsoft/vcpkg /opt/vcpkg && cd /opt/vcpkg && git checkout $(cat /tmp/vcpkg.json | awk '/builtin-baseline/ { print $2 }' | cut -d'"' -f 2)
+RUN /opt/vcpkg/bootstrap-vcpkg.sh -disableMetrics && ln -s /opt/vcpkg/vcpkg /usr/bin/vcpkg
+
+RUN vcpkg --triplet x64-linux-release --host-triplet x64-linux-release install freetype harfbuzz[icu] icu libpng libjpeg-turbo tiff giflib libwebp skia[core,freetype]
+
+# Build GLFW with OSMesa support
+RUN wget -c https://github.com/glfw/glfw/archive/refs/tags/3.3.7.tar.gz -O - | tar -xz --directory /home
+RUN cmake -S /home/glfw-3.3.7 -B /home/glfw-3.3.7/build -DGLFW_USE_OSMESA=ON -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+RUN cmake --build /home/glfw-3.3.7/build && cmake --install /home/glfw-3.3.7/build
+
+# Build GLEW with OSMesa support
+RUN wget -c https://github.com/nigels-com/glew/releases/download/glew-2.2.0/glew-2.2.0.tgz -O - | tar -xz --directory /home
+RUN make install SYSTEM=linux-osmesa -C /home/glew-2.2.0
+
+# Build image 
+
+FROM ode-debian-build-base AS ode-debian-build
+
+ARG ODE_BUILD_COMMIT
+
+RUN mkdir -p /home/ode
+COPY . /home/ode
+# Provide dummy implementation of GLX functions used by Skia
+COPY ./dockerfiles/debian-build/glx-dummy.cpp /home/ode/ode-graphics/ode/glx-dummy.cpp
+
+# Configure and build ODE
+RUN cmake \
+    -S /home/ode \
+    -B /home/ode/build \
+    -DCMAKE_MAKE_PROGRAM=make \
+    -DOVERRIDE_OPENGL_LIBRARY=ON \
+    -DOVERRIDE_GLFW_LIBRARY=ON \
+    -DOVERRIDE_GLEW_LIBRARY=ON \
+    -DGLEW_USE_STATIC_LIBS=ON \
+    -DODE_RENDERER_ENABLED=ON \
+    -DODE_TEST_MODULES=OFF \
+    -DODE_SKIA_GPU=OFF \
+    -DCMAKE_CXX_STANDARD_LIBRARIES=-lOSMesa \
+    -DODE_BUILD_COMMIT=$ODE_BUILD_COMMIT \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_COMPILER=clang \
+    -DCMAKE_CXX_COMPILER=clang++ \
+    -DVCPKG_TARGET_TRIPLET=x64-linux-release \
+    -DCMAKE_TOOLCHAIN_FILE=/opt/vcpkg/scripts/buildsystems/vcpkg.cmake
+RUN cmake --build /home/ode/build --target ode-renderer-cli --config Release
+
+RUN mkdir -p /opt/ode-renderer/bin /opt/ode-renderer/lib
+RUN cp /home/ode/build/ode-renderer/ode-renderer-cli /opt/ode-renderer/bin/ode-renderer
+
+# Find system libraries used by the compiled binaries and copy them as redistributables
+RUN ldd /opt/ode-renderer/bin/* | awk '{ print $1 }' | awk -F'/' '{ print $NF }' | xargs -I'{}' find /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu -name '{}' -print -quit | tee /tmp/libs.txt | xargs -I{} cp {} /opt/ode-renderer/lib
+
+WORKDIR /opt/ode-renderer
+RUN patchelf --set-interpreter /opt/ode-renderer/lib/ld-linux-x86-64.so.2 bin/* \
+    && for v in $(patchelf --print-needed bin/*); do patchelf --replace-needed $v /opt/ode-renderer/lib/$v bin/*; done \
+    && for v in $(patchelf --print-needed lib/* | sort | uniq); do patchelf --replace-needed $v /opt/ode-renderer/lib/$v lib/*; done
+
+# Image with portable ODE executables
+FROM scratch
+ENV PATH="${PATH}:/opt/ode-renderer/bin"
+COPY --from=ode-debian-build /opt/ode-renderer /opt/ode-renderer

@@ -1,0 +1,5 @@
+set(PNG_FOUND TRUE)
+set(PNG_INCLUDE_DIR "${EMSCRIPTEN_SYSROOT}/include")
+set(PNG_LIBRARIES "null")
+add_library(PNG::PNG ALIAS null)
+target_include_directories(null PUBLIC "${PNG_INCLUDE_DIR}")

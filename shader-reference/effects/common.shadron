@@ -1,0 +1,39 @@
+
+// Utility functions
+
+struct Bounds {
+    vec2 a, b;
+};
+
+mat2 getVertexFraming(Bounds viewport, Bounds outputBounds) {
+    return mat2(
+        float(2*(outputBounds.a.x-viewport.a.x)/(viewport.b.x-viewport.a.x)-1),
+        float(2*(outputBounds.a.y-viewport.a.y)/(viewport.b.y-viewport.a.y)-1),
+        float(2*(outputBounds.b.x-outputBounds.a.x)/(viewport.b.x-viewport.a.x)),
+        float(2*(outputBounds.b.y-outputBounds.a.y)/(viewport.b.y-viewport.a.y))
+    );
+}
+
+mat2 getTextureFraming(Bounds outputBounds, Bounds inputBounds) {
+    return mat2(
+        float((outputBounds.a.x-inputBounds.a.x)/(inputBounds.b.x-inputBounds.a.x)),
+        float((outputBounds.a.y-inputBounds.a.y)/(inputBounds.b.y-inputBounds.a.y)),
+        float((outputBounds.b.x-outputBounds.a.x)/(inputBounds.b.x-inputBounds.a.x)),
+        float((outputBounds.b.y-outputBounds.a.y)/(inputBounds.b.y-inputBounds.a.y))
+    );
+}
+
+template <src>
+vec4 passthrough(vec2 texCoord) {
+    return texture(src, texCoord);
+}
+
+// VERTEX SHADER
+
+vertex_list vec2 billboard = { 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f };
+
+template <vertexFraming, texFraming>
+vec4 effectVertexShader(out vec2 texCoord, in vec2 coord) {
+    texCoord = texFraming[0]+texFraming[1]*coord;
+    return vec4(vertexFraming[0]+vertexFraming[1]*coord, 0.0, 1.0);
+}

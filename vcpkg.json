@@ -1,0 +1,69 @@
+{
+    "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg/master/scripts/vcpkg.schema.json",
+    "name": "open-design-engine",
+    "version": "0.2.0",
+    "builtin-baseline": "ac12118f02e127ef1fe9806ffe1a23e7db7ef988",
+    "default-features": [
+        "glfw",
+        "glew",
+        "skia",
+        "freetype",
+        "harfbuzz",
+        "icu",
+        "image-formats",
+        "gtest"
+    ],
+    "features": {
+        "glfw": {
+            "description": "Graphics context management by GLFW",
+            "dependencies": [ "glfw3" ]
+        },
+        "glew": {
+            "description": "OpenGL extension management by GLEW",
+            "dependencies": [ "glew" ]
+        },
+        "skia": {
+            "description": "Shape rasterization by Skia",
+            "dependencies": [ "skia" ]
+        },
+        "skia-no-gl": {
+            "description": "Shape rasterization by Skia, with OpenGL explicitly disabled",
+            "dependencies": [ {
+                "name": "skia",
+                "default-features": false,
+                "features": [ "freetype" ]
+            } ]
+        },
+        "freetype": {
+            "description": "Font decoding by FreeType",
+            "dependencies": [ "freetype" ]
+        },
+        "harfbuzz": {
+            "description": "Text shaping by HarfBuzz",
+            "dependencies": [ {
+                "name": "harfbuzz",
+                "features": [ "icu" ]
+            } ]
+        },
+        "icu": {
+            "description": "Bidirectional text resolution by ICU",
+            "dependencies": [ "icu" ]
+        },
+        "image-formats": {
+            "description": "Libraries for decoding & encoding image files: PNG, JPEG, TIFF, GIF, WEBP",
+            "dependencies": [
+                "libpng",
+                "libjpeg-turbo",
+                "tiff",
+                "giflib",
+                "libwebp"
+            ]
+        },
+        "gtest": {
+            "description": "Google Test library",
+            "dependencies": [
+                "gtest"
+            ]
+        }
+    }
+}

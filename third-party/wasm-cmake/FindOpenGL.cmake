@@ -1,0 +1,5 @@
+set(OPENGL_FOUND TRUE)
+set(OPENGL_INCLUDE_DIR "${EMSCRIPTEN_SYSROOT}/include")
+set(OPENGL_LIBRARIES "null")
+add_library(OpenGL::GL ALIAS null)
+target_include_directories(null PUBLIC "${OPENGL_INCLUDE_DIR}")

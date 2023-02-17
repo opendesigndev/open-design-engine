@@ -1,0 +1,169 @@
+
+// Stroke & choke shader by Viktor Chlumsky
+
+#include "common.shadron"
+
+// More steps = higher quality, lower performance
+// Actual steps are 2*STEPS
+#ifndef STEPS
+param int STEPS = 32 : logrange(1, 256);
+#endif
+
+// PRECOMPUTED UNIFORMS
+// Require that sdLow <= 0 && sdHigh >= 0
+
+float getDistanceStep(float sdLow, float sdHigh) {
+    return 1.0/float(STEPS)*max(-sdLow, sdHigh);
+}
+vec2 getDistanceFactor(vec2 inputDimensions) {
+    return inputDimensions;
+}
+vec2 getDeltaStep(vec2 direction, vec2 inputDimensions, float sdLow, float sdHigh) {
+    return getDistanceStep(sdLow, sdHigh)*normalize(direction)/getDistanceFactor(inputDimensions);
+}
+
+// FIRST PASS - single-dimensional signed distance field
+
+template <basis, distanceFactor, deltaStep, sdLow, invSdRange>
+float linearSdfPass(vec2 texCoord) {
+    bool inside = texture(basis, texCoord).a != 0.0;
+    vec2 delta = vec2(0.0);
+    for (int i = 0; i < STEPS; ++i) {
+        delta += deltaStep;
+        if (
+            (texture(basis, texCoord-delta).a != 0.0) != inside ||
+            (texture(basis, texCoord+delta).a != 0.0) != inside
+        ) {
+            float d = dot(distanceFactor, delta)-0.5;
+            return invSdRange*((inside ? d : -d)-sdLow);
+        }
+    }
+    return float(inside);
+}
+
+// SECOND PASS - compute Euclidean signed distance and threshold it
+
+template <sdf, distanceStep, deltaStep, sdLow, sdRange>
+float signedDistance(vec2 texCoord) {
+    float linearSd = sdLow+sdRange*texture(sdf, texCoord).r;
+    bool inside = linearSd >= 0.0;
+    float minSquaredDistance = linearSd*linearSd;
+    float orthogonalDistance = -0.5;
+    vec2 delta = vec2(0.0);
+    for (int i = 0; i < STEPS; ++i) {
+        orthogonalDistance += distanceStep;
+        delta += deltaStep;
+        float squaredOrthogonalDistance = orthogonalDistance*orthogonalDistance;
+        float squaredDistance = squaredOrthogonalDistance;
+        linearSd = sdLow+sdRange*texture(sdf, texCoord-delta).r;
+        if ((linearSd >= 0.0) == inside)
+            squaredDistance += linearSd*linearSd;
+        minSquaredDistance = min(minSquaredDistance, squaredDistance);
+        squaredDistance = squaredOrthogonalDistance;
+        linearSd = sdLow+sdRange*texture(sdf, texCoord+delta).r;
+        if ((linearSd >= 0.0) == inside)
+            squaredDistance += linearSd*linearSd;
+        minSquaredDistance = min(minSquaredDistance, squaredDistance);
+    }
+    return (inside ? 1.0 : -1.0)*sqrt(minSquaredDistance);
+}
+
+template <sdf, distanceStep, deltaStep, sdLow, sdRange, threshold, color>
+vec4 thresholdPass(vec2 texCoord) {
+    float sd = signedDistance<sdf, distanceStep, deltaStep, sdLow, sdRange>(texCoord);
+    float opacity = clamp(sd-threshold[0]+0.5, 0.0, 1.0)*clamp(threshold[1]-sd+0.5, 0.0, 1.0);
+    return opacity*color;
+}
+
+// TESTBED
+
+#ifndef NO_TESTBED
+
+const vec4 color = vec4(1, 0, 0, 1);
+
+param bool fillInside, fillOutside;
+param float strokeStart = -16 : range(-128, 128);
+param float strokeEnd = 0 : range(-128, 128);
+
+watch let float sdLow = min(min(strokeStart, strokeEnd)-1.0, 0.0);
+watch let float sdHigh = max(max(strokeStart, strokeEnd)+1.0, 0.0);
+let float sdRange = sdHigh-sdLow;
+let float invSdRange = 1.0/sdRange;
+
+watch let vec2 threshold = vec2(
+    fillOutside ? sdLow-1.0 : min(strokeStart, strokeEnd),
+    fillInside ? sdHigh+1.0 : max(strokeStart, strokeEnd)
+);
+
+image Input = file() : map(clamp);
+
+param bool redIsAlpha = true;
+
+vec4 resolveAlpha(vec2 pos) {
+    vec4 color = texture(Input, pos);
+    return vec4(0.0, 0.0, 0.0, redIsAlpha ? color.r : color.a);
+}
+
+image AlphaInput = glsl(resolveAlpha, sizeof(Input)) : map(clamp);
+
+comment "POSITIONING";
+
+param vec2 inputPosition = 64 : range(256);
+param vec2 inputDimensions = vec2(1280, 720) : range(1536);
+let Bounds inputBounds = Bounds(inputPosition, inputPosition+inputDimensions);
+
+param vec2 outputPosition = 32 : range(256);
+param vec2 outputDimensions = vec2(1280, 720)+64 : range(1536);
+let Bounds outputBounds = Bounds(outputPosition, outputPosition+outputDimensions);
+
+param ivec2 viewportPosition = 16 : range(256);
+param ivec2 viewportDimensions = vec2(1280, 720)+96 : range(1536);
+let Bounds viewport = Bounds(vec2(viewportPosition), vec2(viewportPosition+viewportDimensions));
+
+let mat2 pass1VertexFraming = getVertexFraming(viewport, inputBounds);
+let mat2 pass2VertexFraming = getVertexFraming(viewport, outputBounds);
+let mat2 pass1TextureFraming = getTextureFraming(inputBounds, inputBounds);
+let mat2 pass2TextureFraming = getTextureFraming(outputBounds, viewport);
+
+let vec2 pass1DistanceFactor = getDistanceFactor(inputDimensions);
+let vec2 pass1DeltaStep = getDeltaStep(vec2(1.0, 0.0), inputDimensions, sdLow, sdHigh);
+
+let float pass2DistanceStep = getDistanceStep(sdLow, sdHigh);
+let vec2 pass2DeltaStep = getDeltaStep(vec2(0.0, 1.0), vec2(viewportDimensions), sdLow, sdHigh);
+
+model image FirstPass :
+    vertex(effectVertexShader<pass1VertexFraming, pass1TextureFraming>, triangles, billboard),
+    fragment(linearSdfPass<AlphaInput, pass1DistanceFactor, pass1DeltaStep, sdLow, invSdRange>),
+    dimensions(viewportDimensions),
+    depth(false),
+    cull(backface),
+    filter(linear),
+    map(clamp),
+    background(vec4(0.0, 0.5, 0.5, 1.0));
+
+float viewSDF(vec2 texCoord) {
+    float sd = signedDistance<FirstPass, pass2DistanceStep, pass2DeltaStep, sdLow, sdRange>(texCoord);
+    return (sd-sdLow)/sdRange;
+}
+
+model image SDFView :
+    vertex(effectVertexShader<pass2VertexFraming, pass2TextureFraming>, triangles, billboard),
+    fragment(viewSDF),
+    dimensions(viewportDimensions),
+    depth(false),
+    cull(backface),
+    filter(linear),
+    map(clamp),
+    background(vec4(0.5, 0.0, 0.5, 1.0));
+
+model image SecondPass :
+    vertex(effectVertexShader<pass2VertexFraming, pass2TextureFraming>, triangles, billboard),
+    fragment(thresholdPass<FirstPass, pass2DistanceStep, pass2DeltaStep, sdLow, sdRange, threshold, color>),
+    dimensions(viewportDimensions),
+    depth(false),
+    cull(backface),
+    filter(linear),
+    map(clamp),
+    background(vec4(0.5, 0.0, 0.5, 1.0));
+
+#endif
