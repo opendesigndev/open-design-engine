@@ -72,8 +72,8 @@ emcmake cmake \
     .
 cmake --build $BUILD_DIRECTORY
 
-# Set version field from git hash
-VERSION="0.0.0-`git log -n 1 --pretty=format:"%H"`"
+# Set version field to be 0.0.0-githash-YYYYMMDD
+VERSION="0.0.0-`git log -n 1 '--pretty=format:%h_%ci' | cut -d ' ' -f 1 | tr -d '-' | tr '_' '-'`"
 if [ $CMAKE_BUILD_TYPE = "Debug" ]; then
   VERSION=${VERSION}-debug
 fi
