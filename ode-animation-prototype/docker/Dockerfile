@@ -5,6 +5,7 @@ RUN apt-get update && apt-get install -y \
     autoconf autoconf-archive \
     bison gperf \
     python-is-python3 \
+    jq \
     && rm -rf /var/lib/apt/lists/*
 
 # Install emscripten ports
