@@ -13,4 +13,5 @@ RUN embuilder build freetype zlib harfbuzz libpng icu libjpeg
 RUN npm i -g corepack && npm cache clean --force && corepack enable
 RUN corepack prepare yarn@1.22.19
 
-COPY .npmrc /home/emscripten/.npmrc
+COPY .npmrc .gitconfig /home/emscripten/
+ENV HOME /home/emscripten
