@@ -45,6 +45,7 @@ if [ $DOCKER_BUILD = true ]; then
     docker run \
         --rm \
         -v $(pwd):/src \
+        -e NPM_TOKEN=$NPM_TOKEN \
         $DOCKER_RUN_ARGS \
         -u $(id -u):$(id -g) \
         $DOCKER_TAG \
@@ -53,6 +54,17 @@ if [ $DOCKER_BUILD = true ]; then
 fi
 
 cd .. # project root
+
+# Check NPM is logged in
+if [ $NPM_RELEASE = true ]; then
+  if [ -n "${NPM_TOKEN}" ]; then
+    echo "Using NPM_TOKEN environment variable"
+  elif [ -f /host_npmrc ]; then
+    echo "Using host_npmrc environment variable"
+    export NPM_TOKEN=`cat /host_npmrc | grep '//registry.npmjs.org/:_authToken' | cut -d = -f 2`
+  fi
+  npm whoami
+fi
 
 ./third-party/skia/build.sh
 
@@ -84,8 +96,5 @@ cp typescript-bindings/* ./build/wasm-release/ode-animation-prototype/package/
 
 # Publish
 if [ $NPM_RELEASE = true ]; then
-  if [ -f /host_npmrc ]; then
-    export NPM_TOKEN=`cat /host_npmrc | grep '//registry.npmjs.org/:_authToken' | cut -d = -f 2`
-  fi
   npm publish --tag alpha "${PACKAGE_DIRECTORY}"
 fi
