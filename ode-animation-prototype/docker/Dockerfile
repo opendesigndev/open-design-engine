@@ -29,9 +29,9 @@ RUN third-party/skia/build.sh
 
 RUN emcmake cmake \
     -G Ninja \
-    -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE \
+    -DCMAKE_BUILD_TYPE=Release \
     -DODE_TEST_MODULES=OFF \
     -DEMSCRIPTEN=ON \
-    -B $BUILD_DIRECTORY \
+    -B build/wasm-release \
     .
-RUN cmake --build $BUILD_DIRECTORY
+RUN cmake --build build/wasm-release
