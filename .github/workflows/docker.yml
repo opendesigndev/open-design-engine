@@ -47,12 +47,15 @@ jobs:
           target: ode-debian-build-base
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Adding base image tag to summary
+        run: |
+          echo "Base docker image: ${{ fromJSON(steps.meta-base.outputs.json).tags[1] }}" >> $GITHUB_STEP_SUMMARY
       - name: Extract job Docker meta
         id: meta
         uses: docker/metadata-action@v4
         with:
           images: |
-            ${{ env.GITLAB_REGISTRY }}/${{ env.GITLAB_PROJECT }}/portable
+            ${{ env.GITLAB_REGISTRY }}/${{ env.GITLAB_PROJECT }}/ode-portable
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -61,8 +64,8 @@ jobs:
       - name: Build and push main image
         uses: docker/build-push-action@v3
         with:
-          push: true
           context: .
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           file: ./dockerfiles/debian-build/Dockerfile
@@ -70,4 +73,5 @@ jobs:
             ODE_BUILD_COMMIT="${{ github.sha }}"
           cache-from: type=gha
       - name: Adding output tags to summary
-        run: echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+        run: |
+          echo "Main docker image: ${{ fromJSON(steps.meta.outputs.json).tags[1] }}" >> $GITHUB_STEP_SUMMARY
