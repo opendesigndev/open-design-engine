@@ -1,0 +1,10 @@
+version: 2
+updates:
+  - package-ecosystem: "docker"
+    directory: "/dockerfiles/debian-build"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "docker"
+    directory: "/ode-animation-prototype/docker"
+    schedule:
+      interval: "daily"
