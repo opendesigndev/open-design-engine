@@ -1,7 +1,7 @@
 
 # Cachables
 
-FROM debian:11-slim AS ode-debian-build-base
+FROM debian:11-slim@sha256:9b42b2e7eddd84eaddb67b45567cdc0e03ec826bf252352f300147cfb8ce5a6d AS ode-debian-build-base
 
 ENV VCPKG_DEFAULT_TRIPLET x64-linux-release
 ENV VCPKG_DEFAULT_HOST_TRIPLET x64-linux-release
