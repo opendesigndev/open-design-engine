@@ -15,13 +15,17 @@ RUN embuilder build freetype zlib harfbuzz libpng icu libjpeg
 RUN npm i -g corepack && npm cache clean --force && corepack enable
 RUN corepack prepare yarn@1.22.19
 
-COPY .npmrc .gitconfig /home/emscripten/
+COPY ./ode-animation-prototype/docker/.gitconfig /home/emscripten/
 
 ENV HOME /home/emscripten
 
 FROM wasm-base as wasm-build
 
-RUN ./third-party/skia/build.sh
+WORKDIR /home/emscripten/
+
+COPY . .
+
+RUN third-party/skia/build.sh
 
 RUN emcmake cmake \
     -G Ninja \
