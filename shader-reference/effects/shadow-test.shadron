@@ -15,10 +15,12 @@ param int BLUR_ROTATION = 45 : range(180);
 #undef STEPS
 
 #define STEPS BLUR_STEPS
-#include "blur.shadron"
+#include "bounded-blur.shadron"
 #undef STEPS
 
 #undef NO_TESTBED
+
+// TESTBED
 
 #ifndef NO_TESTBED
 

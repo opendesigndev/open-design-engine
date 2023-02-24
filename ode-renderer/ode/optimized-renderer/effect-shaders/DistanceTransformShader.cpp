@@ -1,5 +1,5 @@
 
-#include "LinearDistanceTransformShader.h"
+#include "DistanceTransformShader.h"
 
 #include <cstdio>
 #include <cstring>
@@ -7,9 +7,9 @@
 
 namespace ode {
 
-LinearDistanceTransformShader::LinearDistanceTransformShader() : precision(0) { }
+DistanceTransformShader::DistanceTransformShader() : precision(0) { }
 
-bool LinearDistanceTransformShader::initialize(const SharedResource &res, char channel, int precision) {
+bool DistanceTransformShader::initialize(const SharedResource &res, char channel, int precision) {
     ODE_ASSERT(channel && precision > 0);
     if (!res)
         return false;
@@ -58,7 +58,7 @@ bool LinearDistanceTransformShader::initialize(const SharedResource &res, char c
     return EffectShader::initialize(&shader);
 }
 
-void LinearDistanceTransformShader::bind(const PixelBounds &viewport, const ScaledBounds &outputBounds, const ScaledBounds &inputBounds, const Vector2f &direction, float minDistance, float maxDistance) {
+void DistanceTransformShader::bind(const PixelBounds &viewport, const ScaledBounds &outputBounds, const ScaledBounds &inputBounds, const Vector2f &direction, float minDistance, float maxDistance) {
     ODE_ASSERT(minDistance <= 0.f && maxDistance >= 0.f);
     shader.bind();
     EffectShader::bind(viewport, outputBounds, inputBounds);

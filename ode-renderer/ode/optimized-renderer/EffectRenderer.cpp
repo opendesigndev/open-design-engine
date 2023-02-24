@@ -5,7 +5,58 @@
 
 namespace ode {
 
-EffectRenderer::EffectRenderer(GraphicsContext &gc, TextureFrameBufferManager &tfbManager, Mesh &billboard, BlitShader &blitShader) : gc(gc), tfbManager(tfbManager), billboard(billboard), blitShader(blitShader), shaderRes(EffectShader::prepare()) { }
+EffectRenderer::ShaderManager::ShaderManager() : shaderRes(EffectShader::prepare()) { }
+
+BoundedBlurShader *EffectRenderer::ShaderManager::getBoundedBlurShader(char channel) {
+    BoundedBlurShader *shader = nullptr;
+    switch (channel) {
+        case '\0':
+            shader = &boundedBlurShaders[0];
+            break;
+        case 'a':
+            shader = &boundedBlurShaders[1];
+            break;
+        case 'r':
+            shader = &boundedBlurShaders[2];
+            break;
+        default:
+            ODE_ASSERT(!"Shader for this channel is missing");
+    }
+    if (shader && (shader->ready() || shader->initialize(shaderRes, channel, EFFECT_SHADER_PRECISION)))
+        return shader;
+    return nullptr;
+}
+
+GaussianBlurShader *EffectRenderer::ShaderManager::getGaussianBlurShader() {
+    if (gaussianBlurShader.ready() || gaussianBlurShader.initialize(shaderRes, '\0', EFFECT_SHADER_PRECISION))
+        return &gaussianBlurShader;
+    return nullptr;
+}
+
+DistanceTransformShader *EffectRenderer::ShaderManager::getDistanceTransformShader(char channel) {
+    DistanceTransformShader *shader = nullptr;
+    switch (channel) {
+        case 'a':
+            shader = &distanceTransformShaders[0];
+            break;
+        case 'r':
+            shader = &distanceTransformShaders[1];
+            break;
+        default:
+            ODE_ASSERT(!"Shader for this channel is missing");
+    }
+    if (shader && (shader->ready() || shader->initialize(shaderRes, channel, EFFECT_SHADER_PRECISION)))
+        return shader;
+    return nullptr;
+}
+
+DistanceThresholdShader *EffectRenderer::ShaderManager::getDistanceThresholdShader() {
+    if (distanceThresholdShader.ready() || distanceThresholdShader.initialize(shaderRes, EFFECT_SHADER_PRECISION))
+        return &distanceThresholdShader;
+    return nullptr;
+}
+
+EffectRenderer::EffectRenderer(GraphicsContext &gc, TextureFrameBufferManager &tfbManager, Mesh &billboard, BlitShader &blitShader) : gc(gc), tfbManager(tfbManager), billboard(billboard), blitShader(blitShader) { }
 
 PlacedImagePtr EffectRenderer::drawEffect(const octopus::Effect &effect, const PlacedImagePtr &basis, double scale) {
     switch (effect.type) {
@@ -28,55 +79,12 @@ PlacedImagePtr EffectRenderer::drawEffect(const octopus::Effect &effect, const P
             return nullptr;
         case octopus::Effect::Type::BLUR:
             if (effect.blur.has_value())
-                return drawBlur(scale*effect.blur.value(), basis);
+                return drawGaussianBlur(scale*effect.blur.value(), basis);
             return nullptr;
         case octopus::Effect::Type::OTHER:
             return nullptr;
     }
     ODE_ASSERT(!"Incomplete switch");
-    return nullptr;
-}
-
-LinearBlurShader *EffectRenderer::requireBlurShader(char channel) {
-    LinearBlurShader *blurShader = nullptr;
-    switch (channel) {
-        case '\0':
-            blurShader = &blurShaders[0];
-            break;
-        case 'a':
-            blurShader = &blurShaders[1];
-            break;
-        case 'r':
-            blurShader = &blurShaders[2];
-            break;
-        default:
-            ODE_ASSERT(!"Shader for this channel is missing");
-    }
-    if (blurShader && (blurShader->ready() || blurShader->initialize(shaderRes, channel, EFFECT_SHADER_PRECISION)))
-        return blurShader;
-    return nullptr;
-}
-
-LinearDistanceTransformShader *EffectRenderer::requireDistanceTransformShader(char channel) {
-    LinearDistanceTransformShader *distanceTransformShader = nullptr;
-    switch (channel) {
-        case 'a':
-            distanceTransformShader = &distanceTransformShaders[0];
-            break;
-        case 'r':
-            distanceTransformShader = &distanceTransformShaders[1];
-            break;
-        default:
-            ODE_ASSERT(!"Shader for this channel is missing");
-    }
-    if (distanceTransformShader && (distanceTransformShader->ready() || distanceTransformShader->initialize(shaderRes, channel, EFFECT_SHADER_PRECISION)))
-        return distanceTransformShader;
-    return nullptr;
-}
-
-DistanceThresholdShader *EffectRenderer::requireDistanceThresholdShader() {
-    if (distanceThresholdShader.ready() || distanceThresholdShader.initialize(shaderRes, EFFECT_SHADER_PRECISION))
-        return &distanceThresholdShader;
     return nullptr;
 }
 
@@ -117,8 +125,8 @@ PlacedImagePtr EffectRenderer::drawShadow(octopus::Effect::Type type, const octo
     if (!basis)
         return nullptr;
     Vector2d offset = scale*fromOctopus(shadow.offset);
-    double sigma = fabs(scale*shadow.blur);
-    if (!sigma) {
+    double radius = fabs(scale*shadow.blur);
+    if (!radius) {
         if (shadow.choke) {
             PlacedImagePtr choke = drawChoke(scale*shadow.choke, fromOctopus(shadow.color), basis);
             return PlacedImagePtr(choke, choke.bounds()+offset);
@@ -153,22 +161,22 @@ PlacedImagePtr EffectRenderer::drawShadow(octopus::Effect::Type type, const octo
 
     if (shadow.choke)
         basis = drawChoke(scale*shadow.choke, Color(1), basis);
-    LinearBlurShader *blurShader = requireBlurShader(basis->transparencyMode() == Image::RED_IS_ALPHA ? 'r' : 'a');
+    BoundedBlurShader *blurShader = shaders.getBoundedBlurShader(basis->transparencyMode() == Image::RED_IS_ALPHA ? 'r' : 'a');
     if (!blurShader)
         return nullptr;
 
     TexturePtr basisTex = basis->asTexture();
     if (!basisTex)
         return nullptr;
-    ScaledBounds bounds = basis.bounds()+ScaledMargin(BLUR_MARGIN_FACTOR*sigma);
+    ScaledBounds bounds = basis.bounds()+ScaledMargin(radius);
     PixelBounds pixelBounds = outerPixelBounds(bounds);
     TextureFrameBufferPtr intermediateTex = tfbManager.acquire(pixelBounds);
     intermediateTex->bind();
     glViewport(0, 0, intermediateTex->dimensions().x, intermediateTex->dimensions().y);
     glClearColor(0, 0, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT);
-    blurShader->bind(pixelBounds, bounds, basis.bounds(), false, float(sigma), Color(1));
-    basisTex->bind(LinearBlurShader::UNIT_BASIS);
+    blurShader->bind(pixelBounds, bounds, basis.bounds(), false, radius, Color(1));
+    basisTex->bind(BoundedBlurShader::UNIT_BASIS);
     billboard.draw();
     intermediateTex->unbind();
     ScaledBounds actualBounds(Vector2d(pixelBounds.a), Vector2d(pixelBounds.b)); // TODO proper conversion
@@ -178,8 +186,8 @@ PlacedImagePtr EffectRenderer::drawShadow(octopus::Effect::Type type, const octo
     outTex->bind();
     glViewport(0, 0, outTex->dimensions().x, outTex->dimensions().y);
     glClear(GL_COLOR_BUFFER_BIT);
-    blurShader->bind(pixelBounds, bounds, actualBounds, true, float(sigma), fromOctopus(shadow.color));
-    intermediateTex->bind(LinearBlurShader::UNIT_BASIS);
+    blurShader->bind(pixelBounds, bounds, actualBounds, true, radius, fromOctopus(shadow.color));
+    intermediateTex->bind(BoundedBlurShader::UNIT_BASIS);
     billboard.draw();
     outTex->unbind();
     actualBounds = ScaledBounds(Vector2d(pixelBounds.a), Vector2d(pixelBounds.b)); // TODO proper conversion
@@ -187,28 +195,28 @@ PlacedImagePtr EffectRenderer::drawShadow(octopus::Effect::Type type, const octo
     return PlacedImagePtr(Image::fromTexture(outTex, basis->transparencyMode() == Image::RED_IS_ALPHA ? Image::RED_IS_ALPHA : Image::PREMULTIPLIED), actualBounds+offset);
 }
 
-PlacedImagePtr EffectRenderer::drawBlur(double blur, const PlacedImagePtr &basis) {
+PlacedImagePtr EffectRenderer::drawBoundedBlur(double blur, const PlacedImagePtr &basis) {
     if (!blur)
         return basis;
     if (!basis)
         return nullptr;
     ODE_ASSERT(basis->transparencyMode() == Image::PREMULTIPLIED || basis->transparencyMode() == Image::NO_TRANSPARENCY);
-    LinearBlurShader *blurShader = requireBlurShader();
+    BoundedBlurShader *blurShader = shaders.getBoundedBlurShader();
     if (!blurShader)
         return nullptr;
 
     TexturePtr basisTex = basis->asTexture();
     if (!basisTex)
         return nullptr;
-    ScaledBounds bounds = basis.bounds()+ScaledMargin(BLUR_MARGIN_FACTOR*blur);
+    ScaledBounds bounds = basis.bounds()+ScaledMargin(blur);
     PixelBounds pixelBounds = outerPixelBounds(bounds);
     TextureFrameBufferPtr intermediateTex = tfbManager.acquire(pixelBounds);
     intermediateTex->bind();
     glViewport(0, 0, intermediateTex->dimensions().x, intermediateTex->dimensions().y);
     glClearColor(0, 0, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT);
-    blurShader->bind(pixelBounds, bounds, basis.bounds(), false, float(blur), Color(1));
-    basisTex->bind(LinearBlurShader::UNIT_BASIS);
+    blurShader->bind(pixelBounds, bounds, basis.bounds(), false, blur, Color(1));
+    basisTex->bind(BoundedBlurShader::UNIT_BASIS);
     billboard.draw();
     intermediateTex->unbind();
     ScaledBounds actualBounds(Vector2d(pixelBounds.a), Vector2d(pixelBounds.b)); // TODO proper conversion
@@ -218,8 +226,48 @@ PlacedImagePtr EffectRenderer::drawBlur(double blur, const PlacedImagePtr &basis
     outTex->bind();
     glViewport(0, 0, outTex->dimensions().x, outTex->dimensions().y);
     glClear(GL_COLOR_BUFFER_BIT);
-    blurShader->bind(pixelBounds, bounds, actualBounds, true, float(blur), Color(1));
-    intermediateTex->bind(LinearBlurShader::UNIT_BASIS);
+    blurShader->bind(pixelBounds, bounds, actualBounds, true, blur, Color(1));
+    intermediateTex->bind(BoundedBlurShader::UNIT_BASIS);
+    billboard.draw();
+    outTex->unbind();
+    actualBounds = ScaledBounds(Vector2d(pixelBounds.a), Vector2d(pixelBounds.b)); // TODO proper conversion
+
+    return PlacedImagePtr(Image::fromTexture(outTex, Image::PREMULTIPLIED), actualBounds);
+}
+
+PlacedImagePtr EffectRenderer::drawGaussianBlur(double blur, const PlacedImagePtr &basis) {
+    if (!blur)
+        return basis;
+    if (!basis)
+        return nullptr;
+    ODE_ASSERT(basis->transparencyMode() == Image::PREMULTIPLIED || basis->transparencyMode() == Image::NO_TRANSPARENCY);
+    GaussianBlurShader *blurShader = shaders.getGaussianBlurShader();
+    if (!blurShader)
+        return nullptr;
+
+    TexturePtr basisTex = basis->asTexture();
+    if (!basisTex)
+        return nullptr;
+    ScaledBounds bounds = basis.bounds()+ScaledMargin(GAUSSIAN_BLUR_MARGIN_FACTOR*blur);
+    PixelBounds pixelBounds = outerPixelBounds(bounds);
+    TextureFrameBufferPtr intermediateTex = tfbManager.acquire(pixelBounds);
+    intermediateTex->bind();
+    glViewport(0, 0, intermediateTex->dimensions().x, intermediateTex->dimensions().y);
+    glClearColor(0, 0, 0, 0);
+    glClear(GL_COLOR_BUFFER_BIT);
+    blurShader->bind(pixelBounds, bounds, basis.bounds(), false, blur, Color(1));
+    basisTex->bind(GaussianBlurShader::UNIT_BASIS);
+    billboard.draw();
+    intermediateTex->unbind();
+    ScaledBounds actualBounds(Vector2d(pixelBounds.a), Vector2d(pixelBounds.b)); // TODO proper conversion
+
+    pixelBounds = outerPixelBounds(bounds);
+    TextureFrameBufferPtr outTex = tfbManager.acquire(pixelBounds);
+    outTex->bind();
+    glViewport(0, 0, outTex->dimensions().x, outTex->dimensions().y);
+    glClear(GL_COLOR_BUFFER_BIT);
+    blurShader->bind(pixelBounds, bounds, actualBounds, true, blur, Color(1));
+    intermediateTex->bind(GaussianBlurShader::UNIT_BASIS);
     billboard.draw();
     outTex->unbind();
     actualBounds = ScaledBounds(Vector2d(pixelBounds.a), Vector2d(pixelBounds.b)); // TODO proper conversion
@@ -237,10 +285,10 @@ PlacedImagePtr EffectRenderer::drawChoke(double choke, const Color &color, const
 }
 
 PlacedImagePtr EffectRenderer::drawDistanceThreshold(float minDistance, float maxDistance, float lowerThreshold, float upperThreshold, const Color &color, const PlacedImagePtr &basis, const ScaledBounds &outputBounds) {
-    if (!(basis && outputBounds && requireDistanceTransformShader() && requireDistanceThresholdShader()))
+    if (!(basis && outputBounds))
         return nullptr;
-    LinearDistanceTransformShader *distanceTransformShader = requireDistanceTransformShader(basis->transparencyMode() == Image::RED_IS_ALPHA ? 'r' : 'a');
-    DistanceThresholdShader *distanceThresholdShader = requireDistanceThresholdShader();
+    DistanceTransformShader *distanceTransformShader = shaders.getDistanceTransformShader(basis->transparencyMode() == Image::RED_IS_ALPHA ? 'r' : 'a');
+    DistanceThresholdShader *distanceThresholdShader = shaders.getDistanceThresholdShader();
     if (!(distanceTransformShader && distanceThresholdShader))
         return nullptr;
 
@@ -257,7 +305,7 @@ PlacedImagePtr EffectRenderer::drawDistanceThreshold(float minDistance, float ma
     glClearColor(0, 0, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT);
     distanceTransformShader->bind(pixelBounds, intermediateBounds, basis.bounds(), Vector2f(1.f, 0.f), minDistance, maxDistance);
-    basisTex->bind(LinearBlurShader::UNIT_BASIS);
+    basisTex->bind(DistanceTransformShader::UNIT_BASIS);
     billboard.draw();
     intermediateTex->unbind();
     ScaledBounds actualBounds(Vector2d(pixelBounds.a), Vector2d(pixelBounds.b)); // TODO proper conversion
@@ -268,7 +316,7 @@ PlacedImagePtr EffectRenderer::drawDistanceThreshold(float minDistance, float ma
     glViewport(0, 0, outTex->dimensions().x, outTex->dimensions().y);
     glClear(GL_COLOR_BUFFER_BIT);
     distanceThresholdShader->bind(pixelBounds, outputBounds, actualBounds, Vector2f(0.f, 1.f), minDistance, maxDistance, lowerThreshold, upperThreshold, color);
-    intermediateTex->bind(LinearBlurShader::UNIT_BASIS);
+    intermediateTex->bind(DistanceThresholdShader::UNIT_BASIS);
     billboard.draw();
     outTex->unbind();
     actualBounds = ScaledBounds(Vector2d(pixelBounds.a), Vector2d(pixelBounds.b)); // TODO proper conversion

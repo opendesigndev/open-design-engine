@@ -6,12 +6,12 @@
 
 namespace ode {
 
-class LinearBlurShader : public EffectShader {
+class BoundedBlurShader : public EffectShader {
 
 public:
-    LinearBlurShader();
+    BoundedBlurShader();
     bool initialize(const SharedResource &res, char channel, int precision);
-    void bind(const PixelBounds &viewport, const ScaledBounds &outputBounds, const ScaledBounds &inputBounds, bool phase, float sigma, const Color &color);
+    void bind(const PixelBounds &viewport, const ScaledBounds &outputBounds, const ScaledBounds &inputBounds, bool phase, double radius, const Color &color);
 
 private:
     ShaderProgram shader;

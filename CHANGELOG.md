@@ -1,4 +1,11 @@
 
+## Version 0.2.1 (forthcoming)
+
+- Added support for "bounded blur" (equivalent to box blur applied twice)
+- Bounded blur now used for shadows (this fixes shadow blur size regression)
+- Fixed out-of-bounds mapping of image fills
+- Fixed effect behavior when `ODE_SKIA_GPU` is disabled
+
 ## Version 0.2.0 (2023-02-17)
 
 - Complete overhaul of core renderer which now operates in alpha-premultiplied color space

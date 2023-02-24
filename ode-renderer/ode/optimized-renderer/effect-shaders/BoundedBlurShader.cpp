@@ -1,5 +1,5 @@
 
-#include "LinearBlurShader.h"
+#include "BoundedBlurShader.h"
 
 #include <cstdio>
 #include <cstring>
@@ -7,9 +7,9 @@
 
 namespace ode {
 
-LinearBlurShader::LinearBlurShader() : precision(0) { }
+BoundedBlurShader::BoundedBlurShader() : precision(0) { }
 
-bool LinearBlurShader::initialize(const SharedResource &res, char channel, int precision) {
+bool BoundedBlurShader::initialize(const SharedResource &res, char channel, int precision) {
     ODE_ASSERT(precision > 0);
     if (!res)
         return false;
@@ -28,22 +28,17 @@ bool LinearBlurShader::initialize(const SharedResource &res, char channel, int p
         "uniform sampler2D basis;"
         "uniform vec2 stepFactor;"
         "uniform vec4 color;"
-        "float invErf(float x) {"
-            "float l = log(1.0-x*x);"
-            "float g = 4.546884979448284327344753864428+0.5*l;"
-            "return sqrt(sqrt(g*g-7.1422302240762540265936395279122*l)-g);"
-        "}"
         "void main() {"
             "SUM_TYPE sum = " ODE_GLSL_TEXTURE2D "(basis, texCoord) CHANNELS;"
             "for (int i = 2; i <= STEPS; i += 2) {"
-                "vec2 offset = invErf(STEP_WEIGHT*float(i))*stepFactor;"
+                "vec2 offset = (1.0-sqrt(STEP_WEIGHT*float(i)))*stepFactor;"
                 "sum += " ODE_GLSL_TEXTURE2D "(basis, texCoord-offset) CHANNELS;"
                 "sum += " ODE_GLSL_TEXTURE2D "(basis, texCoord+offset) CHANNELS;"
             "}"
             ODE_GLSL_FRAGCOLOR "= STEP_WEIGHT*sum*color;"
         "}\n"
     );
-    FragmentShader fs("effect-lin-blur");
+    FragmentShader fs("effect-bound-blur");
     const GLchar *src[] = { ODE_EFFECT_SHADER_PREAMBLE, macros, fsSrc.string };
     const GLint sln[] = { sizeof(ODE_EFFECT_SHADER_PREAMBLE)-1, (GLint) strlen(macros), fsSrc.length };
     if (!fs.initialize(src, sln, sizeof(src)/sizeof(*src)))
@@ -59,16 +54,14 @@ bool LinearBlurShader::initialize(const SharedResource &res, char channel, int p
     return EffectShader::initialize(&shader);
 }
 
-void LinearBlurShader::bind(const PixelBounds &viewport, const ScaledBounds &outputBounds, const ScaledBounds &inputBounds, bool phase, float sigma, const Color &color) {
-    ODE_ASSERT(sigma > 0.f);
+void BoundedBlurShader::bind(const PixelBounds &viewport, const ScaledBounds &outputBounds, const ScaledBounds &inputBounds, bool phase, double radius, const Color &color) {
     shader.bind();
     EffectShader::bind(viewport, outputBounds, inputBounds);
-    float stepFactor[2] = {
-        sigma/float(inputBounds.dimensions().x),
-        sigma/float(inputBounds.dimensions().y)
-    };
-    if (phase)
-        stepFactor[0] = -stepFactor[0];
+    float stepFactor[2] = { };
+    if (!phase)
+        stepFactor[0] = float(radius/inputBounds.dimensions().x);
+    else
+        stepFactor[1] = float(radius/inputBounds.dimensions().y);
     float premultipliedColor[4] = {
         float(color.a*color.r),
         float(color.a*color.g),
