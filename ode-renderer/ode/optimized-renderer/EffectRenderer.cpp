@@ -37,20 +37,47 @@ PlacedImagePtr EffectRenderer::drawEffect(const octopus::Effect &effect, const P
     return nullptr;
 }
 
-bool EffectRenderer::requireBlurShader() {
-    return blurShader.ready() || blurShader.initialize(shaderRes, false, EFFECT_SHADER_PRECISION);
+LinearBlurShader *EffectRenderer::requireBlurShader(char channel) {
+    LinearBlurShader *blurShader = nullptr;
+    switch (channel) {
+        case '\0':
+            blurShader = &blurShaders[0];
+            break;
+        case 'a':
+            blurShader = &blurShaders[1];
+            break;
+        case 'r':
+            blurShader = &blurShaders[2];
+            break;
+        default:
+            ODE_ASSERT(!"Shader for this channel is missing");
+    }
+    if (blurShader && (blurShader->ready() || blurShader->initialize(shaderRes, channel, EFFECT_SHADER_PRECISION)))
+        return blurShader;
+    return nullptr;
 }
 
-bool EffectRenderer::requireAlphaBlurShader() {
-    return alphaBlurShader.ready() || alphaBlurShader.initialize(shaderRes, true, EFFECT_SHADER_PRECISION);
+LinearDistanceTransformShader *EffectRenderer::requireDistanceTransformShader(char channel) {
+    LinearDistanceTransformShader *distanceTransformShader = nullptr;
+    switch (channel) {
+        case 'a':
+            distanceTransformShader = &distanceTransformShaders[0];
+            break;
+        case 'r':
+            distanceTransformShader = &distanceTransformShaders[1];
+            break;
+        default:
+            ODE_ASSERT(!"Shader for this channel is missing");
+    }
+    if (distanceTransformShader && (distanceTransformShader->ready() || distanceTransformShader->initialize(shaderRes, channel, EFFECT_SHADER_PRECISION)))
+        return distanceTransformShader;
+    return nullptr;
 }
 
-bool EffectRenderer::requireDistanceTransformShader() {
-    return distanceTransformShader.ready() || distanceTransformShader.initialize(shaderRes, EFFECT_SHADER_PRECISION);
-}
-
-bool EffectRenderer::requireDistanceThresholdShader() {
-    return distanceThresholdShader.ready() || distanceThresholdShader.initialize(shaderRes, EFFECT_SHADER_PRECISION);
+DistanceThresholdShader *EffectRenderer::requireDistanceThresholdShader() {
+    if (distanceThresholdShader.ready() || distanceThresholdShader.initialize(shaderRes, EFFECT_SHADER_PRECISION))
+        return &distanceThresholdShader;
+    return nullptr;
 }
 
 PlacedImagePtr EffectRenderer::drawStroke(const octopus::Stroke &stroke, const PlacedImagePtr &basis, double scale) {
@@ -124,10 +151,11 @@ PlacedImagePtr EffectRenderer::drawShadow(octopus::Effect::Type type, const octo
         return PlacedImagePtr(Image::fromTexture(outTex, Image::PREMULTIPLIED), bounds+offset);
     }
 
-    if (!requireAlphaBlurShader())
-        return nullptr;
     if (shadow.choke)
         basis = drawChoke(scale*shadow.choke, Color(1), basis);
+    LinearBlurShader *blurShader = requireBlurShader(basis->transparencyMode() == Image::RED_IS_ALPHA ? 'r' : 'a');
+    if (!blurShader)
+        return nullptr;
 
     TexturePtr basisTex = basis->asTexture();
     if (!basisTex)
@@ -139,7 +167,7 @@ PlacedImagePtr EffectRenderer::drawShadow(octopus::Effect::Type type, const octo
     glViewport(0, 0, intermediateTex->dimensions().x, intermediateTex->dimensions().y);
     glClearColor(0, 0, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT);
-    alphaBlurShader.bind(pixelBounds, bounds, basis.bounds(), false, float(sigma), Color(1));
+    blurShader->bind(pixelBounds, bounds, basis.bounds(), false, float(sigma), Color(1));
     basisTex->bind(LinearBlurShader::UNIT_BASIS);
     billboard.draw();
     intermediateTex->unbind();
@@ -150,19 +178,23 @@ PlacedImagePtr EffectRenderer::drawShadow(octopus::Effect::Type type, const octo
     outTex->bind();
     glViewport(0, 0, outTex->dimensions().x, outTex->dimensions().y);
     glClear(GL_COLOR_BUFFER_BIT);
-    alphaBlurShader.bind(pixelBounds, bounds, actualBounds, true, float(sigma), fromOctopus(shadow.color));
+    blurShader->bind(pixelBounds, bounds, actualBounds, true, float(sigma), fromOctopus(shadow.color));
     intermediateTex->bind(LinearBlurShader::UNIT_BASIS);
     billboard.draw();
     outTex->unbind();
     actualBounds = ScaledBounds(Vector2d(pixelBounds.a), Vector2d(pixelBounds.b)); // TODO proper conversion
 
-    return PlacedImagePtr(Image::fromTexture(outTex, Image::PREMULTIPLIED), actualBounds+offset);
+    return PlacedImagePtr(Image::fromTexture(outTex, basis->transparencyMode() == Image::RED_IS_ALPHA ? Image::RED_IS_ALPHA : Image::PREMULTIPLIED), actualBounds+offset);
 }
 
 PlacedImagePtr EffectRenderer::drawBlur(double blur, const PlacedImagePtr &basis) {
     if (!blur)
         return basis;
-    if (!(basis && requireBlurShader()))
+    if (!basis)
+        return nullptr;
+    ODE_ASSERT(basis->transparencyMode() == Image::PREMULTIPLIED || basis->transparencyMode() == Image::NO_TRANSPARENCY);
+    LinearBlurShader *blurShader = requireBlurShader();
+    if (!blurShader)
         return nullptr;
 
     TexturePtr basisTex = basis->asTexture();
@@ -175,7 +207,7 @@ PlacedImagePtr EffectRenderer::drawBlur(double blur, const PlacedImagePtr &basis
     glViewport(0, 0, intermediateTex->dimensions().x, intermediateTex->dimensions().y);
     glClearColor(0, 0, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT);
-    blurShader.bind(pixelBounds, bounds, basis.bounds(), false, float(blur), Color(1));
+    blurShader->bind(pixelBounds, bounds, basis.bounds(), false, float(blur), Color(1));
     basisTex->bind(LinearBlurShader::UNIT_BASIS);
     billboard.draw();
     intermediateTex->unbind();
@@ -186,7 +218,7 @@ PlacedImagePtr EffectRenderer::drawBlur(double blur, const PlacedImagePtr &basis
     outTex->bind();
     glViewport(0, 0, outTex->dimensions().x, outTex->dimensions().y);
     glClear(GL_COLOR_BUFFER_BIT);
-    blurShader.bind(pixelBounds, bounds, actualBounds, true, float(blur), Color(1));
+    blurShader->bind(pixelBounds, bounds, actualBounds, true, float(blur), Color(1));
     intermediateTex->bind(LinearBlurShader::UNIT_BASIS);
     billboard.draw();
     outTex->unbind();
@@ -207,6 +239,10 @@ PlacedImagePtr EffectRenderer::drawChoke(double choke, const Color &color, const
 PlacedImagePtr EffectRenderer::drawDistanceThreshold(float minDistance, float maxDistance, float lowerThreshold, float upperThreshold, const Color &color, const PlacedImagePtr &basis, const ScaledBounds &outputBounds) {
     if (!(basis && outputBounds && requireDistanceTransformShader() && requireDistanceThresholdShader()))
         return nullptr;
+    LinearDistanceTransformShader *distanceTransformShader = requireDistanceTransformShader(basis->transparencyMode() == Image::RED_IS_ALPHA ? 'r' : 'a');
+    DistanceThresholdShader *distanceThresholdShader = requireDistanceThresholdShader();
+    if (!(distanceTransformShader && distanceThresholdShader))
+        return nullptr;
 
     TexturePtr basisTex = basis->asTexture();
     if (!basisTex)
@@ -220,7 +256,7 @@ PlacedImagePtr EffectRenderer::drawDistanceThreshold(float minDistance, float ma
     glViewport(0, 0, intermediateTex->dimensions().x, intermediateTex->dimensions().y);
     glClearColor(0, 0, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT);
-    distanceTransformShader.bind(pixelBounds, intermediateBounds, basis.bounds(), Vector2f(1.f, 0.f), minDistance, maxDistance);
+    distanceTransformShader->bind(pixelBounds, intermediateBounds, basis.bounds(), Vector2f(1.f, 0.f), minDistance, maxDistance);
     basisTex->bind(LinearBlurShader::UNIT_BASIS);
     billboard.draw();
     intermediateTex->unbind();
@@ -231,7 +267,7 @@ PlacedImagePtr EffectRenderer::drawDistanceThreshold(float minDistance, float ma
     outTex->bind();
     glViewport(0, 0, outTex->dimensions().x, outTex->dimensions().y);
     glClear(GL_COLOR_BUFFER_BIT);
-    distanceThresholdShader.bind(pixelBounds, outputBounds, actualBounds, Vector2f(0.f, 1.f), minDistance, maxDistance, lowerThreshold, upperThreshold, color);
+    distanceThresholdShader->bind(pixelBounds, outputBounds, actualBounds, Vector2f(0.f, 1.f), minDistance, maxDistance, lowerThreshold, upperThreshold, color);
     intermediateTex->bind(LinearBlurShader::UNIT_BASIS);
     billboard.draw();
     outTex->unbind();

@@ -9,12 +9,16 @@ namespace ode {
 
 LinearDistanceTransformShader::LinearDistanceTransformShader() : precision(0) { }
 
-bool LinearDistanceTransformShader::initialize(const SharedResource &res, int precision) {
-    ODE_ASSERT(precision > 0);
+bool LinearDistanceTransformShader::initialize(const SharedResource &res, char channel, int precision) {
+    ODE_ASSERT(channel && precision > 0);
     if (!res)
         return false;
-    char stepsDefine[64];
-    sprintf(stepsDefine, "#define STEPS %d\n", precision);
+    char macros[256];
+    sprintf(macros,
+        "#define STEPS %d\n"
+        "#define CHANNEL %c\n",
+        precision, channel
+    );
     const StringLiteral fsSrc = ODE_STRLIT(
         ODE_GLSL_FVARYING "vec2 texCoord;"
         "uniform sampler2D basis;"
@@ -23,12 +27,12 @@ bool LinearDistanceTransformShader::initialize(const SharedResource &res, int pr
         "uniform float sdLow;"
         "uniform float invSdRange;"
         "void main() {"
-            "bool inside =" ODE_GLSL_TEXTURE2D "(basis, texCoord).a != 0.0;"
+            "bool inside =" ODE_GLSL_TEXTURE2D "(basis, texCoord).CHANNEL != 0.0;"
             ODE_GLSL_FRAGCOLOR ".ra = vec2(float(inside), 1.0);"
             "vec2 delta = vec2(0.0);"
             "for (int i = 0; i < STEPS; ++i) {"
                 "delta += deltaStep;"
-                "if ((" ODE_GLSL_TEXTURE2D "(basis, texCoord-delta).a != 0.0) != inside || (" ODE_GLSL_TEXTURE2D "(basis, texCoord+delta).a != 0.0) != inside) {"
+                "if ((" ODE_GLSL_TEXTURE2D "(basis, texCoord-delta).CHANNEL != 0.0) != inside || (" ODE_GLSL_TEXTURE2D "(basis, texCoord+delta).CHANNEL != 0.0) != inside) {"
                     ODE_GLSL_FRAGCOLOR ".r = invSdRange*((inside ? 1.0 : -1.0)*(dot(distanceFactor, delta)-0.5)-sdLow);"
                     "break;"
                 "}"
@@ -37,8 +41,8 @@ bool LinearDistanceTransformShader::initialize(const SharedResource &res, int pr
         "}\n"
     );
     FragmentShader fs("effect-lin-dist-transform");
-    const GLchar *src[] = { ODE_EFFECT_SHADER_PREAMBLE, stepsDefine, fsSrc.string };
-    const GLint sln[] = { sizeof(ODE_EFFECT_SHADER_PREAMBLE)-1, (GLint) strlen(stepsDefine), fsSrc.length };
+    const GLchar *src[] = { ODE_EFFECT_SHADER_PREAMBLE, macros, fsSrc.string };
+    const GLint sln[] = { sizeof(ODE_EFFECT_SHADER_PREAMBLE)-1, (GLint) strlen(macros), fsSrc.length };
     if (!fs.initialize(src, sln, sizeof(src)/sizeof(*src)))
         return false;
     if (!shader.initialize(getVertexShader(res), &fs))

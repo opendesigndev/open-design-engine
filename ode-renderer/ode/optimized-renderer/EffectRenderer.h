@@ -26,15 +26,13 @@ private:
     BlitShader &blitShader;
 
     EffectShader::SharedResource shaderRes;
-    LinearBlurShader blurShader;
-    LinearBlurShader alphaBlurShader;
-    LinearDistanceTransformShader distanceTransformShader;
+    LinearBlurShader blurShaders[3];
+    LinearDistanceTransformShader distanceTransformShaders[2];
     DistanceThresholdShader distanceThresholdShader;
 
-    bool requireBlurShader();
-    bool requireAlphaBlurShader();
-    bool requireDistanceTransformShader();
-    bool requireDistanceThresholdShader();
+    LinearBlurShader *requireBlurShader(char channel = '\0');
+    LinearDistanceTransformShader *requireDistanceTransformShader(char channel = 'a');
+    DistanceThresholdShader *requireDistanceThresholdShader();
 
     PlacedImagePtr drawStroke(const octopus::Stroke &stroke, const PlacedImagePtr &basis, double scale);
     PlacedImagePtr drawShadow(octopus::Effect::Type type, const octopus::Shadow &shadow, PlacedImagePtr basis, double scale);

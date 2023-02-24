@@ -465,7 +465,7 @@ PlacedImagePtr Renderer::drawLayerVector(Component &component, const LayerInstan
                 bounds += PixelMargin(1);
                 #ifdef ODE_RASTERIZER_TEXTURE_SUPPORT
                     TextureFrameBufferPtr texture = tfbManager.acquire(bounds);
-                    Matrix3x2d transformation = TransformationMatrix(1, 0, 0, 1, -bounds.a.x, -bounds.a.y)*layerTransform;
+                    Matrix3x2d transformation = TransformationMatrix(1, 0, 0, 1, -bounds.a.x, -bounds.a.y)*layerTransform; // do not move before ifdef, bounds modified in previous statement
                     Rasterizer::TextureDescriptor textureDescriptor = { };
                     textureDescriptor.handle = texture->getInternalGLHandle();
                     textureDescriptor.dimensions = texture->dimensions();

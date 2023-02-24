@@ -10,7 +10,7 @@ class LinearBlurShader : public EffectShader {
 
 public:
     LinearBlurShader();
-    bool initialize(const SharedResource &res, bool alphaOnly, int precision);
+    bool initialize(const SharedResource &res, char channel, int precision);
     void bind(const PixelBounds &viewport, const ScaledBounds &outputBounds, const ScaledBounds &inputBounds, bool phase, float sigma, const Color &color);
 
 private:

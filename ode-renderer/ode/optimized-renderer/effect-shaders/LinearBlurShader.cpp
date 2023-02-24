@@ -9,24 +9,19 @@ namespace ode {
 
 LinearBlurShader::LinearBlurShader() : precision(0) { }
 
-bool LinearBlurShader::initialize(const SharedResource &res, bool alphaOnly, int precision) {
+bool LinearBlurShader::initialize(const SharedResource &res, char channel, int precision) {
     ODE_ASSERT(precision > 0);
     if (!res)
         return false;
-    char stepsDefine[64];
-    sprintf(stepsDefine, "#define STEPS %d\n", 2*precision);
-    StringLiteral channelDefines;
-    if (alphaOnly) {
-        channelDefines = ODE_STRLIT(
-            "#define SUM_TYPE float\n"
-            "#define CHANNELS .a\n"
-        );
-    } else {
-        channelDefines = ODE_STRLIT(
-            "#define SUM_TYPE vec4\n"
-            "#define CHANNELS\n"
-        );
-    }
+    char channelDef[] = " .?";
+    channelDef[2] = channel;
+    char macros[256];
+    sprintf(macros,
+        "#define STEPS %d\n"
+        "#define SUM_TYPE %s\n"
+        "#define CHANNELS%s\n",
+        2*precision, channel ? "float" : "vec4", channel ? channelDef : ""
+    );
     const StringLiteral fsSrc = ODE_STRLIT(
         "const float STEP_WEIGHT = 1.0/float(STEPS+1);"
         ODE_GLSL_FVARYING "vec2 texCoord;"
@@ -41,8 +36,7 @@ bool LinearBlurShader::initialize(const SharedResource &res, bool alphaOnly, int
         "void main() {"
             "SUM_TYPE sum = " ODE_GLSL_TEXTURE2D "(basis, texCoord) CHANNELS;"
             "for (int i = 2; i <= STEPS; i += 2) {"
-                "float t = STEP_WEIGHT*float(i);"
-                "vec2 offset = invErf(t)*stepFactor;"
+                "vec2 offset = invErf(STEP_WEIGHT*float(i))*stepFactor;"
                 "sum += " ODE_GLSL_TEXTURE2D "(basis, texCoord-offset) CHANNELS;"
                 "sum += " ODE_GLSL_TEXTURE2D "(basis, texCoord+offset) CHANNELS;"
             "}"
@@ -50,8 +44,8 @@ bool LinearBlurShader::initialize(const SharedResource &res, bool alphaOnly, int
         "}\n"
     );
     FragmentShader fs("effect-lin-blur");
-    const GLchar *src[] = { ODE_EFFECT_SHADER_PREAMBLE, stepsDefine, channelDefines.string, fsSrc.string };
-    const GLint sln[] = { sizeof(ODE_EFFECT_SHADER_PREAMBLE)-1, (GLint) strlen(stepsDefine), channelDefines.length, fsSrc.length };
+    const GLchar *src[] = { ODE_EFFECT_SHADER_PREAMBLE, macros, fsSrc.string };
+    const GLint sln[] = { sizeof(ODE_EFFECT_SHADER_PREAMBLE)-1, (GLint) strlen(macros), fsSrc.length };
     if (!fs.initialize(src, sln, sizeof(src)/sizeof(*src)))
         return false;
     if (!shader.initialize(getVertexShader(res), &fs))
