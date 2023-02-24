@@ -3,7 +3,7 @@
 
 namespace ode {
 
-BitmapImage::BitmapImage(const BitmapPtr &bitmap, TransparencyMode transparencyMode) : Image(transparencyMode), bitmap(bitmap) { }
+BitmapImage::BitmapImage(const BitmapPtr &bitmap, TransparencyMode transparencyMode, BorderMode borderMode) : Image(transparencyMode, borderMode), bitmap(bitmap) { }
 
 BitmapPtr BitmapImage::asBitmap() const {
     return bitmap;

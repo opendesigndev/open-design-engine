@@ -163,6 +163,7 @@ bool Texture2D::initialize(const void *pixels, int width, int height, PixelForma
     hasMipmaps = false;
     memorySize = newMemSize;
     //LOG_OWN_ACTION(TEXTURE_UPLOAD, (int) memorySize_, "");
+    // Texture must still be bound after return!
     return true;
 }
 

@@ -276,7 +276,7 @@ PlacedImagePtr Renderer::drawLayerText(Component &component, const LayerInstance
         padding.a.x = padding.b.x = bounds.dimensions().x/dimensions.width;
         padding.a.y = padding.b.y = bounds.dimensions().y/dimensions.height;
         bounds += padding;
-        PlacedImagePtr image(ImagePtr(new BitmapImage(bitmap, Image::NORMAL)), bounds);
+        PlacedImagePtr image(ImagePtr(new BitmapImage(bitmap, Image::NORMAL, Image::NO_BORDER)), bounds);
         Matrix3x3d imageTransform = Matrix3x3d(TransformationMatrix::scale(scale)*layer.parentTransform*TransformationMatrix(layer->transform)*animationTransform(component, layer, time))*fromTextifyMatrix(result.transform);
         return transformImage(image, imageTransform);
     }
@@ -471,13 +471,13 @@ PlacedImagePtr Renderer::drawLayerVector(Component &component, const LayerInstan
                     textureDescriptor.dimensions = texture->dimensions();
                     textureDescriptor.format = texture->format();
                     if (rasterizer.rasterize(shape.value(), strokeIndex, transformation, textureDescriptor))
-                        return PlacedImagePtr(ImagePtr(new TextureImage(texture, Image::NORMAL)), bounds);
+                        return PlacedImagePtr(ImagePtr(new TextureImage(texture, Image::NORMAL, Image::NO_BORDER)), bounds);
                 #else
                     Matrix3x2d transformation = TransformationMatrix(1, 0, 0, 1, -bounds.a.x, -bounds.a.y)*layerTransform;
                     BitmapPtr bitmap(new Bitmap(PixelFormat::R, bounds.dimensions()));
                     bitmap->clear();
                     if (rasterizer.rasterize(shape.value(), strokeIndex, transformation, *bitmap))
-                        return PlacedImagePtr(ImagePtr(new BitmapImage((BitmapPtr &&) bitmap, Image::RED_IS_ALPHA)), bounds);
+                        return PlacedImagePtr(ImagePtr(new BitmapImage((BitmapPtr &&) bitmap, Image::RED_IS_ALPHA, Image::NO_BORDER)), bounds);
                 #endif
             }
         }
@@ -568,6 +568,9 @@ PlacedImagePtr Renderer::drawFill(Component &component, const LayerInstanceSpeci
                             // TODO log error
                             return nullptr;
                         }
+                        Vector2i imageDims = image->dimensions();
+                        if (image->borderMode() == Image::ONE_PIXEL_BORDER)
+                            imageDims -= Vector2i(2);
 
                         if (fill.positioning.has_value()) {
                             const octopus::Fill::Positioning &positioning = fill.positioning.value();
@@ -581,7 +584,7 @@ PlacedImagePtr Renderer::drawFill(Component &component, const LayerInstanceSpeci
                                         (transform*Vector3d(1, 0, 0)).length(),
                                         (transform*Vector3d(0, 1, 0)).length()
                                     );
-                                    double aspectRatio = image->dimensions().x*targetDims.y/(image->dimensions().y*targetDims.x);
+                                    double aspectRatio = imageDims.x*targetDims.y/(imageDims.y*targetDims.x);
                                     Vector2d aspectScale(1);
                                     switch (positioning.layout) {
                                         case octopus::Fill::Positioning::Layout::FILL:
@@ -599,6 +602,14 @@ PlacedImagePtr Renderer::drawFill(Component &component, const LayerInstanceSpeci
                                     break;
                                 }
                             }
+                        }
+                        if (image->borderMode() == Image::ONE_PIXEL_BORDER) {
+                            ODE_ASSERT(imageDims.x > 0 && imageDims.y > 0);
+                            transform *= TransformationMatrix(
+                                (double) (imageDims.x+2)/imageDims.x, 0,
+                                0, (double) (imageDims.y+2)/imageDims.y,
+                                -1./imageDims.x, -1./imageDims.y
+                            );
                         }
 
                         ScaledBounds bounds = sFillBounds+ScaledMargin(1);

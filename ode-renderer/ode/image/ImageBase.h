@@ -5,7 +5,7 @@
 #include <map>
 #include <octopus/octopus.h>
 #include <ode-essentials.h>
-#include "../image/Image.h"
+#include "Image.h"
 
 namespace ode {
 
@@ -18,6 +18,7 @@ public:
     void setImageDirectory(const FilePath &path);
     /// Adds an image to the database
     void add(const octopus::Image &ref, const ImagePtr &image);
+    void add(const octopus::Image &ref, const BitmapConstRef &imageBitmap);
     /// Retrieves an image from the database
     ImagePtr get(const octopus::Image &ref);
 

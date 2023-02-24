@@ -102,7 +102,7 @@ ODE_Result ODE_API ode_design_loadImagePixels(ODE_DesignImageBaseHandle designIm
     octopus::Image imageRef = { };
     imageRef.ref.type = octopus::ImageRef::Type::PATH;
     imageRef.ref.value = ode_stringDeref(key);
-    designImageBase.ptr->imageBase.add(imageRef, Image::fromBitmap(bitmapRef, Image::NORMAL));
+    designImageBase.ptr->imageBase.add(imageRef, bitmapRef);
     return ODE_RESULT_OK;
 }
 

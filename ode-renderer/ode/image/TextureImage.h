@@ -12,7 +12,7 @@ namespace ode {
 class TextureImage : public Image {
 
 public:
-    TextureImage(const TexturePtr &texture, TransparencyMode transparencyMode);
+    TextureImage(const TexturePtr &texture, TransparencyMode transparencyMode, BorderMode borderMode);
     virtual BitmapPtr asBitmap() const override;
     virtual TexturePtr asTexture() const override;
     virtual Vector2i dimensions() const override;
