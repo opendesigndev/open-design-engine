@@ -119,9 +119,8 @@ bool RGIOctopusLoader::Input::isValid() const {
     PixelBounds pixelBounds = outerPixelBounds(scaleBounds(componentBounds, 1));
 
     Renderer defaultRenderer(gc);
-    Renderer newTextifyRenderer(gc);
-    // TODO: Matus: Remove/replace this "Textify-Decoupled" version
-    //newTextifyRenderer.setVersion("Textify-Decoupled");
+//    Renderer newRenderer(gc);
+//    newRenderer.setVersion("TBD");
 
     ImageBase imageBase(gc);
     imageBase.setImageDirectory(input.imageDirectory.empty() ? input.octopusPath.parent() : input.imageDirectory);
@@ -147,11 +146,11 @@ bool RGIOctopusLoader::Input::isValid() const {
         return false;
     }
 
-    const PlacedImagePtr imageNewRenderer = render(newTextifyRenderer, imageBase, *oOctopus.artboard, oOctopus.renderGraphAltVersion.getRoot(), 1, pixelBounds, 0, makeRenderHook(oOctopus.renderGraphAltVersion, oOctopus.renderedNodesAltVersion));
-    if (!imageNewRenderer) {
-        fprintf(stderr, "Failed to render\n");
-        return false;
-    }
+//    const PlacedImagePtr imageNewRenderer = render(newRenderer, imageBase, *oOctopus.artboard, oOctopus.renderGraphAltVersion.getRoot(), 1, pixelBounds, 0, makeRenderHook(oOctopus.renderGraphAltVersion, oOctopus.renderedNodesAltVersion));
+//    if (!imageNewRenderer) {
+//        fprintf(stderr, "Failed to render\n");
+//        return false;
+//    }
 
     oOctopus.resetLayers();
 

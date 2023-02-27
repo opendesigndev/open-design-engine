@@ -3,7 +3,7 @@
 
 #include <memory>
 #include <octopus/octopus.h>
-#include <textify/textify-api.h>
+#include <open-design-text-renderer/text-renderer-api.h>
 #include <ode-essentials.h>
 
 namespace ode {

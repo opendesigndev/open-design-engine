@@ -18,7 +18,7 @@ target_include_directories(ode-logic INTERFACE
 )
 
 # Module dependencies
-target_link_libraries(ode-logic PUBLIC liboctopus textify ode-essentials ode-rasterizer)
+target_link_libraries(ode-logic PUBLIC liboctopus open-design-text-renderer ode-essentials ode-rasterizer)
 
 # ODE version macros
 if (DEFINED ODE_VERSION)
