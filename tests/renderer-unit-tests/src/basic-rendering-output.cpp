@@ -13,6 +13,12 @@
 using namespace ode;
 using namespace octopus_builder;
 
+static Bitmap unpremultipliedCopy(const SparseBitmapConstRef &bitmap) {
+    Bitmap copy(bitmap);
+    bitmapUnpremultiply(copy);
+    return copy;
+}
+
 class TestRenderer {
 
 public:
@@ -20,14 +26,14 @@ public:
         octopus::Image imgDef;
         imgDef.ref.type = octopus::ImageRef::Type::PATH;
         imgDef.ref.value = "IMAGE00";
-        Bitmap bitmap00(PixelFormat::RGBA, 360, 240);
-        generateImageAsset(bitmap00, true, true);
-        savePng(imgDef.ref.value, bitmap00);
+        Bitmap bitmap00(PixelFormat::PREMULTIPLIED_RGBA, 360, 240);
+        generateImageAsset(bitmap00, true);
+        savePng(imgDef.ref.value, unpremultipliedCopy(bitmap00));
         imageBase.add(imgDef, Image::fromTexture(Image::fromBitmap((Bitmap &&) bitmap00, Image::PREMULTIPLIED)->asTexture(), Image::PREMULTIPLIED));
         imgDef.ref.value = "IMAGE01";
-        Bitmap bitmap01(PixelFormat::RGBA, 200, 400);
-        generateImageAsset(bitmap01, false, true);
-        savePng(imgDef.ref.value, bitmap01);
+        Bitmap bitmap01(PixelFormat::PREMULTIPLIED_RGBA, 200, 400);
+        generateImageAsset(bitmap01, false);
+        savePng(imgDef.ref.value, unpremultipliedCopy(bitmap01));
         imageBase.add(imgDef, Image::fromTexture(Image::fromBitmap((Bitmap &&) bitmap01, Image::PREMULTIPLIED)->asTexture(), Image::PREMULTIPLIED));
     }
 
@@ -67,6 +73,8 @@ public:
         if (!bitmap)
             return false;
 
+        if (isPixelPremultiplied(bitmap->format()))
+            bitmapUnpremultiply(*bitmap);
         return savePng(octopus.id+".png", *bitmap);
     }
 
@@ -141,6 +149,9 @@ int basicRenderingOutput(GraphicsContext &gc) {
     gradientFill.gradient->type = octopus::Gradient::Type::DIAMOND;
     renderer.renderOctopusIntoFile(buildOctopus("TEST07", gradientShape));
     gradientFill.gradient->type = octopus::Gradient::Type::LINEAR;
+
+    // Test unpremultiplication of output file (transparent rectangle should be white)
+    renderer.renderOctopusIntoFile(buildOctopus("TEST08", ShapeLayer(160, 120, 320, 240).setColor(Color(1, .25))));
 
     // Image fill test
     ShapeLayer imageShape(160, 120, 320, 240);

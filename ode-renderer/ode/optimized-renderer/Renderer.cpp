@@ -474,10 +474,12 @@ PlacedImagePtr Renderer::drawLayerVector(Component &component, const LayerInstan
                         return PlacedImagePtr(ImagePtr(new TextureImage(texture, Image::NORMAL, Image::NO_BORDER)), bounds);
                 #else
                     Matrix3x2d transformation = TransformationMatrix(1, 0, 0, 1, -bounds.a.x, -bounds.a.y)*layerTransform;
-                    BitmapPtr bitmap(new Bitmap(PixelFormat::R, bounds.dimensions()));
+                    BitmapPtr bitmap(new Bitmap(PixelFormat::ALPHA, bounds.dimensions()));
                     bitmap->clear();
-                    if (rasterizer.rasterize(shape.value(), strokeIndex, transformation, *bitmap))
+                    if (rasterizer.rasterize(shape.value(), strokeIndex, transformation, *bitmap)) {
+                        bitmap->reinterpret(PixelFormat::R);
                         return PlacedImagePtr(ImagePtr(new BitmapImage((BitmapPtr &&) bitmap, Image::RED_IS_ALPHA, Image::NO_BORDER)), bounds);
+                    }
                 #endif
             }
         }

@@ -3,4 +3,4 @@
 
 #include <ode-essentials.h>
 
-void generateImageAsset(ode::BitmapRef bitmap, bool transparency, bool premultiplied);
+void generateImageAsset(ode::BitmapRef bitmap, bool transparency);

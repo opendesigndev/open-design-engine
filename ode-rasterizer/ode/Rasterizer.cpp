@@ -333,6 +333,7 @@ bool Rasterizer::Internal::rasterize(Shape *shape, int strokeIndex, const Matrix
 
 bool Rasterizer::rasterize(Shape *shape, int strokeIndex, const Matrix3x2d &transformation, const BitmapRef &dstBitmap) {
     ODE_ASSERT(shape && (dstBitmap || !dstBitmap.dimensions));
+    ODE_ASSERT(dstBitmap.format == PixelFormat::ALPHA);
     if (pixelChannels(dstBitmap.format) != 1)
         return false;
     SkImageInfo imageInfo = SkImageInfo::MakeA8(dstBitmap.dimensions.x, dstBitmap.dimensions.y);
@@ -346,8 +347,8 @@ bool Rasterizer::rasterize(Shape *shape, int strokeIndex, const Matrix3x2d &tran
     #ifdef ODE_RASTERIZER_TEXTURE_SUPPORT
         ODE_ASSERT(shape && dstTexture.handle && dstTexture.format != PixelFormat::EMPTY && dstTexture.dimensions.x > 0 && dstTexture.dimensions.y > 0);
         // TODO support other pixel types?
-        ODE_ASSERT(dstTexture.format == PixelFormat::RGBA);
-        if (dstTexture.format != PixelFormat::RGBA)
+        ODE_ASSERT(dstTexture.format == PixelFormat::RGBA || dstTexture.format == PixelFormat::PREMULTIPLIED_RGBA);
+        if (!(pixelChannels(dstTexture.format) == 4 && pixelHasAlpha(dstTexture.format) && !isPixelFloat(dstTexture.format)))
             return false;
         if (GrDirectContext *context = data->getGraphicsContext()) {
             context->resetContext();

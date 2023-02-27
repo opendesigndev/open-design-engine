@@ -197,9 +197,9 @@ PixelFormat Texture2D::format() const {
 
 Bitmap Texture2D::download() const {
     ODE_ASSERT(handle && fmt != PixelFormat::EMPTY);
-    ODE_ASSERT(fmt == PixelFormat::RGBA); // otherwise won't work in WebGL 1 (?)
+    ODE_ASSERT(fmt == PixelFormat::RGBA || fmt == PixelFormat::PREMULTIPLIED_RGBA); // otherwise won't work in WebGL 1 (?)
     #ifdef ODE_WEBGL_COMPATIBILITY // TODO implement this using intermediate draw buffer?
-        if (!(fmt == PixelFormat::R || fmt == PixelFormat::RGB || fmt == PixelFormat::RGBA))
+        if (!(fmt == PixelFormat::R || fmt == PixelFormat::RGB || fmt == PixelFormat::RGBA || fmt == PixelFormat::PREMULTIPLIED_RGBA))
             return Bitmap();
     #endif
     Bitmap bitmap(fmt, dims);

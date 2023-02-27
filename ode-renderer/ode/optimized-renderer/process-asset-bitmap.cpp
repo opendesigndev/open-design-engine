@@ -1,6 +1,7 @@
 
 #include "process-asset-bitmap.h"
 
+#include <cstring>
 #include <algorithm>
 #include <vector>
 #include <ode/graphics/gl.h>
@@ -15,6 +16,10 @@ static Bitmap convertToRGBA(const BitmapConstRef &bitmap) {
     const byte *spx = (const byte *) bitmap, *sEnd = spx+bitmap.size();
     byte *dpx = (byte *) dst, *dEnd = dpx+dst.size();
     switch (bitmap.format) {
+        case PixelFormat::RGBA:
+        case PixelFormat::PREMULTIPLIED_RGBA:
+            memcpy(dpx, spx, dst.size());
+            return dst;
         case PixelFormat::RGB:
             for (; dpx < dEnd; dpx += 4, spx += 3) {
                 dpx[0] = spx[0];
@@ -82,38 +87,8 @@ ImagePtr processAssetBitmap(const BitmapConstRef &bitmap) {
 }
 
 ImagePtr processAssetBitmap(Bitmap &&bitmap) {
-    // Ensure bitmap is premultiplied
-    switch (bitmap.format()) {
-        case PixelFormat::RGBA:
-            for (byte *p = (byte *) bitmap, *end = p+bitmap.size(); p < end; p += 4) {
-                p[0] = channelPremultiply(p[0], p[3]);
-                p[1] = channelPremultiply(p[1], p[3]);
-                p[2] = channelPremultiply(p[2], p[3]);
-            }
-            bitmap.reinterpret(PixelFormat::PREMULTIPLIED_RGBA);
-            break;
-        case PixelFormat::LUMINANCE_ALPHA:
-            for (byte *p = (byte *) bitmap, *end = p+bitmap.size(); p < end; p += 2) {
-                p[0] = channelPremultiply(p[0], p[1]);
-            }
-            bitmap.reinterpret(PixelFormat::PREMULTIPLIED_LUMINANCE_ALPHA);
-            break;
-        case PixelFormat::FLOAT_RGBA:
-            for (float *p = (float *) bitmap, *end = p+bitmap.size()/sizeof(float); p < end; p += 4) {
-                p[0] *= p[3];
-                p[1] *= p[3];
-                p[2] *= p[3];
-            }
-            bitmap.reinterpret(PixelFormat::FLOAT_PREMULTIPLIED_RGBA);
-            break;
-        case PixelFormat::FLOAT_LUMINANCE_ALPHA:
-            for (float *p = (float *) bitmap, *end = p+bitmap.size()/sizeof(float); p < end; p += 2) {
-                p[0] *= p[1];
-            }
-            bitmap.reinterpret(PixelFormat::FLOAT_PREMULTIPLIED_LUMINANCE_ALPHA);
-            break;
-        default:;
-    }
+    if (!isPixelPremultiplied(bitmap.format()))
+        bitmapPremultiply(bitmap);
     return processAssetBitmap(bitmap);
 }
 
