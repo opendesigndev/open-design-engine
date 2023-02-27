@@ -13,6 +13,9 @@ jobs:
           token: ${{ secrets.ODE_REPOS_TOKEN }}
           submodules: true
 
+      - name: Install prerequisites
+        run: brew install automake autoconf autoconf-archive
+
       - name: Configure engine build
         run: VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT cmake -S . -B build
 
