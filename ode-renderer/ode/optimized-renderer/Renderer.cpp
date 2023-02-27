@@ -516,7 +516,7 @@ PlacedImagePtr Renderer::drawFill(Component &component, const LayerInstanceSpeci
                     Color color = animationFillColor(component, layer, time, Color(fill.color->r, fill.color->g, fill.color->b, fill.color->a));
                     TextureFrameBufferPtr t = tfbManager.acquireExact(PixelBounds(0, 0, 1, 1));
                     t->bind();
-                    glClearColor(color.r, color.g, color.b, color.a);
+                    glClearColor(GLclampf(color.a*color.r), GLclampf(color.a*color.g), GLclampf(color.a*color.b), GLclampf(color.a));
                     glClear(GL_COLOR_BUFFER_BIT);
                     t->unbind();
                     return PlacedImagePtr(Image::fromTexture(t, Image::NORMAL), sFillBounds+ScaledMargin(1));
