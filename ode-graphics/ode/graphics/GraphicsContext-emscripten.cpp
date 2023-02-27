@@ -55,6 +55,8 @@ void GraphicsContext::initialize(const char *target, const Vector2i &dimensions,
         return;
     emscripten_webgl_make_context_current(data->handle);
 
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
     glDisable(GL_BLEND);
 
     glPixelStorei(GL_PACK_ALIGNMENT, 1);

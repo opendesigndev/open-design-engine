@@ -79,7 +79,9 @@ TexturePtr RGIRenderer::compareImagesToTexture(const BitmapPtr &bitmapL, const B
     ImagePtr imageR = Image::fromBitmap(bitmapR, Image::NORMAL);
     TexturePtr textureR = imageR->asTexture();
 
-    PixelBounds dstBounds = outerPixelBounds(placementL|placementR);
+    PixelBounds dstBounds = outerPixelBounds((placementL|placementR).canonical());
+    if (!dstBounds)
+        return nullptr;
     ScaledBounds dstSBounds = convertToScaledBounds(dstBounds);
 
     bind();

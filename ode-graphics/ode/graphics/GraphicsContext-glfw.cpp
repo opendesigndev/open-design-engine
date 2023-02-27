@@ -173,6 +173,9 @@ void GraphicsContext::initialize(const char *title, const Vector2i &dimensions, 
         }
     #endif
 
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     if (!maxTextureSize) {

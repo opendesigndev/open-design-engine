@@ -351,20 +351,30 @@ bool Rasterizer::rasterize(Shape *shape, int strokeIndex, const Matrix3x2d &tran
         if (!(pixelChannels(dstTexture.format) == 4 && pixelHasAlpha(dstTexture.format) && !isPixelFloat(dstTexture.format)))
             return false;
         if (GrDirectContext *context = data->getGraphicsContext()) {
-            context->resetContext();
-            GrGLTextureInfo textureInfo = { };
-            textureInfo.fTarget = GL_TEXTURE_2D;
-            textureInfo.fID = dstTexture.handle;
-            textureInfo.fFormat = GL_RGBA8;
-            GrBackendTexture backendTexture(dstTexture.dimensions.x, dstTexture.dimensions.y, GrMipMapped::kNo, textureInfo);
-            sk_sp<SkSurface> surface = SkSurface::MakeFromBackendTexture(context, backendTexture, GrSurfaceOrigin::kTopLeft_GrSurfaceOrigin, 0, SkColorType::kRGBA_8888_SkColorType, SkColorSpace::MakeSRGBLinear(), nullptr);
-            surface->getCanvas()->clear(SkColor(0));
-            bool result = data->rasterize(shape, strokeIndex, transformation, surface.get());
-            auto texture = surface->getBackendTexture(SkSurface::kFlushRead_BackendHandleAccess);
-            //surface->flushAndSubmit(); // not needed?
+            bool result = false;
+            {
+                context->resetContext();
+                GrGLTextureInfo textureInfo = { };
+                textureInfo.fTarget = GL_TEXTURE_2D;
+                textureInfo.fID = dstTexture.handle;
+                textureInfo.fFormat = GL_RGBA8;
+                GrBackendTexture backendTexture(dstTexture.dimensions.x, dstTexture.dimensions.y, GrMipMapped::kNo, textureInfo);
+                sk_sp<SkSurface> surface = SkSurface::MakeFromBackendTexture(context, backendTexture, GrSurfaceOrigin::kTopLeft_GrSurfaceOrigin, 0, SkColorType::kRGBA_8888_SkColorType, SkColorSpace::MakeSRGBLinear(), nullptr);
+                surface->getCanvas()->clear(SkColor(0));
+                result = data->rasterize(shape, strokeIndex, transformation, surface.get());
+                auto texture = surface->getBackendTexture(SkSurface::kFlushRead_BackendHandleAccess);
+                //surface->flushAndSubmit(); // not needed?
+            }
             // Restore ODE's OpenGL state
             glDisable(GL_BLEND);
             glDisable(GL_SCISSOR_TEST);
+            glDisable(GL_MULTISAMPLE);
+            if (glBindSampler) {
+                // Make sure to remove sampler objects for all texture units used in ODE!
+                glBindSampler(0, 0);
+                glBindSampler(1, 0);
+                glBindSampler(2, 0);
+            }
             return result;
         }
     #endif

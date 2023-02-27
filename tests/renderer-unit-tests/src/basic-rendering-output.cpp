@@ -150,8 +150,14 @@ int basicRenderingOutput(GraphicsContext &gc) {
     renderer.renderOctopusIntoFile(buildOctopus("TEST07", gradientShape));
     gradientFill.gradient->type = octopus::Gradient::Type::LINEAR;
 
+    // stroke gradient test
+    ShapeLayer gradientStrokeShape(160, 120, 320, 240);
+    gradientStrokeShape.setColor(Color(1, .75, 0, .75)).addStroke(CENTER, 24, Color());
+    gradientStrokeShape.shape->strokes[0].fill = gradientFill;
+    renderer.renderOctopusIntoFile(buildOctopus("TEST08", gradientStrokeShape));
+
     // Test unpremultiplication of output file (transparent rectangle should be white)
-    renderer.renderOctopusIntoFile(buildOctopus("TEST08", ShapeLayer(160, 120, 320, 240).setColor(Color(1, .25))));
+    renderer.renderOctopusIntoFile(buildOctopus("TEST09", ShapeLayer(160, 120, 320, 240).setColor(Color(1, .25))));
 
     // Image fill test
     ShapeLayer imageShape(160, 120, 320, 240);
