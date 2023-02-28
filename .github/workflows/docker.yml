@@ -93,4 +93,4 @@ jobs:
         if: failure()
         with:
           name: reports
-          path: ${{ github.workspace }}/packages/**/report/*.html
+          path: ${{ github.workspace }}
