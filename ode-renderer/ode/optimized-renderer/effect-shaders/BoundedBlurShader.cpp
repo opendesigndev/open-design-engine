@@ -30,7 +30,7 @@ bool BoundedBlurShader::initialize(const SharedResource &res, char channel, int 
         "uniform vec4 color;"
         "void main() {"
             "SUM_TYPE sum = " ODE_GLSL_TEXTURE2D "(basis, texCoord) CHANNELS;"
-            "for (int i = 2; i <= STEPS; i += 2) {"
+            "for (int i = STEPS-1; i > 0; i -= 2) {"
                 "vec2 offset = (1.0-sqrt(STEP_WEIGHT*float(i)))*stepFactor;"
                 "sum += " ODE_GLSL_TEXTURE2D "(basis, texCoord-offset) CHANNELS;"
                 "sum += " ODE_GLSL_TEXTURE2D "(basis, texCoord+offset) CHANNELS;"

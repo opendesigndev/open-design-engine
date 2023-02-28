@@ -124,21 +124,28 @@ PlacedImagePtr EffectRenderer::drawStroke(const octopus::Stroke &stroke, const P
 PlacedImagePtr EffectRenderer::drawShadow(octopus::Effect::Type type, const octopus::Shadow &shadow, PlacedImagePtr basis, double scale) {
     if (!basis)
         return nullptr;
+    bool inner = type == octopus::Effect::Type::INNER_SHADOW || type == octopus::Effect::Type::INNER_GLOW;
+    ScaledBounds inputBounds = basis.bounds();
     Vector2d offset = scale*fromOctopus(shadow.offset);
+    Vector2d inOffset = inner ? offset : Vector2d();
+    Vector2d outOffset = inner ? Vector2d() : offset;
     double radius = fabs(scale*shadow.blur);
+    double choke = scale*(inner ? -shadow.choke : shadow.choke);
     if (!radius) {
-        if (shadow.choke) {
-            PlacedImagePtr choke = drawChoke(scale*shadow.choke, fromOctopus(shadow.color), basis);
-            return PlacedImagePtr(choke, choke.bounds()+offset);
+        if (choke) {
+            basis = drawChoke(choke, inner ? Color(1) : fromOctopus(shadow.color), basis);
+            if (!inner)
+                return PlacedImagePtr(basis, basis.bounds()+outOffset);
         }
 
         // Basis to shadow color
         TexturePtr basisTex = basis->asTexture();
         if (!basisTex)
             return nullptr;
-        PixelBounds pixelBounds = outerPixelBounds(basis.bounds());
+        ScaledBounds bounds = inner ? inputBounds : basis.bounds();
+        PixelBounds pixelBounds = outerPixelBounds(bounds);
         TextureFrameBufferPtr outTex = tfbManager.acquire(pixelBounds);
-        ScaledBounds bounds(Vector2d(pixelBounds.a), Vector2d(pixelBounds.b)); // TODO proper conversion
+        ScaledBounds actualBounds(Vector2d(pixelBounds.a), Vector2d(pixelBounds.b)); // TODO proper conversion
         outTex->bind();
         glViewport(0, 0, outTex->dimensions().x, outTex->dimensions().y);
         // Fill outTex with shadow color
@@ -150,17 +157,17 @@ PlacedImagePtr EffectRenderer::drawShadow(octopus::Effect::Type type, const octo
         );
         glClear(GL_COLOR_BUFFER_BIT);
         glEnable(GL_BLEND);
-        glBlendFunc(GL_ZERO, GL_SRC_ALPHA);
-        blitShader.bind(pixelBounds, bounds, basis.bounds());
+        glBlendFunc(GL_ZERO, inner ? GL_ONE_MINUS_SRC_ALPHA : GL_SRC_ALPHA);
+        blitShader.bind(pixelBounds, actualBounds, basis.bounds()+inOffset);
         basisTex->bind(BlitShader::UNIT_IN);
         billboard.draw();
         glDisable(GL_BLEND);
         outTex->unbind();
-        return PlacedImagePtr(Image::fromTexture(outTex, Image::PREMULTIPLIED), bounds+offset);
+        return PlacedImagePtr(Image::fromTexture(outTex, Image::PREMULTIPLIED), actualBounds+outOffset);
     }
 
-    if (shadow.choke)
-        basis = drawChoke(scale*shadow.choke, Color(1), basis);
+    if (choke)
+        basis = drawChoke(choke, Color(1), basis);
     BoundedBlurShader *blurShader = shaders.getBoundedBlurShader(basis->transparencyMode() == Image::RED_IS_ALPHA ? 'r' : 'a');
     if (!blurShader)
         return nullptr;
@@ -168,31 +175,47 @@ PlacedImagePtr EffectRenderer::drawShadow(octopus::Effect::Type type, const octo
     TexturePtr basisTex = basis->asTexture();
     if (!basisTex)
         return nullptr;
-    ScaledBounds bounds = basis.bounds()+ScaledMargin(radius);
-    PixelBounds pixelBounds = outerPixelBounds(bounds);
-    TextureFrameBufferPtr intermediateTex = tfbManager.acquire(pixelBounds);
+    ScaledBounds bounds = inner ? inputBounds : basis.bounds()+ScaledMargin(radius);
+    PixelBounds intermediatePixelBounds = outerPixelBounds(bounds);
+    TextureFrameBufferPtr intermediateTex = tfbManager.acquire(intermediatePixelBounds);
     intermediateTex->bind();
     glViewport(0, 0, intermediateTex->dimensions().x, intermediateTex->dimensions().y);
     glClearColor(0, 0, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT);
-    blurShader->bind(pixelBounds, bounds, basis.bounds(), false, radius, Color(1));
+    blurShader->bind(intermediatePixelBounds, bounds, basis.bounds()+inOffset, false, radius, Color(1));
     basisTex->bind(BoundedBlurShader::UNIT_BASIS);
     billboard.draw();
     intermediateTex->unbind();
-    ScaledBounds actualBounds(Vector2d(pixelBounds.a), Vector2d(pixelBounds.b)); // TODO proper conversion
+    ScaledBounds intermediateActualBounds(Vector2d(intermediatePixelBounds.a), Vector2d(intermediatePixelBounds.b)); // TODO proper conversion
 
-    pixelBounds = outerPixelBounds(bounds);
+    PixelBounds pixelBounds = outerPixelBounds(bounds);
     TextureFrameBufferPtr outTex = tfbManager.acquire(pixelBounds);
     outTex->bind();
     glViewport(0, 0, outTex->dimensions().x, outTex->dimensions().y);
     glClear(GL_COLOR_BUFFER_BIT);
-    blurShader->bind(pixelBounds, bounds, actualBounds, true, radius, fromOctopus(shadow.color));
+    blurShader->bind(pixelBounds, bounds, intermediateActualBounds, true, radius, inner ? Color(1) : fromOctopus(shadow.color));
     intermediateTex->bind(BoundedBlurShader::UNIT_BASIS);
     billboard.draw();
     outTex->unbind();
-    actualBounds = ScaledBounds(Vector2d(pixelBounds.a), Vector2d(pixelBounds.b)); // TODO proper conversion
+    ScaledBounds actualBounds(Vector2d(pixelBounds.a), Vector2d(pixelBounds.b)); // TODO proper conversion
 
-    return PlacedImagePtr(Image::fromTexture(outTex, basis->transparencyMode() == Image::RED_IS_ALPHA ? Image::RED_IS_ALPHA : Image::PREMULTIPLIED), actualBounds+offset);
+    if (inner) {
+        intermediateTex->bind();
+        glViewport(0, 0, intermediateTex->dimensions().x, intermediateTex->dimensions().y);
+        glClearColor(GLclampf(shadow.color.r*shadow.color.a), GLclampf(shadow.color.g*shadow.color.a), GLclampf(shadow.color.b*shadow.color.a), GLclampf(shadow.color.a));
+        glClear(GL_COLOR_BUFFER_BIT);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);
+        blitShader.bind(intermediatePixelBounds, actualBounds, actualBounds);
+        outTex->bind(BlitShader::UNIT_IN);
+        billboard.draw();
+        glDisable(GL_BLEND);
+        outTex->unbind();
+        outTex = (TextureFrameBufferPtr &&) intermediateTex;
+        actualBounds = intermediateActualBounds;
+    }
+
+    return PlacedImagePtr(Image::fromTexture(outTex, basis->transparencyMode() == Image::RED_IS_ALPHA ? Image::RED_IS_ALPHA : Image::PREMULTIPLIED), actualBounds+outOffset);
 }
 
 PlacedImagePtr EffectRenderer::drawBoundedBlur(double blur, const PlacedImagePtr &basis) {

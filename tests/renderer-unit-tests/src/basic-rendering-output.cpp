@@ -228,6 +228,20 @@ int basicRenderingOutput(GraphicsContext &gc) {
     shadow.blur = 0;
     shadow.choke = -4;
     renderer.renderOctopusIntoFile(buildOctopus("TEST26", gradientShape));
+    gradientShape.effects[0].type = octopus::Effect::Type::INNER_SHADOW;
+    shadow.blur = 48;
+    renderer.renderOctopusIntoFile(buildOctopus("TEST27", gradientShape));
+    shadow.offset.x = 8;
+    shadow.choke = 8;
+    renderer.renderOctopusIntoFile(buildOctopus("TEST28", gradientShape));
+    shadow.offset.x = 64;
+    shadow.blur = 0;
+    //shadow.choke = -8;
+    renderer.renderOctopusIntoFile(buildOctopus("TEST29", gradientShape));
+    shadow.choke = 0;
+    renderer.renderOctopusIntoFile(buildOctopus("TEST30", gradientShape));
+    gradientShape.effects[0].type = octopus::Effect::Type::DROP_SHADOW;
+    renderer.renderOctopusIntoFile(buildOctopus("TEST31", gradientShape));
 
     // Stroke effect tests
     gradientShape.effects[0].shadow = nonstd::optional<octopus::Shadow>();
@@ -238,18 +252,18 @@ int basicRenderingOutput(GraphicsContext &gc) {
     effectStroke.fill.color = toOctopus(Color(1, 1, 0));
     effectStroke.thickness = 20;
     effectStroke.position = octopus::Stroke::Position::OUTSIDE;
-    renderer.renderOctopusIntoFile(buildOctopus("TEST27", gradientShape));
+    renderer.renderOctopusIntoFile(buildOctopus("TEST32", gradientShape));
     effectStroke.position = octopus::Stroke::Position::CENTER;
-    renderer.renderOctopusIntoFile(buildOctopus("TEST28", gradientShape));
+    renderer.renderOctopusIntoFile(buildOctopus("TEST33", gradientShape));
     effectStroke.position = octopus::Stroke::Position::INSIDE;
-    renderer.renderOctopusIntoFile(buildOctopus("TEST29", gradientShape));
+    renderer.renderOctopusIntoFile(buildOctopus("TEST34", gradientShape));
 
     // Blur effect test
     octopus::Effect blurEffect;
     blurEffect.type = octopus::Effect::Type::BLUR;
     blurEffect.basis = octopus::EffectBasis::FILL;
     blurEffect.blur = 8;
-    renderer.renderOctopusIntoFile(buildOctopus("TEST30", imageShape.addEffect(blurEffect)));
+    renderer.renderOctopusIntoFile(buildOctopus("TEST36", imageShape.addEffect(blurEffect)));
 
     return 0;
 }
