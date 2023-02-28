@@ -89,8 +89,3 @@ jobs:
       - name: Adding output tags to summary
         run: |
           echo "Main docker image: ${{ fromJSON(steps.meta.outputs.json).tags[1] }}" >> $GITHUB_STEP_SUMMARY
-      - uses: actions/upload-artifact@v3
-        if: failure()
-        with:
-          name: reports
-          path: ${{ github.workspace }}
