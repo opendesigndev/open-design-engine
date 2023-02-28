@@ -5,6 +5,7 @@
 
 #include <cstdio>
 #include "gl.h"
+#include "gl-state-check.h"
 #include <GLFW/glfw3.h>
 #include <ode/utils.h>
 #include "FrameBuffer.h"
@@ -204,6 +205,7 @@ void GraphicsContext::initialize(const char *title, const Vector2i &dimensions, 
     //Log::instance.logf(Log::CORE_OPENGL, Log::INFORMATION, "GPU: %s %s", reinterpret_cast<const char*>(glGetString(GL_VENDOR)), reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
 
     ODE_CHECK_GL_ERROR();
+    ODE_ASSERT(checkGlState());
     data->ready = true;
 }
 

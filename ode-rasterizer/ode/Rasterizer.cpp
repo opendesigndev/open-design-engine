@@ -2,7 +2,8 @@
 #include "Rasterizer.h"
 
 #ifdef ODE_RASTERIZER_TEXTURE_SUPPORT
-#include <GL/glew.h>
+#include <ode/graphics/gl.h>
+#include <ode/graphics/gl-state-check.h>
 #endif
 
 #include <vector>
@@ -352,6 +353,9 @@ bool Rasterizer::rasterize(Shape *shape, int strokeIndex, const Matrix3x2d &tran
             return false;
         if (GrDirectContext *context = data->getGraphicsContext()) {
             bool result = false;
+            #ifdef ODE_GL_ENABLE_VERTEX_ARRAYS
+                glBindVertexArray(0);
+            #endif
             {
                 context->resetContext();
                 GrGLTextureInfo textureInfo = { };
@@ -368,13 +372,14 @@ bool Rasterizer::rasterize(Shape *shape, int strokeIndex, const Matrix3x2d &tran
             // Restore ODE's OpenGL state
             glDisable(GL_BLEND);
             glDisable(GL_SCISSOR_TEST);
-            glDisable(GL_MULTISAMPLE);
+            glDisable(GL_STENCIL_TEST);
             if (glBindSampler) {
                 // Make sure to remove sampler objects for all texture units used in ODE!
                 glBindSampler(0, 0);
                 glBindSampler(1, 0);
                 glBindSampler(2, 0);
             }
+            ODE_ASSERT(checkGlState());
             return result;
         }
     #endif

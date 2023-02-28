@@ -3,6 +3,7 @@
 
 #ifndef ODE_GRAPHICS_NO_CONTEXT
 
+#include <cstdio>
 #include <ode/utils.h>
 
 #if defined(_WIN32) || defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
