@@ -265,5 +265,17 @@ int basicRenderingOutput(GraphicsContext &gc) {
     blurEffect.blur = 8;
     renderer.renderOctopusIntoFile(buildOctopus("TEST36", imageShape.addEffect(blurEffect)));
 
+    // Edge cases
+
+    // Empty component
+    renderer.renderOctopusIntoFile(buildOctopus("TEST64", GroupLayer()));
+
+    // Shape mask without fill
+    ShapeLayer filllessShape(160, 120, 320, 240);
+    filllessShape.visible = false;
+    filllessShape.shape->fills.clear();
+    filllessShape.shape->strokes.clear();
+    renderer.renderOctopusIntoFile(buildOctopus("TEST65", MaskGroupLayer(octopus::MaskBasis::BODY, filllessShape).add(ShapeLayer(280, 200, 320, 240))));
+
     return 0;
 }

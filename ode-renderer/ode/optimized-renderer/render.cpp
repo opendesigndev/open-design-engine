@@ -8,7 +8,7 @@ namespace ode {
 
 PlacedImagePtr render(Renderer &renderer, ImageBase &imageBase, Component &component, const Rendexptr &root, double scale, const PixelBounds &bounds, double time) {
     if (!root)
-        return nullptr;
+        return renderer.reframe(nullptr, bounds);
 
     RenderContext renderContext(renderer, imageBase, component, scale, bounds, time);
     std::stack<std::pair<const Rendexpr *, int> > exprStack;
@@ -28,7 +28,7 @@ PlacedImagePtr render(Renderer &renderer, ImageBase &imageBase, Component &compo
 
 PlacedImagePtr render(Renderer &renderer, ImageBase &imageBase, Component &component, const Rendexptr &root, double scale, const PixelBounds &bounds, double time, const std::function<void(const Rendexpr *, const PlacedImagePtr &)> &hook) {
     if (!root)
-        return nullptr;
+        return renderer.reframe(nullptr, bounds);
 
     RenderContext renderContext(renderer, imageBase, component, scale, bounds, time);
     std::stack<std::pair<const Rendexpr *, int> > exprStack;
