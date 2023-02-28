@@ -1,10 +1,17 @@
 
-## Version 0.2.1 (forthcoming)
+## Version 0.2.1 (2023-02-28)
 
 - Added support for "bounded blur" (equivalent to box blur applied twice)
-- Bounded blur now used for shadows (this fixes shadow blur size regression)
-- Fixed out-of-bounds mapping of image fills
-- Fixed effect behavior when `ODE_SKIA_GPU` is disabled
+- Bounded blur now used for shadows
+- Fixed regression bugs of the new renderer (introduced in 0.2.0)
+  - Inner shadow no longer rendered as drop shadow
+  - Fixed out-of-bounds mapping of image fills
+  - Fixed effect behavior when `ODE_SKIA_GPU` is disabled
+  - Fixed fill color premultiplication
+  - Fixed shadow blur being too large
+  - Output image files correctly saved as unpremultiplied
+- Rendering empty components now produces a blank image rather than an error
+- Fixed an issue related to wrong OpenGL state left by Skia call
 
 ## Version 0.2.0 (2023-02-17)
 
