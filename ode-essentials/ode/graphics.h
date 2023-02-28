@@ -9,3 +9,4 @@
 #include "graphics/SparseBitmapRef.h"
 #include "graphics/SparseBitmapConstRef.h"
 #include "graphics/FilterMode.h"
+#include "graphics/bitmap-ops.h"

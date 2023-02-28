@@ -15,7 +15,7 @@ TextureFrameBuffer::~TextureFrameBuffer() {
 }
 
 bool TextureFrameBuffer::initialize(const Vector2i &dimensions) {
-    if (!Texture2D::initialize(nullptr, dimensions.x, dimensions.y, PixelFormat::RGBA)) // TODO dims as single argument
+    if (!Texture2D::initialize(nullptr, dimensions.x, dimensions.y, PixelFormat::PREMULTIPLIED_RGBA)) // TODO dims as single argument
         return false;
     frameBuffer.setOutput(this);
     return true;

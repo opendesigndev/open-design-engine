@@ -2,6 +2,7 @@
 #pragma once
 
 #include "EffectShader.h"
-#include "LinearBlurShader.h"
-#include "LinearDistanceTransformShader.h"
+#include "BoundedBlurShader.h"
+#include "GaussianBlurShader.h"
+#include "DistanceTransformShader.h"
 #include "DistanceThresholdShader.h"

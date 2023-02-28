@@ -190,9 +190,11 @@ int main(int argc, const char *const *argv) {
         return 1;
     }
 
-    if (BitmapPtr bitmap = image->asBitmap())
+    if (BitmapPtr bitmap = image->asBitmap()) {
+        if (isPixelPremultiplied(bitmap->format()))
+            bitmapUnpremultiply(*bitmap);
         savePng(outputImagePath, *bitmap);
-    else {
+    } else {
         fprintf(stderr, "Internal error 15\n");
         return 1;
     }

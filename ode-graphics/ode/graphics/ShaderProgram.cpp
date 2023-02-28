@@ -7,6 +7,7 @@ ShaderProgram::ShaderProgram() : handle(0), ready(false) { }
 
 ShaderProgram::~ShaderProgram() {
     if (handle) {
+        glUseProgram(0); // in case it is still bound
         glDeleteProgram(handle);
         ODE_CHECK_GL_ERROR();
     }

@@ -1,7 +1,7 @@
 {
     "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg/master/scripts/vcpkg.schema.json",
     "name": "open-design-engine",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "builtin-baseline": "ac12118f02e127ef1fe9806ffe1a23e7db7ef988",
     "default-features": [
         "glfw",

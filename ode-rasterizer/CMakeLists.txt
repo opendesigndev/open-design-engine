@@ -20,21 +20,9 @@ if(ODE_SKIA_GPU)
     target_compile_definitions(ode-rasterizer PRIVATE SK_GL)
 endif()
 
-# Issue with new version of vcpkg's Skia - different include directory
-if(NOT EMSCRIPTEN)
-    find_path(ODE_SKIA_INCLUDE_DIR "skia/core/SkPath.h")
-    target_include_directories(ode-rasterizer PRIVATE ${ODE_SKIA_INCLUDE_DIR})
-endif()
-
 # Module dependencies
 target_link_libraries(ode-rasterizer PRIVATE skia)
 target_link_libraries(ode-rasterizer PUBLIC liboctopus ode-essentials)
 if(ODE_SKIA_GPU)
-    target_link_libraries(ode-rasterizer PUBLIC ode-graphics)
-    if(NOT OVERRIDE_OPENGL_LIBRARY)
-        target_link_libraries(ode-rasterizer PRIVATE OpenGL::GL)
-    endif()
-    if(NOT EMSCRIPTEN)
-        target_link_libraries(ode-rasterizer PRIVATE GLEW::GLEW)
-    endif()
+    target_link_libraries(ode-rasterizer PRIVATE ode-graphics)
 endif()

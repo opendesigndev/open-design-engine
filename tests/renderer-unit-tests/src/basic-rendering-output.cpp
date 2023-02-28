@@ -13,6 +13,12 @@
 using namespace ode;
 using namespace octopus_builder;
 
+static Bitmap unpremultipliedCopy(const SparseBitmapConstRef &bitmap) {
+    Bitmap copy(bitmap);
+    bitmapUnpremultiply(copy);
+    return copy;
+}
+
 class TestRenderer {
 
 public:
@@ -20,14 +26,14 @@ public:
         octopus::Image imgDef;
         imgDef.ref.type = octopus::ImageRef::Type::PATH;
         imgDef.ref.value = "IMAGE00";
-        Bitmap bitmap00(PixelFormat::RGBA, 360, 240);
-        generateImageAsset(bitmap00, true, true);
-        savePng(imgDef.ref.value, bitmap00);
+        Bitmap bitmap00(PixelFormat::PREMULTIPLIED_RGBA, 360, 240);
+        generateImageAsset(bitmap00, true);
+        savePng(imgDef.ref.value, unpremultipliedCopy(bitmap00));
         imageBase.add(imgDef, Image::fromTexture(Image::fromBitmap((Bitmap &&) bitmap00, Image::PREMULTIPLIED)->asTexture(), Image::PREMULTIPLIED));
         imgDef.ref.value = "IMAGE01";
-        Bitmap bitmap01(PixelFormat::RGBA, 200, 400);
-        generateImageAsset(bitmap01, false, true);
-        savePng(imgDef.ref.value, bitmap01);
+        Bitmap bitmap01(PixelFormat::PREMULTIPLIED_RGBA, 200, 400);
+        generateImageAsset(bitmap01, false);
+        savePng(imgDef.ref.value, unpremultipliedCopy(bitmap01));
         imageBase.add(imgDef, Image::fromTexture(Image::fromBitmap((Bitmap &&) bitmap01, Image::PREMULTIPLIED)->asTexture(), Image::PREMULTIPLIED));
     }
 
@@ -67,6 +73,8 @@ public:
         if (!bitmap)
             return false;
 
+        if (isPixelPremultiplied(bitmap->format()))
+            bitmapUnpremultiply(*bitmap);
         return savePng(octopus.id+".png", *bitmap);
     }
 
@@ -142,6 +150,15 @@ int basicRenderingOutput(GraphicsContext &gc) {
     renderer.renderOctopusIntoFile(buildOctopus("TEST07", gradientShape));
     gradientFill.gradient->type = octopus::Gradient::Type::LINEAR;
 
+    // stroke gradient test
+    ShapeLayer gradientStrokeShape(160, 120, 320, 240);
+    gradientStrokeShape.setColor(Color(1, .75, 0, .75)).addStroke(CENTER, 24, Color());
+    gradientStrokeShape.shape->strokes[0].fill = gradientFill;
+    renderer.renderOctopusIntoFile(buildOctopus("TEST08", gradientStrokeShape));
+
+    // Test unpremultiplication of output file (transparent rectangle should be white)
+    renderer.renderOctopusIntoFile(buildOctopus("TEST09", ShapeLayer(160, 120, 320, 240).setColor(Color(1, .25))));
+
     // Image fill test
     ShapeLayer imageShape(160, 120, 320, 240);
     imageShape.shape->fills.front() = octopus::Fill();
@@ -211,6 +228,20 @@ int basicRenderingOutput(GraphicsContext &gc) {
     shadow.blur = 0;
     shadow.choke = -4;
     renderer.renderOctopusIntoFile(buildOctopus("TEST26", gradientShape));
+    gradientShape.effects[0].type = octopus::Effect::Type::INNER_SHADOW;
+    shadow.blur = 48;
+    renderer.renderOctopusIntoFile(buildOctopus("TEST27", gradientShape));
+    shadow.offset.x = 8;
+    shadow.choke = 8;
+    renderer.renderOctopusIntoFile(buildOctopus("TEST28", gradientShape));
+    shadow.offset.x = 64;
+    shadow.blur = 0;
+    //shadow.choke = -8;
+    renderer.renderOctopusIntoFile(buildOctopus("TEST29", gradientShape));
+    shadow.choke = 0;
+    renderer.renderOctopusIntoFile(buildOctopus("TEST30", gradientShape));
+    gradientShape.effects[0].type = octopus::Effect::Type::DROP_SHADOW;
+    renderer.renderOctopusIntoFile(buildOctopus("TEST31", gradientShape));
 
     // Stroke effect tests
     gradientShape.effects[0].shadow = nonstd::optional<octopus::Shadow>();
@@ -221,18 +252,30 @@ int basicRenderingOutput(GraphicsContext &gc) {
     effectStroke.fill.color = toOctopus(Color(1, 1, 0));
     effectStroke.thickness = 20;
     effectStroke.position = octopus::Stroke::Position::OUTSIDE;
-    renderer.renderOctopusIntoFile(buildOctopus("TEST27", gradientShape));
+    renderer.renderOctopusIntoFile(buildOctopus("TEST32", gradientShape));
     effectStroke.position = octopus::Stroke::Position::CENTER;
-    renderer.renderOctopusIntoFile(buildOctopus("TEST28", gradientShape));
+    renderer.renderOctopusIntoFile(buildOctopus("TEST33", gradientShape));
     effectStroke.position = octopus::Stroke::Position::INSIDE;
-    renderer.renderOctopusIntoFile(buildOctopus("TEST29", gradientShape));
+    renderer.renderOctopusIntoFile(buildOctopus("TEST34", gradientShape));
 
     // Blur effect test
     octopus::Effect blurEffect;
     blurEffect.type = octopus::Effect::Type::BLUR;
     blurEffect.basis = octopus::EffectBasis::FILL;
     blurEffect.blur = 8;
-    renderer.renderOctopusIntoFile(buildOctopus("TEST30", imageShape.addEffect(blurEffect)));
+    renderer.renderOctopusIntoFile(buildOctopus("TEST36", imageShape.addEffect(blurEffect)));
+
+    // Edge cases
+
+    // Empty component
+    renderer.renderOctopusIntoFile(buildOctopus("TEST64", GroupLayer()));
+
+    // Shape mask without fill
+    ShapeLayer filllessShape(160, 120, 320, 240);
+    filllessShape.visible = false;
+    filllessShape.shape->fills.clear();
+    filllessShape.shape->strokes.clear();
+    renderer.renderOctopusIntoFile(buildOctopus("TEST65", MaskGroupLayer(octopus::MaskBasis::BODY, filllessShape).add(ShapeLayer(280, 200, 320, 240))));
 
     return 0;
 }

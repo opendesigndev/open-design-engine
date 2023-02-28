@@ -783,6 +783,8 @@ void RGIWindow::drawSelectedImagesWidget(float &zoom) {
                 }
 
                 ImGui::Text("%s", selectedNodes[i].name.c_str());
+                if (selectedNodes[i].node && selectedNodes[i].node->getLayer())
+                    ImGui::Text("Layer ID:         %s", selectedNodes[i].node->getLayer()->id.c_str());
                 drawImGuiWidgetTexture(handle, bitmap->width(), bitmap->height(), zoom, selectedNodes.size());
             }
         }

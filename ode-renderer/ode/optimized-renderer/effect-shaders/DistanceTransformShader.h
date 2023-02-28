@@ -6,11 +6,11 @@
 
 namespace ode {
 
-class LinearDistanceTransformShader : public EffectShader {
+class DistanceTransformShader : public EffectShader {
 
 public:
-    LinearDistanceTransformShader();
-    bool initialize(const SharedResource &res, int precision);
+    DistanceTransformShader();
+    bool initialize(const SharedResource &res, char channel, int precision);
     void bind(const PixelBounds &viewport, const ScaledBounds &outputBounds, const ScaledBounds &inputBounds, const Vector2f &direction, float minDistance, float maxDistance);
 
 private:

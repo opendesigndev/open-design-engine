@@ -2,7 +2,8 @@
 #include "Rasterizer.h"
 
 #ifdef ODE_RASTERIZER_TEXTURE_SUPPORT
-#include <GL/glew.h>
+#include <ode/graphics/gl.h>
+#include <ode/graphics/gl-state-check.h>
 #endif
 
 #include <vector>
@@ -333,6 +334,7 @@ bool Rasterizer::Internal::rasterize(Shape *shape, int strokeIndex, const Matrix
 
 bool Rasterizer::rasterize(Shape *shape, int strokeIndex, const Matrix3x2d &transformation, const BitmapRef &dstBitmap) {
     ODE_ASSERT(shape && (dstBitmap || !dstBitmap.dimensions));
+    ODE_ASSERT(dstBitmap.format == PixelFormat::ALPHA);
     if (pixelChannels(dstBitmap.format) != 1)
         return false;
     SkImageInfo imageInfo = SkImageInfo::MakeA8(dstBitmap.dimensions.x, dstBitmap.dimensions.y);
@@ -346,24 +348,38 @@ bool Rasterizer::rasterize(Shape *shape, int strokeIndex, const Matrix3x2d &tran
     #ifdef ODE_RASTERIZER_TEXTURE_SUPPORT
         ODE_ASSERT(shape && dstTexture.handle && dstTexture.format != PixelFormat::EMPTY && dstTexture.dimensions.x > 0 && dstTexture.dimensions.y > 0);
         // TODO support other pixel types?
-        ODE_ASSERT(dstTexture.format == PixelFormat::RGBA);
-        if (dstTexture.format != PixelFormat::RGBA)
+        ODE_ASSERT(dstTexture.format == PixelFormat::RGBA || dstTexture.format == PixelFormat::PREMULTIPLIED_RGBA);
+        if (!(pixelChannels(dstTexture.format) == 4 && pixelHasAlpha(dstTexture.format) && !isPixelFloat(dstTexture.format)))
             return false;
         if (GrDirectContext *context = data->getGraphicsContext()) {
-            context->resetContext();
-            GrGLTextureInfo textureInfo = { };
-            textureInfo.fTarget = GL_TEXTURE_2D;
-            textureInfo.fID = dstTexture.handle;
-            textureInfo.fFormat = GL_RGBA8;
-            GrBackendTexture backendTexture(dstTexture.dimensions.x, dstTexture.dimensions.y, GrMipMapped::kNo, textureInfo);
-            sk_sp<SkSurface> surface = SkSurface::MakeFromBackendTexture(context, backendTexture, GrSurfaceOrigin::kTopLeft_GrSurfaceOrigin, 0, SkColorType::kRGBA_8888_SkColorType, SkColorSpace::MakeSRGBLinear(), nullptr);
-            surface->getCanvas()->clear(SkColor(0));
-            bool result = data->rasterize(shape, strokeIndex, transformation, surface.get());
-            auto texture = surface->getBackendTexture(SkSurface::kFlushRead_BackendHandleAccess);
-            //surface->flushAndSubmit(); // not needed?
+            bool result = false;
+            #ifdef ODE_GL_ENABLE_VERTEX_ARRAYS
+                glBindVertexArray(0);
+            #endif
+            {
+                context->resetContext();
+                GrGLTextureInfo textureInfo = { };
+                textureInfo.fTarget = GL_TEXTURE_2D;
+                textureInfo.fID = dstTexture.handle;
+                textureInfo.fFormat = GL_RGBA8;
+                GrBackendTexture backendTexture(dstTexture.dimensions.x, dstTexture.dimensions.y, GrMipMapped::kNo, textureInfo);
+                sk_sp<SkSurface> surface = SkSurface::MakeFromBackendTexture(context, backendTexture, GrSurfaceOrigin::kTopLeft_GrSurfaceOrigin, 0, SkColorType::kRGBA_8888_SkColorType, SkColorSpace::MakeSRGBLinear(), nullptr);
+                surface->getCanvas()->clear(SkColor(0));
+                result = data->rasterize(shape, strokeIndex, transformation, surface.get());
+                auto texture = surface->getBackendTexture(SkSurface::kFlushRead_BackendHandleAccess);
+                //surface->flushAndSubmit(); // not needed?
+            }
             // Restore ODE's OpenGL state
             glDisable(GL_BLEND);
             glDisable(GL_SCISSOR_TEST);
+            glDisable(GL_STENCIL_TEST);
+            if (glBindSampler) {
+                // Make sure to remove sampler objects for all texture units used in ODE!
+                glBindSampler(0, 0);
+                glBindSampler(1, 0);
+                glBindSampler(2, 0);
+            }
+            ODE_ASSERT(checkGlState());
             return result;
         }
     #endif

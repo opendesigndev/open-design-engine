@@ -47,8 +47,8 @@ static void mandelbrotEx1Col(Color &color, double m, double q) {
     color.a += a;
 }
 
-static void generateMandelbrotEx1(BitmapRef bitmap, bool transparency, bool premultiplied) {
-    ODE_ASSERT(bitmap.format == PixelFormat::RGBA);
+static void generateMandelbrotEx1(BitmapRef bitmap, bool transparency) {
+    ODE_ASSERT(pixelChannels(bitmap.format) == 4 && !isPixelFloat(bitmap.format) && pixelHasAlpha(bitmap.format));
     Vector2d aspect(
         std::max((double) bitmap.dimensions.x/bitmap.dimensions.y, 1.),
         std::max((double) bitmap.dimensions.y/bitmap.dimensions.x, 1.)
@@ -71,17 +71,17 @@ static void generateMandelbrotEx1(BitmapRef bitmap, bool transparency, bool prem
             Color color(0, 0, 0, 0);
             mandelbrotEx1Col(color, mandelbrot(c), q);
             #ifndef ODE_DEBUG
-            c.y += shift.y;
-            mandelbrotEx1Col(color, mandelbrot(c), q);
-            c.x += shift.x;
-            mandelbrotEx1Col(color, mandelbrot(c), q);
-            c.y -= shift.y;
-            mandelbrotEx1Col(color, mandelbrot(c), q);
-            c.x += shift.x;
-            #define INV_SS .25
+                c.y += shift.y;
+                mandelbrotEx1Col(color, mandelbrot(c), q);
+                c.x += shift.x;
+                mandelbrotEx1Col(color, mandelbrot(c), q);
+                c.y -= shift.y;
+                mandelbrotEx1Col(color, mandelbrot(c), q);
+                c.x += shift.x;
+                #define INV_SS .25
             #else
-            c.x += 2*shift.x;
-            #define INV_SS 1
+                c.x += 2*shift.x;
+                #define INV_SS 1
             #endif
             *p++ = channelFloatToByte(INV_SS*color.r);
             *p++ = channelFloatToByte(INV_SS*color.g);
@@ -90,7 +90,7 @@ static void generateMandelbrotEx1(BitmapRef bitmap, bool transparency, bool prem
         }
         lc.y += 2*shift.y;
     }
-    if (transparency && !premultiplied) {
+    if (transparency && !isPixelPremultiplied(bitmap.format)) {
         p = (byte *) bitmap;
         for (int y = 0; y < bitmap.dimensions.y; ++y) {
             for (int x = 0; x < bitmap.dimensions.x; ++x) {
@@ -103,6 +103,6 @@ static void generateMandelbrotEx1(BitmapRef bitmap, bool transparency, bool prem
     }
 }
 
-void generateImageAsset(BitmapRef bitmap, bool transparency, bool premultiplied) {
-    return generateMandelbrotEx1(bitmap, transparency, premultiplied);
+void generateImageAsset(BitmapRef bitmap, bool transparency) {
+    return generateMandelbrotEx1(bitmap, transparency);
 }

@@ -4,43 +4,9 @@
 #ifndef __EMSCRIPTEN__
     #include <ode-media.h>
 #endif
+#include "../optimized-renderer/process-asset-bitmap.h"
 
 namespace ode {
-
-// TODO MOVE
-static void ensurePremultiplied(Bitmap &bitmap) {
-    switch (bitmap.format()) {
-        case PixelFormat::RGBA:
-            for (byte *p = (byte *) bitmap, *end = p+bitmap.size(); p < end; p += 4) {
-                p[0] = channelPremultiply(p[0], p[3]);
-                p[1] = channelPremultiply(p[1], p[3]);
-                p[2] = channelPremultiply(p[2], p[3]);
-            }
-            bitmap.reinterpret(PixelFormat::PREMULTIPLIED_RGBA);
-            break;
-        case PixelFormat::LUMINANCE_ALPHA:
-            for (byte *p = (byte *) bitmap, *end = p+bitmap.size(); p < end; p += 2) {
-                p[0] = channelPremultiply(p[0], p[1]);
-            }
-            bitmap.reinterpret(PixelFormat::PREMULTIPLIED_LUMINANCE_ALPHA);
-            break;
-        case PixelFormat::FLOAT_RGBA:
-            for (float *p = (float *) bitmap, *end = p+bitmap.size()/sizeof(float); p < end; p += 4) {
-                p[0] *= p[3];
-                p[1] *= p[3];
-                p[2] *= p[3];
-            }
-            bitmap.reinterpret(PixelFormat::FLOAT_PREMULTIPLIED_RGBA);
-            break;
-        case PixelFormat::FLOAT_LUMINANCE_ALPHA:
-            for (float *p = (float *) bitmap, *end = p+bitmap.size()/sizeof(float); p < end; p += 2) {
-                p[0] *= p[1];
-            }
-            bitmap.reinterpret(PixelFormat::FLOAT_PREMULTIPLIED_LUMINANCE_ALPHA);
-            break;
-        default:;
-    }
-}
 
 ImageBase::ImageBase(GraphicsContext &gc) {
     ODE_ASSERT(gc);
@@ -51,8 +17,19 @@ void ImageBase::setImageDirectory(const FilePath &path) {
 }
 
 void ImageBase::add(const octopus::Image &ref, const ImagePtr &image) {
-    if (ImagePtr texImage = Image::fromTexture(image->asTexture(), Image::NORMAL))
-        images.insert(std::make_pair(ref.ref.value, texImage));
+    if (image->transparencyMode() == Image::PREMULTIPLIED && image->borderMode() == Image::ONE_PIXEL_BORDER) {
+        if (ImagePtr texImage = Image::fromTexture(image->asTexture(), Image::PREMULTIPLIED, Image::ONE_PIXEL_BORDER))
+            images.insert(std::make_pair(ref.ref.value, texImage));
+    } else if (BitmapPtr bitmapImage = image->asBitmap())
+        add(ref, *bitmapImage);
+    else
+        ODE_ASSERT(!"Failed to add image asset!");
+}
+
+void ImageBase::add(const octopus::Image &ref, const BitmapConstRef &imageBitmap) {
+    ImagePtr image = processAssetBitmap(imageBitmap);
+    if (image)
+        images.insert(std::make_pair(ref.ref.value, image));
 }
 
 ImagePtr ImageBase::get(const octopus::Image &ref) {
@@ -62,13 +39,10 @@ ImagePtr ImageBase::get(const octopus::Image &ref) {
     #ifndef __EMSCRIPTEN__
         if (!directory.empty()) {
             if (Bitmap bitmap = loadImage(directory+ref.ref.value)) {
-                ensurePremultiplied(bitmap);
-                TexturePtr texture(new Texture2D());
-                if (texture->initialize(bitmap)) {
-                    ImagePtr image = Image::fromTexture(texture, Image::NORMAL);
+                ImagePtr image = processAssetBitmap((Bitmap &&) bitmap);
+                if (image)
                     images.insert(std::make_pair(ref.ref.value, image));
-                    return image;
-                }
+                return image;
             }
         }
     #endif

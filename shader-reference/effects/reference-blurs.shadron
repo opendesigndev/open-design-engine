@@ -1,0 +1,57 @@
+
+#include <math_constants>
+
+float gaussianKernel(float delta, float sigma) {
+    return exp(-0.5*delta*delta/(sigma*sigma))/(sqrt(TAU)*sigma);
+}
+
+float stackKernel(float delta, float radius) {
+    return max(1.0/radius-abs(delta)/(radius*radius), 0.0);
+}
+
+template <BASIS, AXIS, KERNEL, ARG>
+vec4 refAxisBlur(ivec2 pos) {
+    vec4 total = vec4(0.0);
+    ivec2 sPos = pos;
+    for (sPos.AXIS = sizeof(BASIS).AXIS; sPos.AXIS >= 0; --sPos.AXIS) {
+        float w = KERNEL(float(sPos.AXIS-pos.AXIS), ARG);
+        total += w*texelFetch(BASIS, sPos, 0);
+    }
+    return total;
+}
+
+#define REFERENCE_BLUR_IMAGE(NAME, BASIS, KERNEL, ARG) \
+    image NAME##_intermediate = glsl(refAxisBlur<BASIS, x, KERNEL, ARG>, sizeof(BASIS)) : full_range(true), hidden(true); \
+    image NAME = glsl(refAxisBlur<NAME##_intermediate, y, KERNEL, ARG>, sizeof(NAME##_intermediate))
+
+// TESTBED
+
+#ifndef NO_TESTBED
+
+image Input = file();
+image Reference = file();
+
+param float sigma = 1 : logrange(1, 256);
+param float radius = 1 : logrange(1, 256);
+
+watch const float RADIUS_SIGMA_RATIO = 3.0*sqrt(2.0/PI);
+param int pinSigmaToRadius = 0 : range(-1, 1);
+watch let float SIGMA = pinSigmaToRadius > 0 ? radius/RADIUS_SIGMA_RATIO : sigma;
+watch let float RADIUS = pinSigmaToRadius < 0 ? RADIUS_SIGMA_RATIO*sigma : radius;
+
+REFERENCE_BLUR_IMAGE(RefGaussianBlur, Input, gaussianKernel, SIGMA);
+REFERENCE_BLUR_IMAGE(RefStackBlur, Input, stackKernel, RADIUS);
+
+param int diffChannel = 3 : range(0, 3);
+param float diffFactor = 1 : logrange(1, 256);
+template <A, B>
+vec3 diff(vec2 pos) {
+    float a = texture(A, pos)[diffChannel];
+    float b = texture(B, pos)[diffChannel];
+    return diffFactor*vec3(a-b, b-a, 0.0);
+}
+
+image GaussDiff = glsl(diff<Reference, RefGaussianBlur>, sizeof(Reference));
+image StackDiff = glsl(diff<Reference, RefStackBlur>, sizeof(Reference));
+
+#endif

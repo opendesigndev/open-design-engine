@@ -5,6 +5,7 @@
 
 #include <emscripten/html5.h>
 #include "gl.h"
+#include "gl-state-check.h"
 
 namespace ode {
 
@@ -55,6 +56,8 @@ void GraphicsContext::initialize(const char *target, const Vector2i &dimensions,
         return;
     emscripten_webgl_make_context_current(data->handle);
 
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
     glDisable(GL_BLEND);
 
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
@@ -74,6 +77,7 @@ void GraphicsContext::initialize(const char *target, const Vector2i &dimensions,
         //Log::instance.logf(Log::CORE_OPENGL, Log::INFORMATION, "GL_MAX_RENDERBUFFER_SIZE = %d", maxRenderbufferSize);
     }
     ODE_CHECK_GL_ERROR();
+    ODE_ASSERT(checkGlState());
     //LOG_ACTION(GRAPHICS_CONTEXT_CONSTRUCTION, nullptr, width*height, "");
     data->ready = true;
 }
