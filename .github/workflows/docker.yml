@@ -28,8 +28,13 @@ jobs:
       - run: |
           # Looks like metadata-action enable condition only allows boolean variables
           if [ $GITHUB_REF_TYPE == branch ];
-          then echo "ON_BRANCH=true" >> $GITHUB_ENV;
-          else echo "ON_BRANCH=false" >> $GITHUB_ENV; fi
+          then
+            echo "ON_BRANCH=true" >> $GITHUB_ENV;
+            echo "ON_TAG=false" >> $GITHUB_ENV;
+          else
+            echo "ON_BRANCH=false" >> $GITHUB_ENV;
+            echo "ON_TAG=true" >> $GITHUB_ENV;
+          fi
       - name: Extract base image docker meta
         id: meta-base
         uses: docker/metadata-action@v4
@@ -39,9 +44,10 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
+            type=semver,pattern={{version}}
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,prefix={{branch}}-,enable=${{ env.ON_BRANCH }}
-            type=semver,pattern={{version}}
+            type=sha,prefix={{tag}}-,enable=${{ env.ON_TAG }}
       - name: Build and cache base image
         uses: docker/build-push-action@v3
         with:
@@ -65,9 +71,10 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
+            type=semver,pattern={{version}}
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,prefix={{branch}}-,enable=${{ env.ON_BRANCH }}
-            type=semver,pattern={{version}}
+            type=sha,prefix={{tag}}-,enable=${{ env.ON_TAG }}
       - name: Build and push main image
         uses: docker/build-push-action@v3
         with:
