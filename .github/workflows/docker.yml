@@ -66,7 +66,7 @@ jobs:
             type=ref,event=branch
             type=ref,event=pr
             type=raw,value=latest,enable={{is_default_branch}}
-            type=sha,prefix={{branch}}-,enable=${{env.ON_BRANCH}}
+            type=sha,prefix={{branch}}-,enable=${{ env.ON_BRANCH }}
             type=semver,pattern={{version}}
       - name: Build and push main image
         uses: docker/build-push-action@v3
