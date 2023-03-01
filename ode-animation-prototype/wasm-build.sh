@@ -79,6 +79,7 @@ emcmake cmake \
     -G Ninja \
     -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE \
     -DODE_TEST_MODULES=OFF \
+    -DODE_USE_WEBGL2=ON \
     -DEMSCRIPTEN=ON \
     -B $BUILD_DIRECTORY \
     .

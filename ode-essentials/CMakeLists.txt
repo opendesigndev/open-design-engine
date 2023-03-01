@@ -16,3 +16,8 @@ target_include_directories(ode-essentials INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:include>
 )
+
+if (MSVC)
+    # Ignore LNK4099 - PDB not found
+    target_link_options(ode-essentials INTERFACE "/ignore:4099")
+endif()

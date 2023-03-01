@@ -8,6 +8,9 @@ include(version.cmake)
 option(ODE_RENDERER_ENABLED "Build ODE with rendering capabilities" ON)
 option(ODE_TEST_MODULES "Build tests and testing utilities (optional)" ON)
 option(ODE_SKIA_GPU "Enable GPU acceleration for Skia library" ON)
+if(EMSCRIPTEN)
+    option(ODE_USE_WEBGL2 "Use WebGL version 2 (otherwise WebGL 1 is used)" OFF)
+endif()
 
 # Make sure that vcpkg toolchain file is set
 if(NOT CMAKE_TOOLCHAIN_FILE AND NOT EMSCRIPTEN)
