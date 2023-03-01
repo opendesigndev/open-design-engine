@@ -9,6 +9,7 @@ export const HEAPF32: Float32Array;
 export const HEAPF64: Float64Array;
 export function _malloc(size: Size_t): VarDataPtr;
 export function _free(ptr: VarDataPtr): void;
+export function UTF8ToString(ptr: ConstCharPtr, length: Int): string;
 
 export type Char = number;
 export type Int = number;
