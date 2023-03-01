@@ -25,7 +25,7 @@ jobs:
           registry: ${{ env.GITLAB_REGISTRY }}
           username: ${{ env.GITLAB_USERNAME }}
           password: ${{ secrets.GITLAB_PASSWORD }}
-      - name: Extract job Docker meta
+      - name: Extract base image docker meta
         id: meta-base
         uses: docker/metadata-action@v4
         with:
@@ -36,6 +36,7 @@ jobs:
             type=ref,event=pr
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,prefix={{branch}}-
+            type=semver,pattern={{version}}
       - name: Build and cache base image
         uses: docker/build-push-action@v3
         with:
