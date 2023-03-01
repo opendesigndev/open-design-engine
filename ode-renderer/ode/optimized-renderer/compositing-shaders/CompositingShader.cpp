@@ -47,7 +47,7 @@ bool CompositingShader::initialize(ShaderProgram *shader) {
 }
 
 void CompositingShader::bind(const PixelBounds &viewport, const ScaledBounds &outputBounds) {
-    ODE_ASSERT(viewport);
+    ODE_ASSERT(viewport.b.x-viewport.a.x && viewport.b.y-viewport.a.y);
     float vertexFraming[4] = {
         float(2*(outputBounds.a.x-viewport.a.x)/(viewport.b.x-viewport.a.x)-1),
         float(2*(outputBounds.a.y-viewport.a.y)/(viewport.b.y-viewport.a.y)-1),

@@ -330,7 +330,10 @@ void Renderer::screenDraw(const PixelBounds &viewport, const PlacedImagePtr &ima
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(float(bgColor.r), float(bgColor.g), float(bgColor.b), float(bgColor.a));
     glClear(GL_COLOR_BUFFER_BIT);
-    blitShader.bind(viewport, image.bounds(), image.bounds());
+    PixelBounds bottomUpViewport = viewport;
+    bottomUpViewport.a.y = viewport.b.y;
+    bottomUpViewport.b.y = viewport.a.y;
+    blitShader.bind(bottomUpViewport, image.bounds(), image.bounds());
     tex->bind(AlphaMultShader::UNIT_IN);
     billboard.draw();
     glDisable(GL_BLEND);
