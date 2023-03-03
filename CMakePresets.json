@@ -1,0 +1,38 @@
+{
+  "version": 5,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 24,
+    "patch": 0
+  },
+  "include": [],
+  "configurePresets": [
+    {
+      "name": "default",
+      "displayName": "Default Config",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/default"
+    },
+    {
+      "name": "osx-dbg",
+      "displayName": "MacOS Debug Build",
+      "binaryDir": "${sourceDir}/build/osx-dbg",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "ODE_SKIA_GPU": "OFF"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "default",
+      "configurePreset": "default"
+    },
+    {
+      "name": "osx-dbg",
+      "configurePreset": "osx-dbg"
+    }
+  ],
+  "testPresets": []
+}

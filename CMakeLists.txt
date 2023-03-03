@@ -17,7 +17,13 @@ if(NOT CMAKE_TOOLCHAIN_FILE AND NOT EMSCRIPTEN)
     if(DEFINED ENV{VCPKG_ROOT})
         set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
     else()
-        message(SEND_ERROR "Vcpkg toolchain not configured. Either set VCPKG_ROOT environment variable or pass -DCMAKE_TOOLCHAIN_FILE=VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake to cmake")
+        include(FetchContent)
+        FetchContent_Declare(vcpkg
+            GIT_REPOSITORY https://github.com/microsoft/vcpkg/
+            GIT_TAG 2023.02.24
+        )
+        FetchContent_MakeAvailable(vcpkg)
+        set(CMAKE_TOOLCHAIN_FILE "${vcpkg_SOURCE_DIR}/scripts/buildsystems/vcpkg.cmake" CACHE FILEPATH "")
     endif()
 endif()
 
