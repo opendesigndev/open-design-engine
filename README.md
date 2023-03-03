@@ -13,6 +13,13 @@ The Open Design Engine processes and renders designs and provides interface to q
 4. Generate CMake build, e.g. `cmake -S . -B build/win64 -A x64 -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake`
 5. Build generated project, e.g. `cmake --build build/win64`
 
+### MacOS build
+
+1. Install xcode: `xcode-select --install`
+2. Install deps from brew: `brew install autoconf automake autoconf-archive pkg-config cmake ninja`
+3. Configure: `cmake --preset osx-dbg` or `cmake --preset osx-rel`
+4. Build: `cmake --build --preset osx-dbg` or `cmake --build --preset osx-dbg`
+
 ## Maintainer guidelines
 
 - The version of ODE is defined in [vcpkg.json](vcpkg.json) and automatically parsed from this file for other purposes.

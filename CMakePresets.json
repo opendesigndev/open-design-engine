@@ -21,6 +21,21 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "ODE_SKIA_GPU": "OFF"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "osx-rel",
+      "inherits": "osx-dbg",
+      "displayName": "MacOS Release Build",
+      "binaryDir": "${sourceDir}/build/osx-rel",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ODE_SKIA_GPU": "OFF"
       }
     }
   ],
@@ -32,6 +47,10 @@
     {
       "name": "osx-dbg",
       "configurePreset": "osx-dbg"
+    },
+    {
+      "name": "osx-rel",
+      "configurePreset": "osx-rel"
     }
   ],
   "testPresets": []
