@@ -16,8 +16,14 @@ jobs:
       - name: Install prerequisites
         run: brew install automake autoconf autoconf-archive
 
+      - name: Get project variables
+        run: |
+          printf "VCPKG_BASELINE=%s\n" $(jq -r '."builtin-baseline"' vcpkg.json) >> $GITHUB_ENV;
+
       - name: Setup vcpkg dependencies (cached)
         uses: lukka/run-vcpkg@v10
+        with:
+          vcpkgGitCommitId: ${{ env.VCPKG_BASELINE }}
 
       - name: Configure and build ODE
         uses: lukka/run-cmake@v10
