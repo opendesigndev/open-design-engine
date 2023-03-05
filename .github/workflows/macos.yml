@@ -16,8 +16,14 @@ jobs:
       - name: Install prerequisites
         run: brew install automake autoconf autoconf-archive
 
-      - name: Configure engine build
-        run: VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DVCPKG_TARGET_TRIPLET=x64-osx-release -DVCPKG_HOST_TRIPLET=x64-osx-release
+      - name: Setup vcpkg dependencies (cached)
+        uses: lukka/run-vcpkg@v10
 
-      - name: Build engine
-        run: cmake --build build --config Release
+      - name: Configure and build ODE
+        uses: lukka/run-cmake@v10
+        with:
+          configurePreset: osx-rel
+          buildPreset: osx-rel
+
+    env:
+      VCPKG_DEFAULT_TRIPLET: x64-osx-release
