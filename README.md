@@ -10,7 +10,8 @@ The Open Design Engine processes and renders designs and provides interface to q
 1. Make sure you have installed [CMake](https://cmake.org/), [vcpkg](https://vcpkg.io/en/getting-started.html), and a C++ compiler (e.g. Visual Studio, XCode, or g++).
 2. Linux & Mac only: Using APT or Homebrew, install `automake autoconf autoconf-archive`
 3. (Optional) I would recommend setting your vcpkg directory as persistent system variable `VCPKG_ROOT`. If you do, you may omit the `-DCMAKE_TOOLCHAIN_FILE` option in the following step.
-4. Generate CMake build, e.g. `cmake -S . -B build/win64 -A x64 -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake`
+4. Generate CMake build. There are presets available (list them with `cmake --list-presets`), for example
+    - `cmake --preset win64 -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake`
 5. Build generated project, e.g. `cmake --build build/win64`
 
 ## Maintainer guidelines
