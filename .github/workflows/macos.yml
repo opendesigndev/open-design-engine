@@ -23,6 +23,7 @@ jobs:
       - name: Setup vcpkg dependencies (cached)
         uses: lukka/run-vcpkg@v10
         with:
+          vcpkgJsonGlob: vcpkg.json
           vcpkgGitCommitId: ${{ env.VCPKG_BASELINE }}
 
       - name: Configure and build ODE
