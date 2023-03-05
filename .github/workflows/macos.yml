@@ -34,3 +34,18 @@ jobs:
         with:
           configurePreset: osx-rel
           buildPreset: osx-rel
+
+      - name: Gather artifacts
+        run: |
+          mkdir -p build/artifacts/open-design-engine
+          cp build/osx-rel/ode-logic/ode-logic-cli build/artifacts/open-design-engine
+          cp build/osx-rel/ode-renderer/ode-renderer-cli build/artifacts/open-design-engine
+          cp build/osx-rel/ode-animation-prototype/ode-animation-prototype-window build/artifacts/open-design-engine
+          cp build/osx-rel/tests/renderer-unit-tests/renderer-unit-tests build/artifacts/open-design-engine
+          cp build/osx-rel/tools/render-graph-inspector/render-graph-inspector build/artifacts/open-design-engine
+
+      - name: Upload arifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ode-osx64
+          path: build/artifacts
