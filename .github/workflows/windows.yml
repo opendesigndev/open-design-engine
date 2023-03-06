@@ -6,7 +6,7 @@ jobs:
     runs-on: windows-latest
 
     env:
-      VCPKG_DEFAULT_TRIPLET: x64-windows-static
+      VCPKG_DEFAULT_TRIPLET: x64-windows-static-release
 
     steps:
       - uses: actions/checkout@v3
@@ -29,8 +29,8 @@ jobs:
       - name: Configure and build ODE
         uses: lukka/run-cmake@v10
         with:
-          configurePreset: win64
-          buildPreset: win64-rel
+          configurePreset: win64-github-actions
+          buildPreset: win64-github-actions
 
       - name: Gather artifacts
         run: |
