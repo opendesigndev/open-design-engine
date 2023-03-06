@@ -88,6 +88,16 @@
         "CMAKE_BUILD_TYPE": "Debug"
       }
     }, {
+      "name": "win64-vs2022",
+      "displayName": "Windows 64-bit Visual Studio 2022 configuration",
+      "inherits": "win64",
+      "generator": "Visual Studio 17 2022"
+    }, {
+      "name": "win32-vs2022",
+      "displayName": "Windows 32-bit Visual Studio 2022 configuration",
+      "inherits": "win32",
+      "generator": "Visual Studio 17 2022"
+    }, {
       "name": "win64-no-skia-gpu",
       "displayName": "Windows 64-bit configuration with Skia-GPU disabled",
       "inherits": [ "win64", "without-skia-gpu" ]
@@ -103,6 +113,15 @@
       "name": "osx-no-skia-gpu-dbg",
       "displayName": "Mac OS debug configuration with Skia-GPU disabled",
       "inherits": [ "osx-dbg", "without-skia-gpu" ]
+    }, {
+      "name": "win64-github-actions",
+      "displayName": "Configuration preset for GitHub actions Windows build",
+      "inherits": "win64-vs2022",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "VCPKG_TARGET_TRIPLET": "x64-windows-static-release",
+        "VCPKG_HOST_TRIPLET": "x64-windows-static-release"
+      }
     }
   ],
   "buildPresets": [
@@ -135,6 +154,22 @@
       "name": "linux-dbg",
       "configurePreset": "linux-dbg"
     }, {
+      "name": "win64-vs2022-rel",
+      "configurePreset": "win64-vs2022",
+      "configuration": "Release"
+    }, {
+      "name": "win64-vs2022-dbg",
+      "configurePreset": "win64-vs2022",
+      "configuration": "Debug"
+    }, {
+      "name": "win32-vs2022-rel",
+      "configurePreset": "win32-vs2022",
+      "configuration": "Release"
+    }, {
+      "name": "win32-vs2022-dbg",
+      "configurePreset": "win32-vs2022",
+      "configuration": "Debug"
+    }, {
       "name": "win64-no-skia-gpu-rel",
       "configurePreset": "win64-no-skia-gpu",
       "configuration": "Release"
@@ -156,6 +191,10 @@
     }, {
       "name": "osx-no-skia-gpu-dbg",
       "configurePreset": "osx-no-skia-gpu-dbg"
+    }, {
+      "name": "win64-github-actions",
+      "configurePreset": "win64-github-actions",
+      "configuration": "Release"
     }
   ]
 }
