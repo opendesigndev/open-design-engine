@@ -596,6 +596,185 @@ def generateEmscriptenBindings(entities, apiPath):
     src += '#endif // __EMSCRIPTEN__\n'
     return src
 
+###########################
+#   N-API BINDINGS        #
+###########################
+
+def generateNapiBindings(entities, apiPath):
+    name = os.path.basename(apiPath)
+    header = (
+        "#pragma once\n"
+        "#include <napi.h>\n"
+        f"#include <ode/{name}>\n"
+        "\n"
+    )
+    src_head = (
+        '#include <string>\n'
+        '#include "addon.h"\n'
+        '#include "napi-wrap.h"\n'
+        f'#include "gen-api-base.h"\n'
+        f'#include "gen-{name}"\n'
+    )
+    name = os.path.splitext(name)[0].replace("-", "_")
+    src_tail = ""
+    src_body = f"Napi::Object init_gen_{name}(Napi::Env env, Napi::Object exports) {{\n"
+
+    duplicate = set()
+
+    for entity in entities:
+        fullName = namespacedName(entity.namespace, entity.name)
+        emName = jsTypeName(fullName)
+
+        if fullName in duplicate:
+            continue
+        duplicate.add(fullName)
+
+        src_body += "\n"
+
+        # Define or constant
+        if entity.category == 'define' or entity.category == 'const':
+            src_body += f"    exports.Set(\"{emName}\", uint32_t({fullName}));\n"
+        
+        # Enumeration
+        elif entity.category == 'enum':
+            commonPrefixLen = commonEnumPrefixLength(entity)
+            src_body += "    {\n"
+            src_body += f"        auto {emName} = Napi::Object::New(env);\n"
+            for value in entity.members:
+                k = value.name[commonPrefixLen:]
+                v = namespacedName(entity.namespace, value.name)
+                src_body += f"        {emName}.Set(\"{k}\", uint32_t({v}));\n"
+            src_body += f"        exports.Set(\"{emName}\", {emName});\n"
+            src_body += "    }\n"
+            header += f"std::string {emName}_to_string({fullName} value);\n"
+            src_tail += (
+                f"std::string {emName}_to_string({fullName} value) {{\n"
+                "    switch(value) {\n"
+            )
+            for value in entity.members:
+                k = value.name[commonPrefixLen:]
+                full = namespacedName(entity.namespace, value.name)
+                src_tail += f'        case {full}: return "{k}";\n'
+            src_tail += (
+                f'        default: return "UNKNOWN_{emName}_"+std::to_string(uint32_t(value));\n'
+                "    }\n"
+                "}\n\n"
+            )
+        # Handle
+        elif entity.category == 'handle':
+            wrapName = f"Wrap_{emName}"
+            src_tail += (
+                f"template<>\n"
+                f'const char* Handle<{fullName}>::name = "{emName}";\n'
+                f'template<>\n'
+                f'bool Autobind<{fullName}>::read_into(const Napi::Value& value, {fullName}& target) {{\n'
+                f'    auto optional = Handle<{fullName}>::Read(value);\n'
+                '    if(optional) { target = *optional; return true; }\n'
+                '    return false;\n'
+                '}\n'
+                f'template<>\n'
+                f'{fullName}* Autobind<{fullName}>::read_ptr(const Napi::Value& value) {{\n'
+                f'    return Handle<{fullName}>::Read_ptr(value);\n'
+                '}\n'
+                "\n"
+            )
+            src_body += f"    Handle<{fullName}>::Export(exports);"
+        
+        # Function
+        elif entity.category == 'function':
+            signature = f'Napi::Value bind_ode_{emName}(const Napi::CallbackInfo& info)'
+            src_head += signature + ';\n'
+            src_tail += (
+                f'{signature} {{\n'
+                f'    auto env = info.Env();\n'
+            )
+            call = ""
+            i = 0
+            for mem in entity.members:
+                i += 1
+                t = mem.type
+                if call != "":
+                    call += ", "
+                
+                if t.endswith("*") and not t.startswith("const "):
+                    # Output arguments
+                    t = t[:-1]
+                    src_tail += (
+                        f'    auto arg{i} = Autobind<{t}>::read_ptr(info[{i-1}]);\n'
+                        f'    if (arg{i} == nullptr) return Napi::Value();\n'
+                    )
+                    call += f"arg{i}"
+                elif t.endswith("*"):
+                    t = t[6:-1]
+                    src_tail += (
+                        f'    {t} v{i};\n'
+                        f'    if(!Autobind<{t}>::read_into(info[{i-1}], v{i})) return Napi::Value();\n'
+                    )
+                    call += f"&v{i}"
+                else:
+                    src_tail += (
+                        f'    {t} v{i};\n'
+                        f'    if(!Autobind<{t}>::read_into(info[{i-1}], v{i})) return Napi::Value();\n'
+                    )
+                    call += f"v{i}"
+            src_tail += (
+                f'    auto result = {fullName}({call});\n'
+                f'    return Napi::String::New(env, Result_to_string(result));\n'
+                f'}}\n'
+                '\n'
+            )
+            src_body += f'    exports.Set("{emName}", Napi::Function::New<bind_ode_{emName}>(env, "{emName}"));'
+        elif entity.category == 'array_instance':
+            src_body += f"    // TODO: {entity.category} {emName}\n"
+        elif entity.category == 'struct':
+            src_tail += (
+                f'template<>\n'
+                f'bool Autobind<{fullName}>::read_into(const Napi::Value& value, {fullName}& parsed){{\n'
+                f'    Napi::Env env = value.Env();\n'
+                f'    Napi::Object obj = value.As<Napi::Object>();\n'
+            )
+            for member in entity.members:
+                if member.category == 'member_variable' and (member.type.endswith("*") or member.type.endswith("Ptr")):
+                    src_tail += (
+                        f'    uintptr_t ptr_{member.name};\n'
+                        f'    if(Autobind<uintptr_t>::read_into(obj.Get("{member.name}"), ptr_{member.name})) {{\n'
+                        f'        parsed.{member.name} = reinterpret_cast<{member.type}>(ptr_{member.name});\n'
+                        f'    }} else {{\n'
+                        f'        return false;\n'
+                        f'    }}\n'
+                    )
+                elif member.category == 'member_variable':
+                    src_tail += (
+                        f'    if(!Autobind<{member.type}>::read_into(obj.Get("{member.name}"), parsed.{member.name})) {{\n'
+                        f'        return false;\n'
+                        f'    }}\n'
+                    )
+            src_tail += (
+                f'    return true;\n'
+                f'}}\n'
+                f'template<>\n'
+                f'{fullName}* Autobind<{fullName}>::read_ptr(const Napi::Value& value){{\n'
+                f'    Napi::Error::New(value.Env(), "Not implemented: Autobind<{fullName}>::read_ptr").ThrowAsJavaScriptException();\n'
+                f'    return nullptr;\n'
+                f'}}\n'
+            )
+        else:
+            src_tail += (
+                f'template<>\n'
+                f'{fullName}* Autobind<{fullName}>::read_ptr(const Napi::Value& value){{\n'
+                f'    Napi::Error::New(value.Env(), "Not implemented: Autobind<{fullName}>::read_ptr").ThrowAsJavaScriptException();\n'
+                f'    return {{}};\n'
+                f'}}\n'
+            )
+            src_body += f"    // TODO: {entity.category} {emName}\n"
+
+
+
+
+
+    src_body += "    return exports;\n}\n\n"
+    return (src_head + "\n" + src_body + src_tail, header)
+
 
 
 ###########################
@@ -786,6 +965,7 @@ def relPath(path):
 
 def generateBindings(headerPath):
     emscriptenBindingsPath = os.path.join(os.path.dirname(headerPath), "emscripten-bindings.cpp")
+    napiBindingsPath = os.path.join(relPath("ode-napi/gen-"+os.path.splitext(os.path.basename(headerPath))[0]))
     typescriptBindingsPath = os.path.join(relPath("typescript-bindings/"+os.path.splitext(os.path.basename(headerPath))[0]+".d.ts"))
     with open(headerPath, "r") as f:
         header = f.read()
@@ -793,6 +973,11 @@ def generateBindings(headerPath):
     emscriptenBindings = generateEmscriptenBindings(entities, headerPath)
     with open(emscriptenBindingsPath, "w") as f:
         f.write(preamble+emscriptenBindings)
+    (napiBindings, napiHeader) = generateNapiBindings(entities, headerPath)
+    with open(napiBindingsPath+".cpp", "w") as f:
+        f.write(preamble+napiBindings)
+    with open(napiBindingsPath+".h", "w") as f:
+        f.write(preamble+napiHeader)
     typescriptBindings = generateTypescriptBindings(entities)
     with open(typescriptBindingsPath, "w") as f:
         f.write(preamble+typescriptBindings)
