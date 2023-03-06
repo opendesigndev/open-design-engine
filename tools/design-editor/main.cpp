@@ -1,6 +1,8 @@
 
 #include <optional>
 
+#include <ode-logic.h>
+
 #include "ode/DesignEditorWindow.h"
 
 namespace {

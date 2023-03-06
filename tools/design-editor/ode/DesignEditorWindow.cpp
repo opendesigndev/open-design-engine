@@ -1,8 +1,6 @@
 
 #include "DesignEditorWindow.h"
 
-#include <queue>
-
 // ImGui includes
 #include <GL/glew.h>
 #include <imgui.h>
@@ -14,14 +12,23 @@
 #include <ImGuiFileDialog.h>
 
 // OD includes
-#include <ode-media.h>
-#include "DesignEditorRenderer.h"
-#include "DesignEditorOctopusLoader.h"
+#include <ode-renderer.h>
+#include <ode/renderer-api.h>
 #include "DesignEditorWidgetsContext.h"
 #include "DesignEditorLoadedOctopus.h"
 #include "DesignEditorImageVisualizationParams.h"
 
 namespace {
+
+#define CHECK(x) do { if ((x)) return -1; } while (false)
+
+// TODO move to common API utils
+static ODE_StringRef stringRef(const std::string &str) {
+    ODE_StringRef ref;
+    ref.data = str.c_str();
+    ref.length = int(str.size());
+    return ref;
+}
 
 void drawImGuiWidgetTexture(const GLuint textureHandle, int width, int height, float &zoom, size_t colsCount = 1, size_t rowsCount = 1) {
     const ImVec2 windowSize = ImGui::GetWindowSize();
@@ -62,15 +69,11 @@ struct DesignEditorWindow::Internal {
 
     /// Graphics context of the application.
     GraphicsContext gc;
-    /// The rendered image of the root node in graph
-    PlacedImagePtr rootNodeImage;
     /// Loaded octopus file data
+    // TODO: Loaded Octopus
     DesignEditorLoadedOctopus loadedOctopus;
     /// A flag that is true just after a new Octopus file is loaded
     bool octopusFileReloaded = false;
-
-    /// Renderer
-    DesignEditorRenderer renderer;
 
     /// Current and previous context of the ImGui widgets displayed
     DesignEditorWidgetsContext widgetsContext;
@@ -79,6 +82,18 @@ struct DesignEditorWindow::Internal {
     /// Current and previous image visualization params
     DesignEditorImageVisualizationParams imageVisualizationParams;
     DesignEditorImageVisualizationParams prevImageVisualizationParams;
+
+    struct Context {
+        ODE_EngineHandle engine;
+        ODE_EngineAttributes engineAttribs;
+        ODE_DesignHandle design;
+        ODE_ComponentMetadata metadata = { };
+        ODE_RendererContextHandle rc;
+        ODE_DesignImageBaseHandle imageBase;
+        ODE_PR1_AnimationRendererHandle renderer;
+        // Loaded component
+        ODE_ComponentHandle component;
+    } context;
 
     struct ZoomContext {
         float resultImageZoom = 1.0f;
@@ -94,10 +109,6 @@ struct DesignEditorWindow::Internal {
         }
     } zoomContext;
 
-    struct TexturesContext {
-        TexturePtr resultTexture = nullptr;
-    } texturesContext;
-
     struct ImGuiWindowContext {
         const ImVec4 clearColor = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
     } imGuiWindowContext;
@@ -106,6 +117,38 @@ struct DesignEditorWindow::Internal {
         std::string filePath = ".";
         std::string fileName;
     } fileDialogContext;
+
+
+    int initialize() {
+        CHECK(ode_initializeEngineAttributes(&context.engineAttribs));
+        CHECK(ode_createEngine(&context.engine, &context.engineAttribs));
+        CHECK(ode_createDesign(context.engine, &context.design));
+        // TODO: This context is in conflict with the ImGui context.
+//        CHECK(ode_createRendererContext(context.engine, &context.rc, stringRef("Design Editor")));
+//        CHECK(ode_createDesignImageBase(context.rc, context.design, &context.imageBase));
+        return 0;
+    }
+
+    int loadOctopus(const std::string &octopusJson) {
+        CHECK(ode_design_addComponentFromOctopusString(context.design, &context.component, context.metadata, stringRef(octopusJson), nullptr));
+
+        CHECK(ode_component_listLayers(context.component, &loadedOctopus.layerList));
+
+//        ODE_Bitmap bitmap;
+//        ODE_PR1_FrameView frameView;
+//        CHECK(ode_pr1_drawComponent(context.rc, context.component, context.imageBase, &bitmap, &frameView));
+
+        return 0;
+    }
+
+    int destroy() {
+        CHECK(ode_pr1_destroyAnimationRenderer(context.renderer));
+        CHECK(ode_destroyDesignImageBase(context.imageBase));
+        CHECK(ode_destroyRendererContext(context.rc));
+        CHECK(ode_destroyDesign(context.design));
+        CHECK(ode_destroyEngine(context.engine));
+        return 0;
+    }
 };
 
 
@@ -116,9 +159,11 @@ struct DesignEditorWindow::Internal {
 
 DesignEditorWindow::DesignEditorWindow(int width_, int height_) :
     data(new Internal(width_, height_)) {
+    data->initialize();
 }
 
 DesignEditorWindow::~DesignEditorWindow() {
+    data->destroy();
 }
 
 int DesignEditorWindow::display() {
@@ -169,22 +214,24 @@ int DesignEditorWindow::display() {
             if (data->octopusFileReloaded || widgetsContextChanged || imageVisualizationParamsChanged) {
                 data->octopusFileReloaded = false;
 
-                data->texturesContext.resultTexture.reset();
-
-                const BitmapPtr bitmap = data->loadedOctopus.resultBitmap();
-                const std::optional<ode::ScaledBounds> placementOpt = data->loadedOctopus.resultPlacement();
-                if (bitmap && placementOpt.has_value()) {
-                    // TODO: Image visualization params
-                    data->texturesContext.resultTexture = data->renderer.blendImageToTexture(bitmap, placementOpt.value(), data->imageVisualizationParams.selectedDisplayMode);
-                }
+                // TODO: Display result texture
             }
         }
 
         // ODE DesignEditor controls window
         drawControlsWidget();
 
-        if (data->widgetsContext.showResultImage) {
-            drawResultImageWidget(data->zoomContext.resultImageZoom);
+        if (data->widgetsContext.showToolbar) {
+            drawToolbarWidget();
+        }
+        if (data->widgetsContext.showLayerList) {
+            drawLayerListWidget();
+        }
+        if (data->widgetsContext.showDesignView) {
+            drawDesignViewWidget();
+        }
+        if (data->widgetsContext.showLayerProperties) {
+            drawLayerPropertiesWidget();
         }
 
         if (data->widgetsContext.showImGuiDebugger) {
@@ -224,13 +271,15 @@ bool DesignEditorWindow::readOctopusFile(const FilePath &octopusPath) {
     data->octopusFileReloaded = true;
     data->loadedOctopus.clear();
 
-    const DesignEditorOctopusLoader::Input loaderInput { octopusPath, imageDirectory, fontDirectory, ignoreValidation };
-    const bool isLoaded = DesignEditorOctopusLoader::readOctopusFile(loaderInput, data->gc, data->loadedOctopus);
-    if (!isLoaded) {
-        data->loadedOctopus.clear();
+    data->loadedOctopus.filePath = octopusPath;
+
+    if (!readFile(octopusPath, data->loadedOctopus.octopusJson)) {
+        fprintf(stderr, "Failed to read file \"%s\"\n", ((const std::string &) octopusPath).c_str());
+        return false;
     }
 
-    return isLoaded;
+    const int loadError = data->loadOctopus(data->loadedOctopus.octopusJson);
+    return loadError == 0;
 }
 
 void DesignEditorWindow::setImageDirectory(const FilePath &imageDirectory_) {
@@ -280,7 +329,10 @@ void DesignEditorWindow::drawControlsWidget() {
     ImGui::NextColumn();
 
     ImGui::Text("Widgets:");
-    ImGui::Checkbox("Result image", &data->widgetsContext.showResultImage);
+    ImGui::Checkbox("Toolbar", &data->widgetsContext.showToolbar);
+    ImGui::Checkbox("Layer List", &data->widgetsContext.showLayerList);
+    ImGui::Checkbox("Interactive Design View", &data->widgetsContext.showDesignView);
+    ImGui::Checkbox("Layer Properties", &data->widgetsContext.showLayerProperties);
 
     ImGui::NextColumn();
 
@@ -298,15 +350,48 @@ void DesignEditorWindow::drawControlsWidget() {
     ImGui::End();
 }
 
-void DesignEditorWindow::drawResultImageWidget(float &zoom) {
-    ImGui::Begin("Result image");
+void DesignEditorWindow::drawToolbarWidget() {
+    ImGui::Begin("Toolbar");
 
-    if (data->texturesContext.resultTexture != nullptr) {
-        const BitmapPtr &bitmap = data->loadedOctopus.bitmap;
-        drawImGuiWidgetTexture(data->texturesContext.resultTexture->getInternalGLHandle(), bitmap->width(), bitmap->height(), zoom, 1);
+    ImGui::End();
+}
+
+void DesignEditorWindow::drawLayerListWidget() {
+    ImGui::Begin("Layer List");
+
+    if (data->loadedOctopus.isLoaded()) {
+        for (int i = 0; i < data->loadedOctopus.layerList.n; i++) {
+            const ODE_LayerList::Entry &layer = data->loadedOctopus.layerList.entries[i];
+            const std::string layerTypeStr = [](ODE_LayerType layerType) {
+                switch (layerType) {
+                    case ODE_LAYER_TYPE_UNSPECIFIED: return "-";
+                    case ODE_LAYER_TYPE_SHAPE: return "S";
+                    case ODE_LAYER_TYPE_TEXT: return "T";
+                    case ODE_LAYER_TYPE_GROUP: return "G";
+                    case ODE_LAYER_TYPE_MASK_GROUP: return "M";
+                    case ODE_LAYER_TYPE_COMPONENT_REFERENCE: return "CR";
+                    case ODE_LAYER_TYPE_COMPONENT_INSTANCE: return "CI";
+                }
+                return "-";
+            } (layer.type);
+            const std::string layerNameStr("["+layerTypeStr+"] "+std::string(data->loadedOctopus.layerList.entries[i].name.data));
+            ImGui::Selectable(layerNameStr.c_str());
+        }
     } else {
         ImGui::Text("---");
     }
+
+    ImGui::End();
+}
+
+void DesignEditorWindow::drawDesignViewWidget() {
+    ImGui::Begin("Interactive Design View");
+
+    ImGui::End();
+}
+
+void DesignEditorWindow::drawLayerPropertiesWidget() {
+    ImGui::Begin("Layer Properties");
 
     ImGui::End();
 }

@@ -72,8 +72,6 @@ struct RGIWindow::Internal {
 
     /// Graphics context of the application.
     GraphicsContext gc;
-    /// The rendered image of the root node in graph
-    PlacedImagePtr rootNodeImage;
     /// Loaded octopus file data
     RGILoadedOctopus loadedOctopus;
     /// A flag that is true just after a new Octopus file is loaded

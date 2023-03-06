@@ -1,7 +1,8 @@
 
 #pragma once
 
-#include <ode-logic.h>
+#include <memory>
+#include <ode-essentials.h>
 
 using namespace ode;
 
@@ -31,7 +32,10 @@ public:
 
 private:
     void drawControlsWidget();
-    void drawResultImageWidget(float &zoom);
+    void drawToolbarWidget();
+    void drawLayerListWidget();
+    void drawDesignViewWidget();
+    void drawLayerPropertiesWidget();
 
     void handleKeyboardEvents();
 

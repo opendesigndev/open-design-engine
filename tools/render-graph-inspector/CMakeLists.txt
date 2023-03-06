@@ -67,7 +67,7 @@ source_group(TREE ${IMGUI_DIR}/.. FILES ${IMGUI_HEADERS} ${IMGUI_SOURCES})
 source_group(TREE ${IMGUI_FILEDIALOG_DIR}/.. FILES ${IMGUI_FILEDIALOG_HEADERS} ${IMGUI_FILEDIALOG_SOURCES})
 source_group(TREE ${IMNODES_DIR}/.. FILES ${IMNODES_HEADERS} ${IMNODES_SOURCES})
 
-# Required Open Desing Engine internal libraries
+# Required Open Design Engine internal libraries
 set(INTERNAL_LIBRARY_DEPENDENCIES
     liboctopus
     ode-essentials
