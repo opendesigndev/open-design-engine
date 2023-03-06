@@ -673,9 +673,9 @@ def generateNapiBindings(entities, apiPath):
                 '    return false;\n'
                 '}\n'
                 f'template<>\n'
-                f'{fullName}* Autobind<{fullName}>::read_ptr(const Napi::Value& value) {{\n'
-                f'    return Handle<{fullName}>::Read_ptr(value);\n'
-                '}\n'
+                f'void Autobind<{fullName}>::write_from(Napi::Value value, const {fullName}& handle){{\n'
+                f'    if(Handle<{fullName}>::Write(value, handle)) {{ /* TODO: figure out error handling */ }}\n'
+                f'}}\n'
                 "\n"
             )
             src_body += f"    Handle<{fullName}>::Export(exports);"
@@ -690,6 +690,7 @@ def generateNapiBindings(entities, apiPath):
             )
             call = ""
             i = 0
+            outputs = ""
             for mem in entity.members:
                 i += 1
                 t = mem.type
@@ -698,19 +699,19 @@ def generateNapiBindings(entities, apiPath):
                 
                 if t.endswith("*") and not t.startswith("const "):
                     # Output arguments
-                    t = t[:-1]
+                    t = t[:-1].strip()
                     src_tail += (
-                        f'    auto arg{i} = Autobind<{t}>::read_ptr(info[{i-1}]);\n'
-                        f'    if (arg{i} == nullptr) return Napi::Value();\n'
+                        f'    {t} {mem.name};\n'
                     )
-                    call += f"arg{i}"
+                    outputs += f'    Autobind<{t}>::write_from(info[{i-1}], {mem.name});\n'
+                    call += f'&{mem.name}'
                 elif t.endswith("*"):
-                    t = t[6:-1]
+                    t = t[6:-1].strip()
                     src_tail += (
-                        f'    {t} v{i};\n'
-                        f'    if(!Autobind<{t}>::read_into(info[{i-1}], v{i})) return Napi::Value();\n'
+                        f'    {t} {mem.name};\n'
+                        f'    if(!Autobind<{t}>::read_into(info[{i-1}], {mem.name})) return Napi::Value();\n'
                     )
-                    call += f"&v{i}"
+                    call += f"&{mem.name}"
                 else:
                     src_tail += (
                         f'    {t} v{i};\n'
@@ -719,6 +720,7 @@ def generateNapiBindings(entities, apiPath):
                     call += f"v{i}"
             src_tail += (
                 f'    auto result = {fullName}({call});\n'
+                f'{outputs}'
                 f'    return Napi::String::New(env, Result_to_string(result));\n'
                 f'}}\n'
                 '\n'
@@ -753,19 +755,11 @@ def generateNapiBindings(entities, apiPath):
                 f'    return true;\n'
                 f'}}\n'
                 f'template<>\n'
-                f'{fullName}* Autobind<{fullName}>::read_ptr(const Napi::Value& value){{\n'
-                f'    Napi::Error::New(value.Env(), "Not implemented: Autobind<{fullName}>::read_ptr").ThrowAsJavaScriptException();\n'
-                f'    return nullptr;\n'
+                f'void Autobind<{fullName}>::write_from(Napi::Value value, const {fullName}& parsed){{\n'
                 f'}}\n'
+                '\n'
             )
         else:
-            src_tail += (
-                f'template<>\n'
-                f'{fullName}* Autobind<{fullName}>::read_ptr(const Napi::Value& value){{\n'
-                f'    Napi::Error::New(value.Env(), "Not implemented: Autobind<{fullName}>::read_ptr").ThrowAsJavaScriptException();\n'
-                f'    return {{}};\n'
-                f'}}\n'
-            )
             src_body += f"    // TODO: {entity.category} {emName}\n"
 
 

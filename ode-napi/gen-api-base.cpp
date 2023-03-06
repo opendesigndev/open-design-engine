@@ -102,36 +102,6 @@ std::string Result_to_string(ODE_Result value) {
 }
 
 template<>
-ODE_Scalar* Autobind<ODE_Scalar>::read_ptr(const Napi::Value& value){
-    Napi::Error::New(value.Env(), "Not implemented: Autobind<ODE_Scalar>::read_ptr").ThrowAsJavaScriptException();
-    return {};
-}
-template<>
-ODE_VarDataPtr* Autobind<ODE_VarDataPtr>::read_ptr(const Napi::Value& value){
-    Napi::Error::New(value.Env(), "Not implemented: Autobind<ODE_VarDataPtr>::read_ptr").ThrowAsJavaScriptException();
-    return {};
-}
-template<>
-ODE_ConstDataPtr* Autobind<ODE_ConstDataPtr>::read_ptr(const Napi::Value& value){
-    Napi::Error::New(value.Env(), "Not implemented: Autobind<ODE_ConstDataPtr>::read_ptr").ThrowAsJavaScriptException();
-    return {};
-}
-template<>
-ODE_ConstCharPtr* Autobind<ODE_ConstCharPtr>::read_ptr(const Napi::Value& value){
-    Napi::Error::New(value.Env(), "Not implemented: Autobind<ODE_ConstCharPtr>::read_ptr").ThrowAsJavaScriptException();
-    return {};
-}
-template<>
-ODE_Vector2* Autobind<ODE_Vector2>::read_ptr(const Napi::Value& value){
-    Napi::Error::New(value.Env(), "Not implemented: Autobind<ODE_Vector2>::read_ptr").ThrowAsJavaScriptException();
-    return {};
-}
-template<>
-ODE_Rectangle* Autobind<ODE_Rectangle>::read_ptr(const Napi::Value& value){
-    Napi::Error::New(value.Env(), "Not implemented: Autobind<ODE_Rectangle>::read_ptr").ThrowAsJavaScriptException();
-    return {};
-}
-template<>
 bool Autobind<ODE_StringRef>::read_into(const Napi::Value& value, ODE_StringRef& parsed){
     Napi::Env env = value.Env();
     Napi::Object obj = value.As<Napi::Object>();
@@ -147,10 +117,9 @@ bool Autobind<ODE_StringRef>::read_into(const Napi::Value& value, ODE_StringRef&
     return true;
 }
 template<>
-ODE_StringRef* Autobind<ODE_StringRef>::read_ptr(const Napi::Value& value){
-    Napi::Error::New(value.Env(), "Not implemented: Autobind<ODE_StringRef>::read_ptr").ThrowAsJavaScriptException();
-    return nullptr;
+void Autobind<ODE_StringRef>::write_from(Napi::Value value, const ODE_StringRef& parsed){
 }
+
 template<>
 bool Autobind<ODE_String>::read_into(const Napi::Value& value, ODE_String& parsed){
     Napi::Env env = value.Env();
@@ -167,10 +136,9 @@ bool Autobind<ODE_String>::read_into(const Napi::Value& value, ODE_String& parse
     return true;
 }
 template<>
-ODE_String* Autobind<ODE_String>::read_ptr(const Napi::Value& value){
-    Napi::Error::New(value.Env(), "Not implemented: Autobind<ODE_String>::read_ptr").ThrowAsJavaScriptException();
-    return nullptr;
+void Autobind<ODE_String>::write_from(Napi::Value value, const ODE_String& parsed){
 }
+
 template<>
 bool Autobind<ODE_MemoryBuffer>::read_into(const Napi::Value& value, ODE_MemoryBuffer& parsed){
     Napi::Env env = value.Env();
@@ -187,10 +155,9 @@ bool Autobind<ODE_MemoryBuffer>::read_into(const Napi::Value& value, ODE_MemoryB
     return true;
 }
 template<>
-ODE_MemoryBuffer* Autobind<ODE_MemoryBuffer>::read_ptr(const Napi::Value& value){
-    Napi::Error::New(value.Env(), "Not implemented: Autobind<ODE_MemoryBuffer>::read_ptr").ThrowAsJavaScriptException();
-    return nullptr;
+void Autobind<ODE_MemoryBuffer>::write_from(Napi::Value value, const ODE_MemoryBuffer& parsed){
 }
+
 template<>
 bool Autobind<ODE_StringList>::read_into(const Napi::Value& value, ODE_StringList& parsed){
     Napi::Env env = value.Env();
@@ -207,10 +174,9 @@ bool Autobind<ODE_StringList>::read_into(const Napi::Value& value, ODE_StringLis
     return true;
 }
 template<>
-ODE_StringList* Autobind<ODE_StringList>::read_ptr(const Napi::Value& value){
-    Napi::Error::New(value.Env(), "Not implemented: Autobind<ODE_StringList>::read_ptr").ThrowAsJavaScriptException();
-    return nullptr;
+void Autobind<ODE_StringList>::write_from(Napi::Value value, const ODE_StringList& parsed){
 }
+
 Napi::Value bind_ode_destroyString(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_String v1;
@@ -221,29 +187,29 @@ Napi::Value bind_ode_destroyString(const Napi::CallbackInfo& info) {
 
 Napi::Value bind_ode_allocateMemoryBuffer(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    auto arg1 = Autobind<ODE_MemoryBuffer >::read_ptr(info[0]);
-    if (arg1 == nullptr) return Napi::Value();
+    ODE_MemoryBuffer buffer;
     size_t v2;
     if(!Autobind<size_t>::read_into(info[1], v2)) return Napi::Value();
-    auto result = ode_allocateMemoryBuffer(arg1, v2);
+    auto result = ode_allocateMemoryBuffer(&buffer, v2);
+    Autobind<ODE_MemoryBuffer>::write_from(info[0], buffer);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_reallocateMemoryBuffer(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    auto arg1 = Autobind<ODE_MemoryBuffer >::read_ptr(info[0]);
-    if (arg1 == nullptr) return Napi::Value();
+    ODE_MemoryBuffer buffer;
     size_t v2;
     if(!Autobind<size_t>::read_into(info[1], v2)) return Napi::Value();
-    auto result = ode_reallocateMemoryBuffer(arg1, v2);
+    auto result = ode_reallocateMemoryBuffer(&buffer, v2);
+    Autobind<ODE_MemoryBuffer>::write_from(info[0], buffer);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_destroyMemoryBuffer(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    auto arg1 = Autobind<ODE_MemoryBuffer >::read_ptr(info[0]);
-    if (arg1 == nullptr) return Napi::Value();
-    auto result = ode_destroyMemoryBuffer(arg1);
+    ODE_MemoryBuffer buffer;
+    auto result = ode_destroyMemoryBuffer(&buffer);
+    Autobind<ODE_MemoryBuffer>::write_from(info[0], buffer);
     return Napi::String::New(env, Result_to_string(result));
 }
 

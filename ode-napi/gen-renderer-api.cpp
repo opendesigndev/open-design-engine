@@ -62,10 +62,9 @@ bool Autobind<ODE_Bitmap>::read_into(const Napi::Value& value, ODE_Bitmap& parse
     return true;
 }
 template<>
-ODE_Bitmap* Autobind<ODE_Bitmap>::read_ptr(const Napi::Value& value){
-    Napi::Error::New(value.Env(), "Not implemented: Autobind<ODE_Bitmap>::read_ptr").ThrowAsJavaScriptException();
-    return nullptr;
+void Autobind<ODE_Bitmap>::write_from(Napi::Value value, const ODE_Bitmap& parsed){
 }
+
 template<>
 bool Autobind<ODE_BitmapRef>::read_into(const Napi::Value& value, ODE_BitmapRef& parsed){
     Napi::Env env = value.Env();
@@ -88,10 +87,9 @@ bool Autobind<ODE_BitmapRef>::read_into(const Napi::Value& value, ODE_BitmapRef&
     return true;
 }
 template<>
-ODE_BitmapRef* Autobind<ODE_BitmapRef>::read_ptr(const Napi::Value& value){
-    Napi::Error::New(value.Env(), "Not implemented: Autobind<ODE_BitmapRef>::read_ptr").ThrowAsJavaScriptException();
-    return nullptr;
+void Autobind<ODE_BitmapRef>::write_from(Napi::Value value, const ODE_BitmapRef& parsed){
 }
+
 template<>
 bool Autobind<ODE_PR1_FrameView>::read_into(const Napi::Value& value, ODE_PR1_FrameView& parsed){
     Napi::Env env = value.Env();
@@ -111,10 +109,9 @@ bool Autobind<ODE_PR1_FrameView>::read_into(const Napi::Value& value, ODE_PR1_Fr
     return true;
 }
 template<>
-ODE_PR1_FrameView* Autobind<ODE_PR1_FrameView>::read_ptr(const Napi::Value& value){
-    Napi::Error::New(value.Env(), "Not implemented: Autobind<ODE_PR1_FrameView>::read_ptr").ThrowAsJavaScriptException();
-    return nullptr;
+void Autobind<ODE_PR1_FrameView>::write_from(Napi::Value value, const ODE_PR1_FrameView& parsed){
 }
+
 template<>
 const char* Handle<ODE_RendererContextHandle>::name = "RendererContextHandle";
 template<>
@@ -124,8 +121,8 @@ bool Autobind<ODE_RendererContextHandle>::read_into(const Napi::Value& value, OD
     return false;
 }
 template<>
-ODE_RendererContextHandle* Autobind<ODE_RendererContextHandle>::read_ptr(const Napi::Value& value) {
-    return Handle<ODE_RendererContextHandle>::Read_ptr(value);
+void Autobind<ODE_RendererContextHandle>::write_from(Napi::Value value, const ODE_RendererContextHandle& handle){
+    if(Handle<ODE_RendererContextHandle>::Write(value, handle)) { /* TODO: figure out error handling */ }
 }
 
 template<>
@@ -137,8 +134,8 @@ bool Autobind<ODE_DesignImageBaseHandle>::read_into(const Napi::Value& value, OD
     return false;
 }
 template<>
-ODE_DesignImageBaseHandle* Autobind<ODE_DesignImageBaseHandle>::read_ptr(const Napi::Value& value) {
-    return Handle<ODE_DesignImageBaseHandle>::Read_ptr(value);
+void Autobind<ODE_DesignImageBaseHandle>::write_from(Napi::Value value, const ODE_DesignImageBaseHandle& handle){
+    if(Handle<ODE_DesignImageBaseHandle>::Write(value, handle)) { /* TODO: figure out error handling */ }
 }
 
 template<>
@@ -150,8 +147,8 @@ bool Autobind<ODE_PR1_AnimationRendererHandle>::read_into(const Napi::Value& val
     return false;
 }
 template<>
-ODE_PR1_AnimationRendererHandle* Autobind<ODE_PR1_AnimationRendererHandle>::read_ptr(const Napi::Value& value) {
-    return Handle<ODE_PR1_AnimationRendererHandle>::Read_ptr(value);
+void Autobind<ODE_PR1_AnimationRendererHandle>::write_from(Napi::Value value, const ODE_PR1_AnimationRendererHandle& handle){
+    if(Handle<ODE_PR1_AnimationRendererHandle>::Write(value, handle)) { /* TODO: figure out error handling */ }
 }
 
 Napi::Value bind_ode_destroyBitmap(const Napi::CallbackInfo& info) {
@@ -166,11 +163,11 @@ Napi::Value bind_ode_createRendererContext(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_EngineHandle v1;
     if(!Autobind<ODE_EngineHandle>::read_into(info[0], v1)) return Napi::Value();
-    auto arg2 = Autobind<ODE_RendererContextHandle >::read_ptr(info[1]);
-    if (arg2 == nullptr) return Napi::Value();
+    ODE_RendererContextHandle rendererContext;
     ODE_StringRef v3;
     if(!Autobind<ODE_StringRef>::read_into(info[2], v3)) return Napi::Value();
-    auto result = ode_createRendererContext(v1, arg2, v3);
+    auto result = ode_createRendererContext(v1, &rendererContext, v3);
+    Autobind<ODE_RendererContextHandle>::write_from(info[1], rendererContext);
     return Napi::String::New(env, Result_to_string(result));
 }
 
@@ -188,9 +185,9 @@ Napi::Value bind_ode_createDesignImageBase(const Napi::CallbackInfo& info) {
     if(!Autobind<ODE_RendererContextHandle>::read_into(info[0], v1)) return Napi::Value();
     ODE_DesignHandle v2;
     if(!Autobind<ODE_DesignHandle>::read_into(info[1], v2)) return Napi::Value();
-    auto arg3 = Autobind<ODE_DesignImageBaseHandle >::read_ptr(info[2]);
-    if (arg3 == nullptr) return Napi::Value();
-    auto result = ode_createDesignImageBase(v1, v2, arg3);
+    ODE_DesignImageBaseHandle designImageBase;
+    auto result = ode_createDesignImageBase(v1, v2, &designImageBase);
+    Autobind<ODE_DesignImageBaseHandle>::write_from(info[2], designImageBase);
     return Napi::String::New(env, Result_to_string(result));
 }
 
@@ -222,11 +219,11 @@ Napi::Value bind_ode_pr1_drawComponent(const Napi::CallbackInfo& info) {
     if(!Autobind<ODE_ComponentHandle>::read_into(info[1], v2)) return Napi::Value();
     ODE_DesignImageBaseHandle v3;
     if(!Autobind<ODE_DesignImageBaseHandle>::read_into(info[2], v3)) return Napi::Value();
-    auto arg4 = Autobind<ODE_Bitmap >::read_ptr(info[3]);
-    if (arg4 == nullptr) return Napi::Value();
-    ODE_PR1_FrameView  v5;
-    if(!Autobind<ODE_PR1_FrameView >::read_into(info[4], v5)) return Napi::Value();
-    auto result = ode_pr1_drawComponent(v1, v2, v3, arg4, &v5);
+    ODE_Bitmap outputBitmap;
+    ODE_PR1_FrameView frameView;
+    if(!Autobind<ODE_PR1_FrameView>::read_into(info[4], frameView)) return Napi::Value();
+    auto result = ode_pr1_drawComponent(v1, v2, v3, &outputBitmap, &frameView);
+    Autobind<ODE_Bitmap>::write_from(info[3], outputBitmap);
     return Napi::String::New(env, Result_to_string(result));
 }
 
@@ -236,11 +233,11 @@ Napi::Value bind_ode_pr1_createAnimationRenderer(const Napi::CallbackInfo& info)
     if(!Autobind<ODE_RendererContextHandle>::read_into(info[0], v1)) return Napi::Value();
     ODE_ComponentHandle v2;
     if(!Autobind<ODE_ComponentHandle>::read_into(info[1], v2)) return Napi::Value();
-    auto arg3 = Autobind<ODE_PR1_AnimationRendererHandle >::read_ptr(info[2]);
-    if (arg3 == nullptr) return Napi::Value();
+    ODE_PR1_AnimationRendererHandle animationRenderer;
     ODE_DesignImageBaseHandle v4;
     if(!Autobind<ODE_DesignImageBaseHandle>::read_into(info[3], v4)) return Napi::Value();
-    auto result = ode_pr1_createAnimationRenderer(v1, v2, arg3, v4);
+    auto result = ode_pr1_createAnimationRenderer(v1, v2, &animationRenderer, v4);
+    Autobind<ODE_PR1_AnimationRendererHandle>::write_from(info[2], animationRenderer);
     return Napi::String::New(env, Result_to_string(result));
 }
 
@@ -256,11 +253,11 @@ Napi::Value bind_ode_pr1_animation_drawFrame(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_PR1_AnimationRendererHandle v1;
     if(!Autobind<ODE_PR1_AnimationRendererHandle>::read_into(info[0], v1)) return Napi::Value();
-    ODE_PR1_FrameView  v2;
-    if(!Autobind<ODE_PR1_FrameView >::read_into(info[1], v2)) return Napi::Value();
+    ODE_PR1_FrameView frameView;
+    if(!Autobind<ODE_PR1_FrameView>::read_into(info[1], frameView)) return Napi::Value();
     ODE_Scalar v3;
     if(!Autobind<ODE_Scalar>::read_into(info[2], v3)) return Napi::Value();
-    auto result = ode_pr1_animation_drawFrame(v1, &v2, v3);
+    auto result = ode_pr1_animation_drawFrame(v1, &frameView, v3);
     return Napi::String::New(env, Result_to_string(result));
 }
 

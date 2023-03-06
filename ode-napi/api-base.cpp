@@ -23,8 +23,8 @@ bool Autobind<unsigned long>::read_into(const Napi::Value& value, unsigned long&
 template<>
 bool Autobind<ODE_Vector2>::read_into(const Napi::Value& value, ODE_Vector2& parsed){
     Napi::Array arr = value.As<Napi::Array>();
-    parsed.x = (int32_t)arr.Get(uint32_t(0)).Unwrap().As<Napi::Number>();
-    parsed.y = (int32_t)arr.Get(uint32_t(1)).Unwrap().As<Napi::Number>();
+    parsed.x = (ODE_Scalar)arr.Get(uint32_t(0)).Unwrap().As<Napi::Number>();
+    parsed.y = (ODE_Scalar)arr.Get(uint32_t(1)).Unwrap().As<Napi::Number>();
     return true;
 }
 
@@ -49,8 +49,8 @@ bool Autobind<ODE_VarDataPtr>::read_into(const Napi::Value& value, ODE_VarDataPt
 
 template<>
 bool Autobind<ODE_Scalar>::read_into(const Napi::Value& value, ODE_Scalar& parsed){
-    Napi::Error::New(value.Env(), "Not implemented: Autobind<ODE_Scalar>::read_into").ThrowAsJavaScriptException();
-    return false;
+    parsed = (ODE_Scalar)value.As<Napi::Number>();
+    return true;
 }
 
 Napi::Value bind_ode_makeString(const Napi::CallbackInfo& info) {

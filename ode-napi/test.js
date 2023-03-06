@@ -25,3 +25,7 @@ console.log('design_addComponentFromOctopusString', ode.design_addComponentFromO
     position: [0,0],
 }, octopus))
 console.log(design)
+const layer = ode.makeString("")
+console.log(layer)
+console.log('component_identifyLayer', ode.component_identifyLayer(component, layer, [415,167], 1))
+console.log(layer)

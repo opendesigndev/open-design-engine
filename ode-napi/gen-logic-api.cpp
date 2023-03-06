@@ -122,10 +122,9 @@ bool Autobind<ODE_Transformation>::read_into(const Napi::Value& value, ODE_Trans
     return true;
 }
 template<>
-ODE_Transformation* Autobind<ODE_Transformation>::read_ptr(const Napi::Value& value){
-    Napi::Error::New(value.Env(), "Not implemented: Autobind<ODE_Transformation>::read_ptr").ThrowAsJavaScriptException();
-    return nullptr;
+void Autobind<ODE_Transformation>::write_from(Napi::Value value, const ODE_Transformation& parsed){
 }
+
 template<>
 bool Autobind<ODE_EngineAttributes>::read_into(const Napi::Value& value, ODE_EngineAttributes& parsed){
     Napi::Env env = value.Env();
@@ -136,10 +135,9 @@ bool Autobind<ODE_EngineAttributes>::read_into(const Napi::Value& value, ODE_Eng
     return true;
 }
 template<>
-ODE_EngineAttributes* Autobind<ODE_EngineAttributes>::read_ptr(const Napi::Value& value){
-    Napi::Error::New(value.Env(), "Not implemented: Autobind<ODE_EngineAttributes>::read_ptr").ThrowAsJavaScriptException();
-    return nullptr;
+void Autobind<ODE_EngineAttributes>::write_from(Napi::Value value, const ODE_EngineAttributes& parsed){
 }
+
 template<>
 bool Autobind<ODE_ComponentMetadata>::read_into(const Napi::Value& value, ODE_ComponentMetadata& parsed){
     Napi::Env env = value.Env();
@@ -156,10 +154,9 @@ bool Autobind<ODE_ComponentMetadata>::read_into(const Napi::Value& value, ODE_Co
     return true;
 }
 template<>
-ODE_ComponentMetadata* Autobind<ODE_ComponentMetadata>::read_ptr(const Napi::Value& value){
-    Napi::Error::New(value.Env(), "Not implemented: Autobind<ODE_ComponentMetadata>::read_ptr").ThrowAsJavaScriptException();
-    return nullptr;
+void Autobind<ODE_ComponentMetadata>::write_from(Napi::Value value, const ODE_ComponentMetadata& parsed){
 }
+
 template<>
 bool Autobind<ODE_LayerList::Entry>::read_into(const Napi::Value& value, ODE_LayerList::Entry& parsed){
     Napi::Env env = value.Env();
@@ -182,10 +179,9 @@ bool Autobind<ODE_LayerList::Entry>::read_into(const Napi::Value& value, ODE_Lay
     return true;
 }
 template<>
-ODE_LayerList::Entry* Autobind<ODE_LayerList::Entry>::read_ptr(const Napi::Value& value){
-    Napi::Error::New(value.Env(), "Not implemented: Autobind<ODE_LayerList::Entry>::read_ptr").ThrowAsJavaScriptException();
-    return nullptr;
+void Autobind<ODE_LayerList::Entry>::write_from(Napi::Value value, const ODE_LayerList::Entry& parsed){
 }
+
 template<>
 bool Autobind<ODE_LayerList>::read_into(const Napi::Value& value, ODE_LayerList& parsed){
     Napi::Env env = value.Env();
@@ -202,10 +198,9 @@ bool Autobind<ODE_LayerList>::read_into(const Napi::Value& value, ODE_LayerList&
     return true;
 }
 template<>
-ODE_LayerList* Autobind<ODE_LayerList>::read_ptr(const Napi::Value& value){
-    Napi::Error::New(value.Env(), "Not implemented: Autobind<ODE_LayerList>::read_ptr").ThrowAsJavaScriptException();
-    return nullptr;
+void Autobind<ODE_LayerList>::write_from(Napi::Value value, const ODE_LayerList& parsed){
 }
+
 template<>
 bool Autobind<ODE_LayerMetrics>::read_into(const Napi::Value& value, ODE_LayerMetrics& parsed){
     Napi::Env env = value.Env();
@@ -225,10 +220,9 @@ bool Autobind<ODE_LayerMetrics>::read_into(const Napi::Value& value, ODE_LayerMe
     return true;
 }
 template<>
-ODE_LayerMetrics* Autobind<ODE_LayerMetrics>::read_ptr(const Napi::Value& value){
-    Napi::Error::New(value.Env(), "Not implemented: Autobind<ODE_LayerMetrics>::read_ptr").ThrowAsJavaScriptException();
-    return nullptr;
+void Autobind<ODE_LayerMetrics>::write_from(Napi::Value value, const ODE_LayerMetrics& parsed){
 }
+
 std::string ParseError_Type_to_string(ODE_ParseError::Type value) {
     switch(value) {
         case ODE_ParseError::OK: return "OK";
@@ -258,10 +252,9 @@ bool Autobind<ODE_ParseError>::read_into(const Napi::Value& value, ODE_ParseErro
     return true;
 }
 template<>
-ODE_ParseError* Autobind<ODE_ParseError>::read_ptr(const Napi::Value& value){
-    Napi::Error::New(value.Env(), "Not implemented: Autobind<ODE_ParseError>::read_ptr").ThrowAsJavaScriptException();
-    return nullptr;
+void Autobind<ODE_ParseError>::write_from(Napi::Value value, const ODE_ParseError& parsed){
 }
+
 template<>
 const char* Handle<ODE_EngineHandle>::name = "EngineHandle";
 template<>
@@ -271,8 +264,8 @@ bool Autobind<ODE_EngineHandle>::read_into(const Napi::Value& value, ODE_EngineH
     return false;
 }
 template<>
-ODE_EngineHandle* Autobind<ODE_EngineHandle>::read_ptr(const Napi::Value& value) {
-    return Handle<ODE_EngineHandle>::Read_ptr(value);
+void Autobind<ODE_EngineHandle>::write_from(Napi::Value value, const ODE_EngineHandle& handle){
+    if(Handle<ODE_EngineHandle>::Write(value, handle)) { /* TODO: figure out error handling */ }
 }
 
 template<>
@@ -284,8 +277,8 @@ bool Autobind<ODE_DesignHandle>::read_into(const Napi::Value& value, ODE_DesignH
     return false;
 }
 template<>
-ODE_DesignHandle* Autobind<ODE_DesignHandle>::read_ptr(const Napi::Value& value) {
-    return Handle<ODE_DesignHandle>::Read_ptr(value);
+void Autobind<ODE_DesignHandle>::write_from(Napi::Value value, const ODE_DesignHandle& handle){
+    if(Handle<ODE_DesignHandle>::Write(value, handle)) { /* TODO: figure out error handling */ }
 }
 
 template<>
@@ -297,8 +290,8 @@ bool Autobind<ODE_ComponentHandle>::read_into(const Napi::Value& value, ODE_Comp
     return false;
 }
 template<>
-ODE_ComponentHandle* Autobind<ODE_ComponentHandle>::read_ptr(const Napi::Value& value) {
-    return Handle<ODE_ComponentHandle>::Read_ptr(value);
+void Autobind<ODE_ComponentHandle>::write_from(Napi::Value value, const ODE_ComponentHandle& handle){
+    if(Handle<ODE_ComponentHandle>::Write(value, handle)) { /* TODO: figure out error handling */ }
 }
 
 Napi::Value bind_ode_destroyLayerList(const Napi::CallbackInfo& info) {
@@ -319,19 +312,19 @@ Napi::Value bind_ode_destroyMissingFontList(const Napi::CallbackInfo& info) {
 
 Napi::Value bind_ode_initializeEngineAttributes(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    auto arg1 = Autobind<ODE_EngineAttributes >::read_ptr(info[0]);
-    if (arg1 == nullptr) return Napi::Value();
-    auto result = ode_initializeEngineAttributes(arg1);
+    ODE_EngineAttributes engineAttributes;
+    auto result = ode_initializeEngineAttributes(&engineAttributes);
+    Autobind<ODE_EngineAttributes>::write_from(info[0], engineAttributes);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_createEngine(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    auto arg1 = Autobind<ODE_EngineHandle >::read_ptr(info[0]);
-    if (arg1 == nullptr) return Napi::Value();
-    ODE_EngineAttributes  v2;
-    if(!Autobind<ODE_EngineAttributes >::read_into(info[1], v2)) return Napi::Value();
-    auto result = ode_createEngine(arg1, &v2);
+    ODE_EngineHandle engine;
+    ODE_EngineAttributes engineAttributes;
+    if(!Autobind<ODE_EngineAttributes>::read_into(info[1], engineAttributes)) return Napi::Value();
+    auto result = ode_createEngine(&engine, &engineAttributes);
+    Autobind<ODE_EngineHandle>::write_from(info[0], engine);
     return Napi::String::New(env, Result_to_string(result));
 }
 
@@ -347,9 +340,9 @@ Napi::Value bind_ode_createDesign(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_EngineHandle v1;
     if(!Autobind<ODE_EngineHandle>::read_into(info[0], v1)) return Napi::Value();
-    auto arg2 = Autobind<ODE_DesignHandle >::read_ptr(info[1]);
-    if (arg2 == nullptr) return Napi::Value();
-    auto result = ode_createDesign(v1, arg2);
+    ODE_DesignHandle design;
+    auto result = ode_createDesign(v1, &design);
+    Autobind<ODE_DesignHandle>::write_from(info[1], design);
     return Napi::String::New(env, Result_to_string(result));
 }
 
@@ -357,13 +350,13 @@ Napi::Value bind_ode_loadDesignFromManifestString(const Napi::CallbackInfo& info
     auto env = info.Env();
     ODE_EngineHandle v1;
     if(!Autobind<ODE_EngineHandle>::read_into(info[0], v1)) return Napi::Value();
-    auto arg2 = Autobind<ODE_DesignHandle >::read_ptr(info[1]);
-    if (arg2 == nullptr) return Napi::Value();
+    ODE_DesignHandle design;
     ODE_StringRef v3;
     if(!Autobind<ODE_StringRef>::read_into(info[2], v3)) return Napi::Value();
-    auto arg4 = Autobind<ODE_ParseError >::read_ptr(info[3]);
-    if (arg4 == nullptr) return Napi::Value();
-    auto result = ode_loadDesignFromManifestString(v1, arg2, v3, arg4);
+    ODE_ParseError parseError;
+    auto result = ode_loadDesignFromManifestString(v1, &design, v3, &parseError);
+    Autobind<ODE_DesignHandle>::write_from(info[1], design);
+    Autobind<ODE_ParseError>::write_from(info[3], parseError);
     return Napi::String::New(env, Result_to_string(result));
 }
 
@@ -381,9 +374,9 @@ Napi::Value bind_ode_design_loadManifestString(const Napi::CallbackInfo& info) {
     if(!Autobind<ODE_DesignHandle>::read_into(info[0], v1)) return Napi::Value();
     ODE_StringRef v2;
     if(!Autobind<ODE_StringRef>::read_into(info[1], v2)) return Napi::Value();
-    auto arg3 = Autobind<ODE_ParseError >::read_ptr(info[2]);
-    if (arg3 == nullptr) return Napi::Value();
-    auto result = ode_design_loadManifestString(v1, v2, arg3);
+    ODE_ParseError parseError;
+    auto result = ode_design_loadManifestString(v1, v2, &parseError);
+    Autobind<ODE_ParseError>::write_from(info[2], parseError);
     return Napi::String::New(env, Result_to_string(result));
 }
 
@@ -391,15 +384,15 @@ Napi::Value bind_ode_design_addComponentFromOctopusString(const Napi::CallbackIn
     auto env = info.Env();
     ODE_DesignHandle v1;
     if(!Autobind<ODE_DesignHandle>::read_into(info[0], v1)) return Napi::Value();
-    auto arg2 = Autobind<ODE_ComponentHandle >::read_ptr(info[1]);
-    if (arg2 == nullptr) return Napi::Value();
+    ODE_ComponentHandle component;
     ODE_ComponentMetadata v3;
     if(!Autobind<ODE_ComponentMetadata>::read_into(info[2], v3)) return Napi::Value();
     ODE_StringRef v4;
     if(!Autobind<ODE_StringRef>::read_into(info[3], v4)) return Napi::Value();
-    auto arg5 = Autobind<ODE_ParseError >::read_ptr(info[4]);
-    if (arg5 == nullptr) return Napi::Value();
-    auto result = ode_design_addComponentFromOctopusString(v1, arg2, v3, v4, arg5);
+    ODE_ParseError parseError;
+    auto result = ode_design_addComponentFromOctopusString(v1, &component, v3, v4, &parseError);
+    Autobind<ODE_ComponentHandle>::write_from(info[1], component);
+    Autobind<ODE_ParseError>::write_from(info[4], parseError);
     return Napi::String::New(env, Result_to_string(result));
 }
 
@@ -417,9 +410,9 @@ Napi::Value bind_ode_design_listMissingFonts(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_DesignHandle v1;
     if(!Autobind<ODE_DesignHandle>::read_into(info[0], v1)) return Napi::Value();
-    auto arg2 = Autobind<ODE_StringList >::read_ptr(info[1]);
-    if (arg2 == nullptr) return Napi::Value();
-    auto result = ode_design_listMissingFonts(v1, arg2);
+    ODE_StringList fontList;
+    auto result = ode_design_listMissingFonts(v1, &fontList);
+    Autobind<ODE_StringList>::write_from(info[1], fontList);
     return Napi::String::New(env, Result_to_string(result));
 }
 
@@ -429,11 +422,11 @@ Napi::Value bind_ode_design_loadFontBytes(const Napi::CallbackInfo& info) {
     if(!Autobind<ODE_DesignHandle>::read_into(info[0], v1)) return Napi::Value();
     ODE_StringRef v2;
     if(!Autobind<ODE_StringRef>::read_into(info[1], v2)) return Napi::Value();
-    auto arg3 = Autobind<ODE_MemoryBuffer >::read_ptr(info[2]);
-    if (arg3 == nullptr) return Napi::Value();
+    ODE_MemoryBuffer data;
     ODE_StringRef v4;
     if(!Autobind<ODE_StringRef>::read_into(info[3], v4)) return Napi::Value();
-    auto result = ode_design_loadFontBytes(v1, v2, arg3, v4);
+    auto result = ode_design_loadFontBytes(v1, v2, &data, v4);
+    Autobind<ODE_MemoryBuffer>::write_from(info[2], data);
     return Napi::String::New(env, Result_to_string(result));
 }
 
@@ -441,11 +434,11 @@ Napi::Value bind_ode_design_getComponent(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_DesignHandle v1;
     if(!Autobind<ODE_DesignHandle>::read_into(info[0], v1)) return Napi::Value();
-    auto arg2 = Autobind<ODE_ComponentHandle >::read_ptr(info[1]);
-    if (arg2 == nullptr) return Napi::Value();
+    ODE_ComponentHandle component;
     ODE_StringRef v3;
     if(!Autobind<ODE_StringRef>::read_into(info[2], v3)) return Napi::Value();
-    auto result = ode_design_getComponent(v1, arg2, v3);
+    auto result = ode_design_getComponent(v1, &component, v3);
+    Autobind<ODE_ComponentHandle>::write_from(info[1], component);
     return Napi::String::New(env, Result_to_string(result));
 }
 
@@ -459,9 +452,9 @@ Napi::Value bind_ode_component_addLayer(const Napi::CallbackInfo& info) {
     if(!Autobind<ODE_StringRef>::read_into(info[2], v3)) return Napi::Value();
     ODE_StringRef v4;
     if(!Autobind<ODE_StringRef>::read_into(info[3], v4)) return Napi::Value();
-    auto arg5 = Autobind<ODE_ParseError >::read_ptr(info[4]);
-    if (arg5 == nullptr) return Napi::Value();
-    auto result = ode_component_addLayer(v1, v2, v3, v4, arg5);
+    ODE_ParseError parseError;
+    auto result = ode_component_addLayer(v1, v2, v3, v4, &parseError);
+    Autobind<ODE_ParseError>::write_from(info[4], parseError);
     return Napi::String::New(env, Result_to_string(result));
 }
 
@@ -473,9 +466,9 @@ Napi::Value bind_ode_component_modifyLayer(const Napi::CallbackInfo& info) {
     if(!Autobind<ODE_StringRef>::read_into(info[1], v2)) return Napi::Value();
     ODE_StringRef v3;
     if(!Autobind<ODE_StringRef>::read_into(info[2], v3)) return Napi::Value();
-    auto arg4 = Autobind<ODE_ParseError >::read_ptr(info[3]);
-    if (arg4 == nullptr) return Napi::Value();
-    auto result = ode_component_modifyLayer(v1, v2, v3, arg4);
+    ODE_ParseError parseError;
+    auto result = ode_component_modifyLayer(v1, v2, v3, &parseError);
+    Autobind<ODE_ParseError>::write_from(info[3], parseError);
     return Napi::String::New(env, Result_to_string(result));
 }
 
@@ -485,9 +478,9 @@ Napi::Value bind_ode_pr1_component_loadAnimation(const Napi::CallbackInfo& info)
     if(!Autobind<ODE_ComponentHandle>::read_into(info[0], v1)) return Napi::Value();
     ODE_StringRef v2;
     if(!Autobind<ODE_StringRef>::read_into(info[1], v2)) return Napi::Value();
-    auto arg3 = Autobind<ODE_ParseError >::read_ptr(info[2]);
-    if (arg3 == nullptr) return Napi::Value();
-    auto result = ode_pr1_component_loadAnimation(v1, v2, arg3);
+    ODE_ParseError parseError;
+    auto result = ode_pr1_component_loadAnimation(v1, v2, &parseError);
+    Autobind<ODE_ParseError>::write_from(info[2], parseError);
     return Napi::String::New(env, Result_to_string(result));
 }
 
@@ -509,9 +502,9 @@ Napi::Value bind_ode_component_listLayers(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_ComponentHandle v1;
     if(!Autobind<ODE_ComponentHandle>::read_into(info[0], v1)) return Napi::Value();
-    auto arg2 = Autobind<ODE_LayerList >::read_ptr(info[1]);
-    if (arg2 == nullptr) return Napi::Value();
-    auto result = ode_component_listLayers(v1, arg2);
+    ODE_LayerList layerList;
+    auto result = ode_component_listLayers(v1, &layerList);
+    Autobind<ODE_LayerList>::write_from(info[1], layerList);
     return Napi::String::New(env, Result_to_string(result));
 }
 
@@ -519,13 +512,13 @@ Napi::Value bind_ode_component_identifyLayer(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_ComponentHandle v1;
     if(!Autobind<ODE_ComponentHandle>::read_into(info[0], v1)) return Napi::Value();
-    auto arg2 = Autobind<ODE_String >::read_ptr(info[1]);
-    if (arg2 == nullptr) return Napi::Value();
+    ODE_String layerId;
     ODE_Vector2 v3;
     if(!Autobind<ODE_Vector2>::read_into(info[2], v3)) return Napi::Value();
     ODE_Scalar v4;
     if(!Autobind<ODE_Scalar>::read_into(info[3], v4)) return Napi::Value();
-    auto result = ode_component_identifyLayer(v1, arg2, v3, v4);
+    auto result = ode_component_identifyLayer(v1, &layerId, v3, v4);
+    Autobind<ODE_String>::write_from(info[1], layerId);
     return Napi::String::New(env, Result_to_string(result));
 }
 
@@ -535,9 +528,9 @@ Napi::Value bind_ode_component_getLayerMetrics(const Napi::CallbackInfo& info) {
     if(!Autobind<ODE_ComponentHandle>::read_into(info[0], v1)) return Napi::Value();
     ODE_StringRef v2;
     if(!Autobind<ODE_StringRef>::read_into(info[1], v2)) return Napi::Value();
-    auto arg3 = Autobind<ODE_LayerMetrics >::read_ptr(info[2]);
-    if (arg3 == nullptr) return Napi::Value();
-    auto result = ode_component_getLayerMetrics(v1, v2, arg3);
+    ODE_LayerMetrics layerMetrics;
+    auto result = ode_component_getLayerMetrics(v1, v2, &layerMetrics);
+    Autobind<ODE_LayerMetrics>::write_from(info[2], layerMetrics);
     return Napi::String::New(env, Result_to_string(result));
 }
 
@@ -545,9 +538,9 @@ Napi::Value bind_ode_component_listMissingFonts(const Napi::CallbackInfo& info) 
     auto env = info.Env();
     ODE_ComponentHandle v1;
     if(!Autobind<ODE_ComponentHandle>::read_into(info[0], v1)) return Napi::Value();
-    auto arg2 = Autobind<ODE_StringList >::read_ptr(info[1]);
-    if (arg2 == nullptr) return Napi::Value();
-    auto result = ode_component_listMissingFonts(v1, arg2);
+    ODE_StringList fontList;
+    auto result = ode_component_listMissingFonts(v1, &fontList);
+    Autobind<ODE_StringList>::write_from(info[1], fontList);
     return Napi::String::New(env, Result_to_string(result));
 }
 
@@ -555,9 +548,9 @@ Napi::Value bind_ode_component_getOctopus(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_ComponentHandle v1;
     if(!Autobind<ODE_ComponentHandle>::read_into(info[0], v1)) return Napi::Value();
-    auto arg2 = Autobind<ODE_String >::read_ptr(info[1]);
-    if (arg2 == nullptr) return Napi::Value();
-    auto result = ode_component_getOctopus(v1, arg2);
+    ODE_String octopusString;
+    auto result = ode_component_getOctopus(v1, &octopusString);
+    Autobind<ODE_String>::write_from(info[1], octopusString);
     return Napi::String::New(env, Result_to_string(result));
 }
 

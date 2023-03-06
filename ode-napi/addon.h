@@ -38,8 +38,8 @@ public:
 template<typename T>
 class Autobind {
 public:
-    static T* read_ptr(const Napi::Value&);
     static bool read_into(const Napi::Value& value, T& target);
+    static void write_from(Napi::Value value, const T& target);
     static bool read_into(const Napi::Maybe<Napi::Value>& value, T& target) {
         if (value.IsNothing()) return false;
         return Autobind<T>::read_into(value.Unwrap(), target);
