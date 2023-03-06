@@ -23,7 +23,7 @@ RUN cmake --build /home/glfw-3.3.7/build && cmake --install /home/glfw-3.3.7/bui
 RUN wget -c https://github.com/nigels-com/glew/releases/download/glew-2.2.0/glew-2.2.0.tgz -O - | tar -xz --directory /home
 RUN make install SYSTEM=linux-osmesa -C /home/glew-2.2.0
 
-# Build image 
+# Build image
 
 FROM ode-debian-build-base AS ode-debian-build
 

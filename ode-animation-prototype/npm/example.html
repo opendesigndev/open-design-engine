@@ -36,7 +36,6 @@
         const animationDefinition = stringRef(document.querySelector('#animdef').innerHTML.trim())
         ode.pr1_component_loadAnimation(component, animationDefinition, null);
 
-        
         const rendererContext = new ode.RendererContextHandle();
         ode.createRendererContext(engine, rendererContext, stringRef('#canvas'));
 
@@ -50,8 +49,7 @@
         frameView.width = 640
         frameView.height = 480
         frameView.scale = 1
-        
-        
+
         let start;
         function redraw(timestamp) {
             if (start === undefined) {
@@ -61,7 +59,7 @@
             ode.pr1_animation_drawFrame(animationRenderer, frameView, t);
             window.requestAnimationFrame(redraw)
         }
-        
+
         window.requestAnimationFrame(redraw)
 
         function stringRef(str) {
