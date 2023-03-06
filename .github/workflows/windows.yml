@@ -1,0 +1,48 @@
+name: Windows build
+on: [push]
+
+jobs:
+  windows:
+    runs-on: windows-latest
+
+    env:
+      VCPKG_DEFAULT_TRIPLET: x64-windows-static
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          # Personal token with read-only access to liboctopus and open-design-text-renderer
+          # https://github.com/organizations/opendesigndev/settings/personal-access-tokens/39049
+          token: ${{ secrets.ODE_REPOS_TOKEN }}
+          submodules: true
+
+      - name: Get project variables
+        run: |
+          "VCPKG_BASELINE="+(Get-Content vcpkg.json | Out-String | ConvertFrom-Json)."builtin-baseline" >> $env:GITHUB_ENV
+
+      - name: Setup vcpkg dependencies (cached)
+        uses: lukka/run-vcpkg@v10
+        with:
+          vcpkgJsonGlob: vcpkg.json
+          vcpkgGitCommitId: ${{ env.VCPKG_BASELINE }}
+
+      - name: Configure and build ODE
+        uses: lukka/run-cmake@v10
+        with:
+          configurePreset: win64
+          buildPreset: win64-rel
+
+      - name: Gather artifacts
+        run: |
+          New-Item -ItemType Directory -Force -Path build/artifacts/open-design-engine
+          Copy-Item build/win64/ode-logic/Release/ode-logic-cli.exe -Destination build/artifacts/open-design-engine
+          Copy-Item build/win64/ode-renderer/Release/ode-renderer-cli.exe -Destination build/artifacts/open-design-engine
+          Copy-Item build/win64/ode-animation-prototype/Release/ode-animation-prototype-window.exe -Destination build/artifacts/open-design-engine
+          Copy-Item build/win64/tests/renderer-unit-tests/Release/renderer-unit-tests.exe -Destination build/artifacts/open-design-engine
+          Copy-Item build/win64/tools/render-graph-inspector/Release/render-graph-inspector.exe -Destination build/artifacts/open-design-engine
+
+      - name: Upload arifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ode-win64
+          path: build/artifacts
