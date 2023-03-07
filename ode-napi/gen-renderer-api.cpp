@@ -45,24 +45,46 @@ bool Autobind<ODE_Bitmap>::read_into(const Napi::Value& value, ODE_Bitmap& parse
     Napi::Env env = value.Env();
     Napi::Object obj = value.As<Napi::Object>();
     if(!Autobind<int>::read_into(obj.Get("format"), parsed.format)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field format").ThrowAsJavaScriptException();
         return false;
     }
     uintptr_t ptr_pixels;
     if(Autobind<uintptr_t>::read_into(obj.Get("pixels"), ptr_pixels)) {
         parsed.pixels = reinterpret_cast<ODE_VarDataPtr>(ptr_pixels);
     } else {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field pixels").ThrowAsJavaScriptException();
         return false;
     }
     if(!Autobind<int>::read_into(obj.Get("width"), parsed.width)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field width").ThrowAsJavaScriptException();
         return false;
     }
     if(!Autobind<int>::read_into(obj.Get("height"), parsed.height)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field height").ThrowAsJavaScriptException();
         return false;
     }
     return true;
 }
 template<>
-void Autobind<ODE_Bitmap>::write_from(Napi::Value value, const ODE_Bitmap& parsed){
+Napi::Value Autobind<ODE_Bitmap>::serialize(Napi::Env env, const ODE_Bitmap& source){
+    Napi::Object obj = Napi::Object::New(env);
+    Napi::Value format = Autobind<int>::serialize(env, source.format);
+    if(format.IsEmpty()) return Napi::Value();
+    obj.Set("format", format);
+    Napi::Value pixels = Autobind<uintptr_t>::serialize(env, (uintptr_t)source.pixels);
+    if(pixels.IsEmpty()) return Napi::Value();
+    obj.Set("pixels", pixels);
+    Napi::Value width = Autobind<int>::serialize(env, source.width);
+    if(width.IsEmpty()) return Napi::Value();
+    obj.Set("width", width);
+    Napi::Value height = Autobind<int>::serialize(env, source.height);
+    if(height.IsEmpty()) return Napi::Value();
+    obj.Set("height", height);
+    return obj;
 }
 
 template<>
@@ -70,24 +92,46 @@ bool Autobind<ODE_BitmapRef>::read_into(const Napi::Value& value, ODE_BitmapRef&
     Napi::Env env = value.Env();
     Napi::Object obj = value.As<Napi::Object>();
     if(!Autobind<int>::read_into(obj.Get("format"), parsed.format)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field format").ThrowAsJavaScriptException();
         return false;
     }
     uintptr_t ptr_pixels;
     if(Autobind<uintptr_t>::read_into(obj.Get("pixels"), ptr_pixels)) {
         parsed.pixels = reinterpret_cast<ODE_ConstDataPtr>(ptr_pixels);
     } else {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field pixels").ThrowAsJavaScriptException();
         return false;
     }
     if(!Autobind<int>::read_into(obj.Get("width"), parsed.width)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field width").ThrowAsJavaScriptException();
         return false;
     }
     if(!Autobind<int>::read_into(obj.Get("height"), parsed.height)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field height").ThrowAsJavaScriptException();
         return false;
     }
     return true;
 }
 template<>
-void Autobind<ODE_BitmapRef>::write_from(Napi::Value value, const ODE_BitmapRef& parsed){
+Napi::Value Autobind<ODE_BitmapRef>::serialize(Napi::Env env, const ODE_BitmapRef& source){
+    Napi::Object obj = Napi::Object::New(env);
+    Napi::Value format = Autobind<int>::serialize(env, source.format);
+    if(format.IsEmpty()) return Napi::Value();
+    obj.Set("format", format);
+    Napi::Value pixels = Autobind<uintptr_t>::serialize(env, (uintptr_t)source.pixels);
+    if(pixels.IsEmpty()) return Napi::Value();
+    obj.Set("pixels", pixels);
+    Napi::Value width = Autobind<int>::serialize(env, source.width);
+    if(width.IsEmpty()) return Napi::Value();
+    obj.Set("width", width);
+    Napi::Value height = Autobind<int>::serialize(env, source.height);
+    if(height.IsEmpty()) return Napi::Value();
+    obj.Set("height", height);
+    return obj;
 }
 
 template<>
@@ -95,21 +139,43 @@ bool Autobind<ODE_PR1_FrameView>::read_into(const Napi::Value& value, ODE_PR1_Fr
     Napi::Env env = value.Env();
     Napi::Object obj = value.As<Napi::Object>();
     if(!Autobind<int>::read_into(obj.Get("width"), parsed.width)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field width").ThrowAsJavaScriptException();
         return false;
     }
     if(!Autobind<int>::read_into(obj.Get("height"), parsed.height)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field height").ThrowAsJavaScriptException();
         return false;
     }
     if(!Autobind<ODE_Vector2>::read_into(obj.Get("offset"), parsed.offset)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field offset").ThrowAsJavaScriptException();
         return false;
     }
     if(!Autobind<ODE_Scalar>::read_into(obj.Get("scale"), parsed.scale)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field scale").ThrowAsJavaScriptException();
         return false;
     }
     return true;
 }
 template<>
-void Autobind<ODE_PR1_FrameView>::write_from(Napi::Value value, const ODE_PR1_FrameView& parsed){
+Napi::Value Autobind<ODE_PR1_FrameView>::serialize(Napi::Env env, const ODE_PR1_FrameView& source){
+    Napi::Object obj = Napi::Object::New(env);
+    Napi::Value width = Autobind<int>::serialize(env, source.width);
+    if(width.IsEmpty()) return Napi::Value();
+    obj.Set("width", width);
+    Napi::Value height = Autobind<int>::serialize(env, source.height);
+    if(height.IsEmpty()) return Napi::Value();
+    obj.Set("height", height);
+    Napi::Value offset = Autobind<ODE_Vector2>::serialize(env, source.offset);
+    if(offset.IsEmpty()) return Napi::Value();
+    obj.Set("offset", offset);
+    Napi::Value scale = Autobind<ODE_Scalar>::serialize(env, source.scale);
+    if(scale.IsEmpty()) return Napi::Value();
+    obj.Set("scale", scale);
+    return obj;
 }
 
 template<>
@@ -121,8 +187,8 @@ bool Autobind<ODE_RendererContextHandle>::read_into(const Napi::Value& value, OD
     return false;
 }
 template<>
-void Autobind<ODE_RendererContextHandle>::write_from(Napi::Value value, const ODE_RendererContextHandle& handle){
-    if(Handle<ODE_RendererContextHandle>::Write(value, handle)) { /* TODO: figure out error handling */ }
+Napi::Value Autobind<ODE_RendererContextHandle>::serialize(Napi::Env env, const ODE_RendererContextHandle& src) {
+    return Handle<ODE_RendererContextHandle>::serialize(env, src);
 }
 
 template<>
@@ -134,8 +200,8 @@ bool Autobind<ODE_DesignImageBaseHandle>::read_into(const Napi::Value& value, OD
     return false;
 }
 template<>
-void Autobind<ODE_DesignImageBaseHandle>::write_from(Napi::Value value, const ODE_DesignImageBaseHandle& handle){
-    if(Handle<ODE_DesignImageBaseHandle>::Write(value, handle)) { /* TODO: figure out error handling */ }
+Napi::Value Autobind<ODE_DesignImageBaseHandle>::serialize(Napi::Env env, const ODE_DesignImageBaseHandle& src) {
+    return Handle<ODE_DesignImageBaseHandle>::serialize(env, src);
 }
 
 template<>
@@ -147,117 +213,221 @@ bool Autobind<ODE_PR1_AnimationRendererHandle>::read_into(const Napi::Value& val
     return false;
 }
 template<>
-void Autobind<ODE_PR1_AnimationRendererHandle>::write_from(Napi::Value value, const ODE_PR1_AnimationRendererHandle& handle){
-    if(Handle<ODE_PR1_AnimationRendererHandle>::Write(value, handle)) { /* TODO: figure out error handling */ }
+Napi::Value Autobind<ODE_PR1_AnimationRendererHandle>::serialize(Napi::Env env, const ODE_PR1_AnimationRendererHandle& src) {
+    return Handle<ODE_PR1_AnimationRendererHandle>::serialize(env, src);
 }
 
 Napi::Value bind_ode_destroyBitmap(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_Bitmap v1;
-    if(!Autobind<ODE_Bitmap>::read_into(info[0], v1)) return Napi::Value();
-    auto result = ode_destroyBitmap(v1);
+    ODE_Bitmap bitmap;
+    if(!Autobind<ODE_Bitmap>::read_into(info[0], bitmap)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument bitmap ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_destroyBitmap(bitmap);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_createRendererContext(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_EngineHandle v1;
-    if(!Autobind<ODE_EngineHandle>::read_into(info[0], v1)) return Napi::Value();
+    ODE_EngineHandle engine;
+    if(!Autobind<ODE_EngineHandle>::read_into(info[0], engine)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument engine ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
     ODE_RendererContextHandle rendererContext;
-    ODE_StringRef v3;
-    if(!Autobind<ODE_StringRef>::read_into(info[2], v3)) return Napi::Value();
-    auto result = ode_createRendererContext(v1, &rendererContext, v3);
+    if(!Autobind<ODE_RendererContextHandle>::read_into(info[1], rendererContext)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument rendererContext ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_StringRef target;
+    if(!Autobind<ODE_StringRef>::read_into(info[2], target)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument target ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_createRendererContext(engine, &rendererContext, target);
     Autobind<ODE_RendererContextHandle>::write_from(info[1], rendererContext);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_destroyRendererContext(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_RendererContextHandle v1;
-    if(!Autobind<ODE_RendererContextHandle>::read_into(info[0], v1)) return Napi::Value();
-    auto result = ode_destroyRendererContext(v1);
+    ODE_RendererContextHandle rendererContext;
+    if(!Autobind<ODE_RendererContextHandle>::read_into(info[0], rendererContext)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument rendererContext ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_destroyRendererContext(rendererContext);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_createDesignImageBase(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_RendererContextHandle v1;
-    if(!Autobind<ODE_RendererContextHandle>::read_into(info[0], v1)) return Napi::Value();
-    ODE_DesignHandle v2;
-    if(!Autobind<ODE_DesignHandle>::read_into(info[1], v2)) return Napi::Value();
+    ODE_RendererContextHandle rendererContext;
+    if(!Autobind<ODE_RendererContextHandle>::read_into(info[0], rendererContext)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument rendererContext ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_DesignHandle design;
+    if(!Autobind<ODE_DesignHandle>::read_into(info[1], design)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument design ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
     ODE_DesignImageBaseHandle designImageBase;
-    auto result = ode_createDesignImageBase(v1, v2, &designImageBase);
+    if(!Autobind<ODE_DesignImageBaseHandle>::read_into(info[2], designImageBase)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument designImageBase ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_createDesignImageBase(rendererContext, design, &designImageBase);
     Autobind<ODE_DesignImageBaseHandle>::write_from(info[2], designImageBase);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_destroyDesignImageBase(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_DesignImageBaseHandle v1;
-    if(!Autobind<ODE_DesignImageBaseHandle>::read_into(info[0], v1)) return Napi::Value();
-    auto result = ode_destroyDesignImageBase(v1);
+    ODE_DesignImageBaseHandle designImageBase;
+    if(!Autobind<ODE_DesignImageBaseHandle>::read_into(info[0], designImageBase)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument designImageBase ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_destroyDesignImageBase(designImageBase);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_design_loadImagePixels(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_DesignImageBaseHandle v1;
-    if(!Autobind<ODE_DesignImageBaseHandle>::read_into(info[0], v1)) return Napi::Value();
-    ODE_StringRef v2;
-    if(!Autobind<ODE_StringRef>::read_into(info[1], v2)) return Napi::Value();
-    ODE_BitmapRef v3;
-    if(!Autobind<ODE_BitmapRef>::read_into(info[2], v3)) return Napi::Value();
-    auto result = ode_design_loadImagePixels(v1, v2, v3);
+    ODE_DesignImageBaseHandle designImageBase;
+    if(!Autobind<ODE_DesignImageBaseHandle>::read_into(info[0], designImageBase)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument designImageBase ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_StringRef key;
+    if(!Autobind<ODE_StringRef>::read_into(info[1], key)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument key ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_BitmapRef bitmap;
+    if(!Autobind<ODE_BitmapRef>::read_into(info[2], bitmap)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument bitmap ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_design_loadImagePixels(designImageBase, key, bitmap);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_pr1_drawComponent(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_RendererContextHandle v1;
-    if(!Autobind<ODE_RendererContextHandle>::read_into(info[0], v1)) return Napi::Value();
-    ODE_ComponentHandle v2;
-    if(!Autobind<ODE_ComponentHandle>::read_into(info[1], v2)) return Napi::Value();
-    ODE_DesignImageBaseHandle v3;
-    if(!Autobind<ODE_DesignImageBaseHandle>::read_into(info[2], v3)) return Napi::Value();
+    ODE_RendererContextHandle rendererContext;
+    if(!Autobind<ODE_RendererContextHandle>::read_into(info[0], rendererContext)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument rendererContext ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_ComponentHandle component;
+    if(!Autobind<ODE_ComponentHandle>::read_into(info[1], component)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument component ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_DesignImageBaseHandle designImageBase;
+    if(!Autobind<ODE_DesignImageBaseHandle>::read_into(info[2], designImageBase)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument designImageBase ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
     ODE_Bitmap outputBitmap;
+    if(!Autobind<ODE_Bitmap>::read_into(info[3], outputBitmap)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument outputBitmap ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
     ODE_PR1_FrameView frameView;
-    if(!Autobind<ODE_PR1_FrameView>::read_into(info[4], frameView)) return Napi::Value();
-    auto result = ode_pr1_drawComponent(v1, v2, v3, &outputBitmap, &frameView);
+    if(!Autobind<ODE_PR1_FrameView>::read_into(info[4], frameView)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument frameView ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_pr1_drawComponent(rendererContext, component, designImageBase, &outputBitmap, &frameView);
     Autobind<ODE_Bitmap>::write_from(info[3], outputBitmap);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_pr1_createAnimationRenderer(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_RendererContextHandle v1;
-    if(!Autobind<ODE_RendererContextHandle>::read_into(info[0], v1)) return Napi::Value();
-    ODE_ComponentHandle v2;
-    if(!Autobind<ODE_ComponentHandle>::read_into(info[1], v2)) return Napi::Value();
+    ODE_RendererContextHandle rendererContext;
+    if(!Autobind<ODE_RendererContextHandle>::read_into(info[0], rendererContext)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument rendererContext ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_ComponentHandle component;
+    if(!Autobind<ODE_ComponentHandle>::read_into(info[1], component)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument component ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
     ODE_PR1_AnimationRendererHandle animationRenderer;
-    ODE_DesignImageBaseHandle v4;
-    if(!Autobind<ODE_DesignImageBaseHandle>::read_into(info[3], v4)) return Napi::Value();
-    auto result = ode_pr1_createAnimationRenderer(v1, v2, &animationRenderer, v4);
+    if(!Autobind<ODE_PR1_AnimationRendererHandle>::read_into(info[2], animationRenderer)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument animationRenderer ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_DesignImageBaseHandle imageBase;
+    if(!Autobind<ODE_DesignImageBaseHandle>::read_into(info[3], imageBase)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument imageBase ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_pr1_createAnimationRenderer(rendererContext, component, &animationRenderer, imageBase);
     Autobind<ODE_PR1_AnimationRendererHandle>::write_from(info[2], animationRenderer);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_pr1_destroyAnimationRenderer(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_PR1_AnimationRendererHandle v1;
-    if(!Autobind<ODE_PR1_AnimationRendererHandle>::read_into(info[0], v1)) return Napi::Value();
-    auto result = ode_pr1_destroyAnimationRenderer(v1);
+    ODE_PR1_AnimationRendererHandle animationRenderer;
+    if(!Autobind<ODE_PR1_AnimationRendererHandle>::read_into(info[0], animationRenderer)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument animationRenderer ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_pr1_destroyAnimationRenderer(animationRenderer);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_pr1_animation_drawFrame(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_PR1_AnimationRendererHandle v1;
-    if(!Autobind<ODE_PR1_AnimationRendererHandle>::read_into(info[0], v1)) return Napi::Value();
+    ODE_PR1_AnimationRendererHandle renderer;
+    if(!Autobind<ODE_PR1_AnimationRendererHandle>::read_into(info[0], renderer)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument renderer ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
     ODE_PR1_FrameView frameView;
-    if(!Autobind<ODE_PR1_FrameView>::read_into(info[1], frameView)) return Napi::Value();
-    ODE_Scalar v3;
-    if(!Autobind<ODE_Scalar>::read_into(info[2], v3)) return Napi::Value();
-    auto result = ode_pr1_animation_drawFrame(v1, &frameView, v3);
+    if(!Autobind<ODE_PR1_FrameView>::read_into(info[1], frameView)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument frameView ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_Scalar time;
+    if(!Autobind<ODE_Scalar>::read_into(info[2], time)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument time ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_pr1_animation_drawFrame(renderer, &frameView, time);
     return Napi::String::New(env, Result_to_string(result));
 }
 

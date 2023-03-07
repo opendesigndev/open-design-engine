@@ -100,6 +100,10 @@ std::string Result_to_string(ODE_Result value) {
         default: return "UNKNOWN_Result_"+std::to_string(uint32_t(value));
     }
 }
+template<>
+Napi::Value Autobind<ODE_Result>::serialize(Napi::Env env, const ODE_Result& source){
+    return Napi::String::New(env, Result_to_string(source));
+}
 
 template<>
 bool Autobind<ODE_StringRef>::read_into(const Napi::Value& value, ODE_StringRef& parsed){
@@ -109,15 +113,27 @@ bool Autobind<ODE_StringRef>::read_into(const Napi::Value& value, ODE_StringRef&
     if(Autobind<uintptr_t>::read_into(obj.Get("data"), ptr_data)) {
         parsed.data = reinterpret_cast<ODE_ConstCharPtr>(ptr_data);
     } else {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field data").ThrowAsJavaScriptException();
         return false;
     }
     if(!Autobind<int>::read_into(obj.Get("length"), parsed.length)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field length").ThrowAsJavaScriptException();
         return false;
     }
     return true;
 }
 template<>
-void Autobind<ODE_StringRef>::write_from(Napi::Value value, const ODE_StringRef& parsed){
+Napi::Value Autobind<ODE_StringRef>::serialize(Napi::Env env, const ODE_StringRef& source){
+    Napi::Object obj = Napi::Object::New(env);
+    Napi::Value data = Autobind<uintptr_t>::serialize(env, (uintptr_t)source.data);
+    if(data.IsEmpty()) return Napi::Value();
+    obj.Set("data", data);
+    Napi::Value length = Autobind<int>::serialize(env, source.length);
+    if(length.IsEmpty()) return Napi::Value();
+    obj.Set("length", length);
+    return obj;
 }
 
 template<>
@@ -128,15 +144,27 @@ bool Autobind<ODE_String>::read_into(const Napi::Value& value, ODE_String& parse
     if(Autobind<uintptr_t>::read_into(obj.Get("data"), ptr_data)) {
         parsed.data = reinterpret_cast<char *>(ptr_data);
     } else {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field data").ThrowAsJavaScriptException();
         return false;
     }
     if(!Autobind<int>::read_into(obj.Get("length"), parsed.length)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field length").ThrowAsJavaScriptException();
         return false;
     }
     return true;
 }
 template<>
-void Autobind<ODE_String>::write_from(Napi::Value value, const ODE_String& parsed){
+Napi::Value Autobind<ODE_String>::serialize(Napi::Env env, const ODE_String& source){
+    Napi::Object obj = Napi::Object::New(env);
+    Napi::Value data = Autobind<uintptr_t>::serialize(env, (uintptr_t)source.data);
+    if(data.IsEmpty()) return Napi::Value();
+    obj.Set("data", data);
+    Napi::Value length = Autobind<int>::serialize(env, source.length);
+    if(length.IsEmpty()) return Napi::Value();
+    obj.Set("length", length);
+    return obj;
 }
 
 template<>
@@ -147,15 +175,27 @@ bool Autobind<ODE_MemoryBuffer>::read_into(const Napi::Value& value, ODE_MemoryB
     if(Autobind<uintptr_t>::read_into(obj.Get("data"), ptr_data)) {
         parsed.data = reinterpret_cast<ODE_VarDataPtr>(ptr_data);
     } else {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field data").ThrowAsJavaScriptException();
         return false;
     }
     if(!Autobind<size_t>::read_into(obj.Get("length"), parsed.length)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field length").ThrowAsJavaScriptException();
         return false;
     }
     return true;
 }
 template<>
-void Autobind<ODE_MemoryBuffer>::write_from(Napi::Value value, const ODE_MemoryBuffer& parsed){
+Napi::Value Autobind<ODE_MemoryBuffer>::serialize(Napi::Env env, const ODE_MemoryBuffer& source){
+    Napi::Object obj = Napi::Object::New(env);
+    Napi::Value data = Autobind<uintptr_t>::serialize(env, (uintptr_t)source.data);
+    if(data.IsEmpty()) return Napi::Value();
+    obj.Set("data", data);
+    Napi::Value length = Autobind<size_t>::serialize(env, source.length);
+    if(length.IsEmpty()) return Napi::Value();
+    obj.Set("length", length);
+    return obj;
 }
 
 template<>
@@ -166,31 +206,56 @@ bool Autobind<ODE_StringList>::read_into(const Napi::Value& value, ODE_StringLis
     if(Autobind<uintptr_t>::read_into(obj.Get("entries"), ptr_entries)) {
         parsed.entries = reinterpret_cast<ODE_StringRef *>(ptr_entries);
     } else {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field entries").ThrowAsJavaScriptException();
         return false;
     }
     if(!Autobind<int>::read_into(obj.Get("n"), parsed.n)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field n").ThrowAsJavaScriptException();
         return false;
     }
     return true;
 }
 template<>
-void Autobind<ODE_StringList>::write_from(Napi::Value value, const ODE_StringList& parsed){
+Napi::Value Autobind<ODE_StringList>::serialize(Napi::Env env, const ODE_StringList& source){
+    Napi::Object obj = Napi::Object::New(env);
+    Napi::Value entries = Autobind<uintptr_t>::serialize(env, (uintptr_t)source.entries);
+    if(entries.IsEmpty()) return Napi::Value();
+    obj.Set("entries", entries);
+    Napi::Value n = Autobind<int>::serialize(env, source.n);
+    if(n.IsEmpty()) return Napi::Value();
+    obj.Set("n", n);
+    return obj;
 }
 
 Napi::Value bind_ode_destroyString(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_String v1;
-    if(!Autobind<ODE_String>::read_into(info[0], v1)) return Napi::Value();
-    auto result = ode_destroyString(v1);
+    ODE_String string;
+    if(!Autobind<ODE_String>::read_into(info[0], string)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument string ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_destroyString(string);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_allocateMemoryBuffer(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_MemoryBuffer buffer;
-    size_t v2;
-    if(!Autobind<size_t>::read_into(info[1], v2)) return Napi::Value();
-    auto result = ode_allocateMemoryBuffer(&buffer, v2);
+    if(!Autobind<ODE_MemoryBuffer>::read_into(info[0], buffer)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument buffer ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    size_t length;
+    if(!Autobind<size_t>::read_into(info[1], length)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument length ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_allocateMemoryBuffer(&buffer, length);
     Autobind<ODE_MemoryBuffer>::write_from(info[0], buffer);
     return Napi::String::New(env, Result_to_string(result));
 }
@@ -198,9 +263,18 @@ Napi::Value bind_ode_allocateMemoryBuffer(const Napi::CallbackInfo& info) {
 Napi::Value bind_ode_reallocateMemoryBuffer(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_MemoryBuffer buffer;
-    size_t v2;
-    if(!Autobind<size_t>::read_into(info[1], v2)) return Napi::Value();
-    auto result = ode_reallocateMemoryBuffer(&buffer, v2);
+    if(!Autobind<ODE_MemoryBuffer>::read_into(info[0], buffer)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument buffer ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    size_t length;
+    if(!Autobind<size_t>::read_into(info[1], length)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument length ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_reallocateMemoryBuffer(&buffer, length);
     Autobind<ODE_MemoryBuffer>::write_from(info[0], buffer);
     return Napi::String::New(env, Result_to_string(result));
 }
@@ -208,6 +282,11 @@ Napi::Value bind_ode_reallocateMemoryBuffer(const Napi::CallbackInfo& info) {
 Napi::Value bind_ode_destroyMemoryBuffer(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_MemoryBuffer buffer;
+    if(!Autobind<ODE_MemoryBuffer>::read_into(info[0], buffer)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument buffer ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
     auto result = ode_destroyMemoryBuffer(&buffer);
     Autobind<ODE_MemoryBuffer>::write_from(info[0], buffer);
     return Napi::String::New(env, Result_to_string(result));

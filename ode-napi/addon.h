@@ -29,20 +29,22 @@ public:
     Addon(Napi::Object exports);
 
     Napi::ObjectReference exports;
-    Napi::Reference<Napi::Symbol> engineSymbol;
-    Napi::Reference<Napi::Symbol> ptrSymbol;
     int new_counter;
-    static Addon& from_env(const Napi::Env&);
+    static Addon &from_env(const Napi::Env &);
 };
 
+bool copy_values(Napi::Value from, Napi::Value to);
 template<typename T>
 class Autobind {
 public:
-    static bool read_into(const Napi::Value& value, T& target);
-    static void write_from(Napi::Value value, const T& target);
-    static bool read_into(const Napi::Maybe<Napi::Value>& value, T& target) {
+    static bool read_into(const Napi::Value &value, T &target);
+    static bool read_into(const Napi::Maybe<Napi::Value> &value, T &target) {
         if (value.IsNothing()) return false;
         return Autobind<T>::read_into(value.Unwrap(), target);
+    }
+    static Napi::Value serialize(Napi::Env env, const T &src);
+    static bool write_from(Napi::Value src, const T &target) {
+        return copy_values(Autobind<T>::serialize(src.Env(), target), src);
     }
 };
 

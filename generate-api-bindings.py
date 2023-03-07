@@ -54,7 +54,7 @@ reSkipB = re.compile(r"^\/\*.*?\*\/", re.DOTALL) # Multi-line comment
 reOddBackslashesNL = re.compile(r"([^\\](\\\\)*)\\\n") # An escaped newline
 reMultiLineComment = re.compile(r"\/\*.*?\*\/", re.DOTALL)
 reEnumValue = re.compile(r"(\w+)\s*(=\s*([\w\.\+\-]+))\s*$")
-reFunctionArg = re.compile(r"([\w\s\*]+[\s\*])(\w+)\s*$")
+reFunctionArg = re.compile(r"((?:ODE(?:_IN)?_OUT )?[\w\s\*]+[\s\*])(\w+)\s*$")
 reMixedMember = re.compile(r"(^|[\w\s\*]*[\s\*])\s*(\w+)\s*$", re.DOTALL)
 reMemberVariable = re.compile(r"^(\w[\w\s\*]*\w|\w)([\s\*][\w\s\*,]*\w)\s*(\[[\w\s\[\]]*\])?\s*;")
 reMemberVariableName = re.compile(r"^(|.*[\s\*])(\w+)$")
@@ -658,7 +658,12 @@ def generateNapiBindings(entities, apiPath):
             src_tail += (
                 f'        default: return "UNKNOWN_{emName}_"+std::to_string(uint32_t(value));\n'
                 "    }\n"
-                "}\n\n"
+                "}\n"
+                f'template<>\n'
+                f'Napi::Value Autobind<{fullName}>::serialize(Napi::Env env, const {fullName}& source){{\n'
+                f'    return Napi::String::New(env, {emName}_to_string(source));\n'
+                f'}}\n'
+                "\n"
             )
         # Handle
         elif entity.category == 'handle':
@@ -673,9 +678,9 @@ def generateNapiBindings(entities, apiPath):
                 '    return false;\n'
                 '}\n'
                 f'template<>\n'
-                f'void Autobind<{fullName}>::write_from(Napi::Value value, const {fullName}& handle){{\n'
-                f'    if(Handle<{fullName}>::Write(value, handle)) {{ /* TODO: figure out error handling */ }}\n'
-                f'}}\n'
+                f'Napi::Value Autobind<{fullName}>::serialize(Napi::Env env, const {fullName}& src) {{\n'
+                f'    return Handle<{fullName}>::serialize(env, src);\n'
+                '}\n'
                 "\n"
             )
             src_body += f"    Handle<{fullName}>::Export(exports);"
@@ -696,28 +701,36 @@ def generateNapiBindings(entities, apiPath):
                 t = mem.type
                 if call != "":
                     call += ", "
-                
-                if t.endswith("*") and not t.startswith("const "):
-                    # Output arguments
-                    t = t[:-1].strip()
-                    src_tail += (
-                        f'    {t} {mem.name};\n'
-                    )
-                    outputs += f'    Autobind<{t}>::write_from(info[{i-1}], {mem.name});\n'
-                    call += f'&{mem.name}'
-                elif t.endswith("*"):
+                if mem.name == "parseError": print(mem)
+
+                inout_type = "IN"
+                if t.startswith("ODE_IN_OUT"): inout_type = "INOUT"
+                elif t.startswith("ODE_IN"): inout_type = "IN"
+                elif t.startswith("ODE_OUT"): inout_type = "OUT"
+                elif t.endswith("*") and t.startswith("const "): inout_type = "IN"
+                elif t.endswith("*"): inout_type = "INOUT"
+
+                if t.startswith("const") and t.endswith("*"):
                     t = t[6:-1].strip()
-                    src_tail += (
-                        f'    {t} {mem.name};\n'
-                        f'    if(!Autobind<{t}>::read_into(info[{i-1}], {mem.name})) return Napi::Value();\n'
-                    )
+                    call += f"&{mem.name}"
+                elif t.endswith("*"):
+                    t = t[:-1].strip()
                     call += f"&{mem.name}"
                 else:
+                    call += mem.name
+                
+                src_tail += f'    {t} {mem.name};\n'
+                if inout_type == "INOUT" or inout_type == "IN":
                     src_tail += (
-                        f'    {t} v{i};\n'
-                        f'    if(!Autobind<{t}>::read_into(info[{i-1}], v{i})) return Napi::Value();\n'
+                        f'    if(!Autobind<{t}>::read_into(info[{i-1}], {mem.name})) {{\n'
+                        f'        auto ex = env.GetAndClearPendingException();\n'
+                        f'        Napi::Error::New(env, "Failed to parse argument {mem.name} ("+ ex.Message() +")").ThrowAsJavaScriptException();\n'
+                        f'        return Napi::Value();\n'
+                        f'    }}\n'
                     )
-                    call += f"v{i}"
+                if inout_type == "INOUT" or inout_type == "OUT":
+                    outputs += f'    Autobind<{t}>::write_from(info[{i-1}], {mem.name});\n'
+
             src_tail += (
                 f'    auto result = {fullName}({call});\n'
                 f'{outputs}'
@@ -742,12 +755,16 @@ def generateNapiBindings(entities, apiPath):
                         f'    if(Autobind<uintptr_t>::read_into(obj.Get("{member.name}"), ptr_{member.name})) {{\n'
                         f'        parsed.{member.name} = reinterpret_cast<{member.type}>(ptr_{member.name});\n'
                         f'    }} else {{\n'
+                        f'        env.GetAndClearPendingException();\n'
+                        f'        Napi::Error::New(env, "Invalid value for field {member.name}").ThrowAsJavaScriptException();\n'
                         f'        return false;\n'
                         f'    }}\n'
                     )
                 elif member.category == 'member_variable':
                     src_tail += (
                         f'    if(!Autobind<{member.type}>::read_into(obj.Get("{member.name}"), parsed.{member.name})) {{\n'
+                        f'        env.GetAndClearPendingException();\n'
+                        f'        Napi::Error::New(env, "Invalid value for field {member.name}").ThrowAsJavaScriptException();\n'
                         f'        return false;\n'
                         f'    }}\n'
                     )
@@ -755,16 +772,25 @@ def generateNapiBindings(entities, apiPath):
                 f'    return true;\n'
                 f'}}\n'
                 f'template<>\n'
-                f'void Autobind<{fullName}>::write_from(Napi::Value value, const {fullName}& parsed){{\n'
-                f'}}\n'
-                '\n'
+                f'Napi::Value Autobind<{fullName}>::serialize(Napi::Env env, const {fullName}& source){{\n'
+                f'    Napi::Object obj = Napi::Object::New(env);\n'
+            )
+            for member in entity.members:
+                if member.category == 'member_variable' and (member.type.endswith("*") or member.type.endswith("Ptr")):
+                    src_tail += f'    Napi::Value {member.name} = Autobind<uintptr_t>::serialize(env, (uintptr_t)source.{member.name});\n'
+                elif member.category == 'member_variable':
+                    src_tail += f'    Napi::Value {member.name} = Autobind<{member.type}>::serialize(env, source.{member.name});\n'
+                if member.category == 'member_variable':
+                    src_tail += (
+                        f'    if({member.name}.IsEmpty()) return Napi::Value();\n'
+                        f'    obj.Set("{member.name}", {member.name});\n'
+                    )
+            src_tail += (
+                f'    return obj;\n'
+                f'}}\n\n'
             )
         else:
             src_body += f"    // TODO: {entity.category} {emName}\n"
-
-
-
-
 
     src_body += "    return exports;\n}\n\n"
     return (src_head + "\n" + src_body + src_tail, header)
@@ -778,6 +804,9 @@ def generateNapiBindings(entities, apiPath):
 tsTypes = []
 
 def tsType(type):
+    if type.startswith("ODE_IN "): type = type[7:]
+    if type.startswith("ODE_OUT "): type = type[8:]
+    if type.startswith("ODE_IN_OUT "): type = type[11:]
     if type:
         type = (' '+type+' ').replace('*', ' ').replace(' const ', '').strip()
         if (jsType := jsTypeName(type)):

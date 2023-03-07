@@ -15,6 +15,14 @@
 #define ODE_FUTURE_API ODE_API
 /// Structures marked with ODE_TUPLE can be constructed as array objects in JS
 #define ODE_TUPLE
+/// Arguments marked with ODE_OUT will be written into, but not read.
+#define ODE_OUT
+/// Arguments marked with ODE_IN_OUT will be read and written into
+#define ODE_IN_OUT
+/// Arguments marked with ODE_IN will be read, but not written into.
+/// Unmarked argument types are determined using heuristics, but are usually
+/// treated as ODE_IN.
+#define ODE_IN
 
 #ifndef ODE_BIND_CONSTRUCTOR
 #define ODE_BIND_CONSTRUCTOR(api, fnPtr)

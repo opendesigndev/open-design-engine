@@ -219,7 +219,7 @@ ODE_Result ODE_FUTURE_API ode_design_addComponentFromManifestString(ODE_DesignHa
  * @param octopusString - Octopus JSON string reference
  * @param parseError - output argument to store details of parse error if ODE_RESULT_OCTOPUS_PARSE_ERROR is returned. Can be null if this information is not needed.
  */
-ODE_Result ODE_API ode_design_addComponentFromOctopusString(ODE_DesignHandle design, ODE_ComponentHandle *component, ODE_ComponentMetadata metadata, ODE_StringRef octopusString, ODE_ParseError *parseError);
+ODE_Result ODE_API ode_design_addComponentFromOctopusString(ODE_DesignHandle design, ODE_ComponentHandle *component, ODE_ComponentMetadata metadata, ODE_StringRef octopusString, ODE_OUT ODE_ParseError *parseError);
 
 /// Removes component from design. It is not necessary to call this before ode_destroyDesign
 ODE_Result ODE_API ode_design_removeComponent(ODE_DesignHandle design, ODE_ComponentHandle component);
@@ -325,7 +325,7 @@ ODE_Result ODE_API ode_component_listLayers(ODE_ComponentHandle component, ODE_L
  * @param position - position in component's coordinate system
  * @param radius - tolerance radius around position (a layer not intersecting position but within this radius may be outputted)
  */
-ODE_Result ODE_API ode_component_identifyLayer(ODE_ComponentHandle component, ODE_String *layerId, ODE_Vector2 position, ODE_Scalar radius);
+ODE_Result ODE_API ode_component_identifyLayer(ODE_ComponentHandle component, ODE_OUT ODE_String *layerId, ODE_Vector2 position, ODE_Scalar radius);
 
 /**
  * Outputs layer metrics for a given layer of a component

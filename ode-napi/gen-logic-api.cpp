@@ -111,18 +111,29 @@ std::string LayerType_to_string(ODE_LayerType value) {
         default: return "UNKNOWN_LayerType_"+std::to_string(uint32_t(value));
     }
 }
+template<>
+Napi::Value Autobind<ODE_LayerType>::serialize(Napi::Env env, const ODE_LayerType& source){
+    return Napi::String::New(env, LayerType_to_string(source));
+}
 
 template<>
 bool Autobind<ODE_Transformation>::read_into(const Napi::Value& value, ODE_Transformation& parsed){
     Napi::Env env = value.Env();
     Napi::Object obj = value.As<Napi::Object>();
     if(!Autobind<ODE_Scalar_array_6>::read_into(obj.Get("matrix"), parsed.matrix)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field matrix").ThrowAsJavaScriptException();
         return false;
     }
     return true;
 }
 template<>
-void Autobind<ODE_Transformation>::write_from(Napi::Value value, const ODE_Transformation& parsed){
+Napi::Value Autobind<ODE_Transformation>::serialize(Napi::Env env, const ODE_Transformation& source){
+    Napi::Object obj = Napi::Object::New(env);
+    Napi::Value matrix = Autobind<ODE_Scalar_array_6>::serialize(env, source.matrix);
+    if(matrix.IsEmpty()) return Napi::Value();
+    obj.Set("matrix", matrix);
+    return obj;
 }
 
 template<>
@@ -130,12 +141,19 @@ bool Autobind<ODE_EngineAttributes>::read_into(const Napi::Value& value, ODE_Eng
     Napi::Env env = value.Env();
     Napi::Object obj = value.As<Napi::Object>();
     if(!Autobind<int>::read_into(obj.Get("padding"), parsed.padding)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field padding").ThrowAsJavaScriptException();
         return false;
     }
     return true;
 }
 template<>
-void Autobind<ODE_EngineAttributes>::write_from(Napi::Value value, const ODE_EngineAttributes& parsed){
+Napi::Value Autobind<ODE_EngineAttributes>::serialize(Napi::Env env, const ODE_EngineAttributes& source){
+    Napi::Object obj = Napi::Object::New(env);
+    Napi::Value padding = Autobind<int>::serialize(env, source.padding);
+    if(padding.IsEmpty()) return Napi::Value();
+    obj.Set("padding", padding);
+    return obj;
 }
 
 template<>
@@ -143,18 +161,35 @@ bool Autobind<ODE_ComponentMetadata>::read_into(const Napi::Value& value, ODE_Co
     Napi::Env env = value.Env();
     Napi::Object obj = value.As<Napi::Object>();
     if(!Autobind<ODE_StringRef>::read_into(obj.Get("id"), parsed.id)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field id").ThrowAsJavaScriptException();
         return false;
     }
     if(!Autobind<ODE_StringRef>::read_into(obj.Get("page"), parsed.page)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field page").ThrowAsJavaScriptException();
         return false;
     }
     if(!Autobind<ODE_Vector2>::read_into(obj.Get("position"), parsed.position)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field position").ThrowAsJavaScriptException();
         return false;
     }
     return true;
 }
 template<>
-void Autobind<ODE_ComponentMetadata>::write_from(Napi::Value value, const ODE_ComponentMetadata& parsed){
+Napi::Value Autobind<ODE_ComponentMetadata>::serialize(Napi::Env env, const ODE_ComponentMetadata& source){
+    Napi::Object obj = Napi::Object::New(env);
+    Napi::Value id = Autobind<ODE_StringRef>::serialize(env, source.id);
+    if(id.IsEmpty()) return Napi::Value();
+    obj.Set("id", id);
+    Napi::Value page = Autobind<ODE_StringRef>::serialize(env, source.page);
+    if(page.IsEmpty()) return Napi::Value();
+    obj.Set("page", page);
+    Napi::Value position = Autobind<ODE_Vector2>::serialize(env, source.position);
+    if(position.IsEmpty()) return Napi::Value();
+    obj.Set("position", position);
+    return obj;
 }
 
 template<>
@@ -162,24 +197,51 @@ bool Autobind<ODE_LayerList::Entry>::read_into(const Napi::Value& value, ODE_Lay
     Napi::Env env = value.Env();
     Napi::Object obj = value.As<Napi::Object>();
     if(!Autobind<ODE_StringRef>::read_into(obj.Get("parentId"), parsed.parentId)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field parentId").ThrowAsJavaScriptException();
         return false;
     }
     if(!Autobind<ODE_StringRef>::read_into(obj.Get("id"), parsed.id)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field id").ThrowAsJavaScriptException();
         return false;
     }
     if(!Autobind<ODE_LayerType>::read_into(obj.Get("type"), parsed.type)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field type").ThrowAsJavaScriptException();
         return false;
     }
     if(!Autobind<int>::read_into(obj.Get("flags"), parsed.flags)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field flags").ThrowAsJavaScriptException();
         return false;
     }
     if(!Autobind<ODE_StringRef>::read_into(obj.Get("name"), parsed.name)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field name").ThrowAsJavaScriptException();
         return false;
     }
     return true;
 }
 template<>
-void Autobind<ODE_LayerList::Entry>::write_from(Napi::Value value, const ODE_LayerList::Entry& parsed){
+Napi::Value Autobind<ODE_LayerList::Entry>::serialize(Napi::Env env, const ODE_LayerList::Entry& source){
+    Napi::Object obj = Napi::Object::New(env);
+    Napi::Value parentId = Autobind<ODE_StringRef>::serialize(env, source.parentId);
+    if(parentId.IsEmpty()) return Napi::Value();
+    obj.Set("parentId", parentId);
+    Napi::Value id = Autobind<ODE_StringRef>::serialize(env, source.id);
+    if(id.IsEmpty()) return Napi::Value();
+    obj.Set("id", id);
+    Napi::Value type = Autobind<ODE_LayerType>::serialize(env, source.type);
+    if(type.IsEmpty()) return Napi::Value();
+    obj.Set("type", type);
+    Napi::Value flags = Autobind<int>::serialize(env, source.flags);
+    if(flags.IsEmpty()) return Napi::Value();
+    obj.Set("flags", flags);
+    Napi::Value name = Autobind<ODE_StringRef>::serialize(env, source.name);
+    if(name.IsEmpty()) return Napi::Value();
+    obj.Set("name", name);
+    return obj;
 }
 
 template<>
@@ -190,15 +252,27 @@ bool Autobind<ODE_LayerList>::read_into(const Napi::Value& value, ODE_LayerList&
     if(Autobind<uintptr_t>::read_into(obj.Get("entries"), ptr_entries)) {
         parsed.entries = reinterpret_cast<ODE_LayerList::Entry *>(ptr_entries);
     } else {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field entries").ThrowAsJavaScriptException();
         return false;
     }
     if(!Autobind<int>::read_into(obj.Get("n"), parsed.n)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field n").ThrowAsJavaScriptException();
         return false;
     }
     return true;
 }
 template<>
-void Autobind<ODE_LayerList>::write_from(Napi::Value value, const ODE_LayerList& parsed){
+Napi::Value Autobind<ODE_LayerList>::serialize(Napi::Env env, const ODE_LayerList& source){
+    Napi::Object obj = Napi::Object::New(env);
+    Napi::Value entries = Autobind<uintptr_t>::serialize(env, (uintptr_t)source.entries);
+    if(entries.IsEmpty()) return Napi::Value();
+    obj.Set("entries", entries);
+    Napi::Value n = Autobind<int>::serialize(env, source.n);
+    if(n.IsEmpty()) return Napi::Value();
+    obj.Set("n", n);
+    return obj;
 }
 
 template<>
@@ -206,21 +280,43 @@ bool Autobind<ODE_LayerMetrics>::read_into(const Napi::Value& value, ODE_LayerMe
     Napi::Env env = value.Env();
     Napi::Object obj = value.As<Napi::Object>();
     if(!Autobind<ODE_Transformation>::read_into(obj.Get("transformation"), parsed.transformation)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field transformation").ThrowAsJavaScriptException();
         return false;
     }
     if(!Autobind<ODE_Rectangle>::read_into(obj.Get("logicalBounds"), parsed.logicalBounds)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field logicalBounds").ThrowAsJavaScriptException();
         return false;
     }
     if(!Autobind<ODE_Rectangle>::read_into(obj.Get("graphicalBounds"), parsed.graphicalBounds)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field graphicalBounds").ThrowAsJavaScriptException();
         return false;
     }
     if(!Autobind<ODE_Rectangle>::read_into(obj.Get("transformedGraphicalBounds"), parsed.transformedGraphicalBounds)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field transformedGraphicalBounds").ThrowAsJavaScriptException();
         return false;
     }
     return true;
 }
 template<>
-void Autobind<ODE_LayerMetrics>::write_from(Napi::Value value, const ODE_LayerMetrics& parsed){
+Napi::Value Autobind<ODE_LayerMetrics>::serialize(Napi::Env env, const ODE_LayerMetrics& source){
+    Napi::Object obj = Napi::Object::New(env);
+    Napi::Value transformation = Autobind<ODE_Transformation>::serialize(env, source.transformation);
+    if(transformation.IsEmpty()) return Napi::Value();
+    obj.Set("transformation", transformation);
+    Napi::Value logicalBounds = Autobind<ODE_Rectangle>::serialize(env, source.logicalBounds);
+    if(logicalBounds.IsEmpty()) return Napi::Value();
+    obj.Set("logicalBounds", logicalBounds);
+    Napi::Value graphicalBounds = Autobind<ODE_Rectangle>::serialize(env, source.graphicalBounds);
+    if(graphicalBounds.IsEmpty()) return Napi::Value();
+    obj.Set("graphicalBounds", graphicalBounds);
+    Napi::Value transformedGraphicalBounds = Autobind<ODE_Rectangle>::serialize(env, source.transformedGraphicalBounds);
+    if(transformedGraphicalBounds.IsEmpty()) return Napi::Value();
+    obj.Set("transformedGraphicalBounds", transformedGraphicalBounds);
+    return obj;
 }
 
 std::string ParseError_Type_to_string(ODE_ParseError::Type value) {
@@ -238,21 +334,37 @@ std::string ParseError_Type_to_string(ODE_ParseError::Type value) {
         default: return "UNKNOWN_ParseError_Type_"+std::to_string(uint32_t(value));
     }
 }
+template<>
+Napi::Value Autobind<ODE_ParseError::Type>::serialize(Napi::Env env, const ODE_ParseError::Type& source){
+    return Napi::String::New(env, ParseError_Type_to_string(source));
+}
 
 template<>
 bool Autobind<ODE_ParseError>::read_into(const Napi::Value& value, ODE_ParseError& parsed){
     Napi::Env env = value.Env();
     Napi::Object obj = value.As<Napi::Object>();
     if(!Autobind<ODE_ParseError::Type>::read_into(obj.Get("type"), parsed.type)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field type").ThrowAsJavaScriptException();
         return false;
     }
     if(!Autobind<int>::read_into(obj.Get("position"), parsed.position)) {
+        env.GetAndClearPendingException();
+        Napi::Error::New(env, "Invalid value for field position").ThrowAsJavaScriptException();
         return false;
     }
     return true;
 }
 template<>
-void Autobind<ODE_ParseError>::write_from(Napi::Value value, const ODE_ParseError& parsed){
+Napi::Value Autobind<ODE_ParseError>::serialize(Napi::Env env, const ODE_ParseError& source){
+    Napi::Object obj = Napi::Object::New(env);
+    Napi::Value type = Autobind<ODE_ParseError::Type>::serialize(env, source.type);
+    if(type.IsEmpty()) return Napi::Value();
+    obj.Set("type", type);
+    Napi::Value position = Autobind<int>::serialize(env, source.position);
+    if(position.IsEmpty()) return Napi::Value();
+    obj.Set("position", position);
+    return obj;
 }
 
 template<>
@@ -264,8 +376,8 @@ bool Autobind<ODE_EngineHandle>::read_into(const Napi::Value& value, ODE_EngineH
     return false;
 }
 template<>
-void Autobind<ODE_EngineHandle>::write_from(Napi::Value value, const ODE_EngineHandle& handle){
-    if(Handle<ODE_EngineHandle>::Write(value, handle)) { /* TODO: figure out error handling */ }
+Napi::Value Autobind<ODE_EngineHandle>::serialize(Napi::Env env, const ODE_EngineHandle& src) {
+    return Handle<ODE_EngineHandle>::serialize(env, src);
 }
 
 template<>
@@ -277,8 +389,8 @@ bool Autobind<ODE_DesignHandle>::read_into(const Napi::Value& value, ODE_DesignH
     return false;
 }
 template<>
-void Autobind<ODE_DesignHandle>::write_from(Napi::Value value, const ODE_DesignHandle& handle){
-    if(Handle<ODE_DesignHandle>::Write(value, handle)) { /* TODO: figure out error handling */ }
+Napi::Value Autobind<ODE_DesignHandle>::serialize(Napi::Env env, const ODE_DesignHandle& src) {
+    return Handle<ODE_DesignHandle>::serialize(env, src);
 }
 
 template<>
@@ -290,29 +402,42 @@ bool Autobind<ODE_ComponentHandle>::read_into(const Napi::Value& value, ODE_Comp
     return false;
 }
 template<>
-void Autobind<ODE_ComponentHandle>::write_from(Napi::Value value, const ODE_ComponentHandle& handle){
-    if(Handle<ODE_ComponentHandle>::Write(value, handle)) { /* TODO: figure out error handling */ }
+Napi::Value Autobind<ODE_ComponentHandle>::serialize(Napi::Env env, const ODE_ComponentHandle& src) {
+    return Handle<ODE_ComponentHandle>::serialize(env, src);
 }
 
 Napi::Value bind_ode_destroyLayerList(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_LayerList v1;
-    if(!Autobind<ODE_LayerList>::read_into(info[0], v1)) return Napi::Value();
-    auto result = ode_destroyLayerList(v1);
+    ODE_LayerList layerList;
+    if(!Autobind<ODE_LayerList>::read_into(info[0], layerList)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument layerList ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_destroyLayerList(layerList);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_destroyMissingFontList(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_StringList v1;
-    if(!Autobind<ODE_StringList>::read_into(info[0], v1)) return Napi::Value();
-    auto result = ode_destroyMissingFontList(v1);
+    ODE_StringList fontList;
+    if(!Autobind<ODE_StringList>::read_into(info[0], fontList)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument fontList ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_destroyMissingFontList(fontList);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_initializeEngineAttributes(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_EngineAttributes engineAttributes;
+    if(!Autobind<ODE_EngineAttributes>::read_into(info[0], engineAttributes)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument engineAttributes ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
     auto result = ode_initializeEngineAttributes(&engineAttributes);
     Autobind<ODE_EngineAttributes>::write_from(info[0], engineAttributes);
     return Napi::String::New(env, Result_to_string(result));
@@ -321,8 +446,17 @@ Napi::Value bind_ode_initializeEngineAttributes(const Napi::CallbackInfo& info) 
 Napi::Value bind_ode_createEngine(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_EngineHandle engine;
+    if(!Autobind<ODE_EngineHandle>::read_into(info[0], engine)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument engine ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
     ODE_EngineAttributes engineAttributes;
-    if(!Autobind<ODE_EngineAttributes>::read_into(info[1], engineAttributes)) return Napi::Value();
+    if(!Autobind<ODE_EngineAttributes>::read_into(info[1], engineAttributes)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument engineAttributes ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
     auto result = ode_createEngine(&engine, &engineAttributes);
     Autobind<ODE_EngineHandle>::write_from(info[0], engine);
     return Napi::String::New(env, Result_to_string(result));
@@ -330,31 +464,62 @@ Napi::Value bind_ode_createEngine(const Napi::CallbackInfo& info) {
 
 Napi::Value bind_ode_destroyEngine(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_EngineHandle v1;
-    if(!Autobind<ODE_EngineHandle>::read_into(info[0], v1)) return Napi::Value();
-    auto result = ode_destroyEngine(v1);
+    ODE_EngineHandle engine;
+    if(!Autobind<ODE_EngineHandle>::read_into(info[0], engine)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument engine ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_destroyEngine(engine);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_createDesign(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_EngineHandle v1;
-    if(!Autobind<ODE_EngineHandle>::read_into(info[0], v1)) return Napi::Value();
+    ODE_EngineHandle engine;
+    if(!Autobind<ODE_EngineHandle>::read_into(info[0], engine)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument engine ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
     ODE_DesignHandle design;
-    auto result = ode_createDesign(v1, &design);
+    if(!Autobind<ODE_DesignHandle>::read_into(info[1], design)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument design ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_createDesign(engine, &design);
     Autobind<ODE_DesignHandle>::write_from(info[1], design);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_loadDesignFromManifestString(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_EngineHandle v1;
-    if(!Autobind<ODE_EngineHandle>::read_into(info[0], v1)) return Napi::Value();
+    ODE_EngineHandle engine;
+    if(!Autobind<ODE_EngineHandle>::read_into(info[0], engine)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument engine ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
     ODE_DesignHandle design;
-    ODE_StringRef v3;
-    if(!Autobind<ODE_StringRef>::read_into(info[2], v3)) return Napi::Value();
+    if(!Autobind<ODE_DesignHandle>::read_into(info[1], design)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument design ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_StringRef manifestString;
+    if(!Autobind<ODE_StringRef>::read_into(info[2], manifestString)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument manifestString ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
     ODE_ParseError parseError;
-    auto result = ode_loadDesignFromManifestString(v1, &design, v3, &parseError);
+    if(!Autobind<ODE_ParseError>::read_into(info[3], parseError)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument parseError ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_loadDesignFromManifestString(engine, &design, manifestString, &parseError);
     Autobind<ODE_DesignHandle>::write_from(info[1], design);
     Autobind<ODE_ParseError>::write_from(info[3], parseError);
     return Napi::String::New(env, Result_to_string(result));
@@ -362,194 +527,394 @@ Napi::Value bind_ode_loadDesignFromManifestString(const Napi::CallbackInfo& info
 
 Napi::Value bind_ode_destroyDesign(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_DesignHandle v1;
-    if(!Autobind<ODE_DesignHandle>::read_into(info[0], v1)) return Napi::Value();
-    auto result = ode_destroyDesign(v1);
+    ODE_DesignHandle design;
+    if(!Autobind<ODE_DesignHandle>::read_into(info[0], design)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument design ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_destroyDesign(design);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_design_loadManifestString(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_DesignHandle v1;
-    if(!Autobind<ODE_DesignHandle>::read_into(info[0], v1)) return Napi::Value();
-    ODE_StringRef v2;
-    if(!Autobind<ODE_StringRef>::read_into(info[1], v2)) return Napi::Value();
+    ODE_DesignHandle design;
+    if(!Autobind<ODE_DesignHandle>::read_into(info[0], design)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument design ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_StringRef manifestString;
+    if(!Autobind<ODE_StringRef>::read_into(info[1], manifestString)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument manifestString ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
     ODE_ParseError parseError;
-    auto result = ode_design_loadManifestString(v1, v2, &parseError);
+    if(!Autobind<ODE_ParseError>::read_into(info[2], parseError)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument parseError ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_design_loadManifestString(design, manifestString, &parseError);
     Autobind<ODE_ParseError>::write_from(info[2], parseError);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_design_addComponentFromOctopusString(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_DesignHandle v1;
-    if(!Autobind<ODE_DesignHandle>::read_into(info[0], v1)) return Napi::Value();
+    ODE_DesignHandle design;
+    if(!Autobind<ODE_DesignHandle>::read_into(info[0], design)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument design ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
     ODE_ComponentHandle component;
-    ODE_ComponentMetadata v3;
-    if(!Autobind<ODE_ComponentMetadata>::read_into(info[2], v3)) return Napi::Value();
-    ODE_StringRef v4;
-    if(!Autobind<ODE_StringRef>::read_into(info[3], v4)) return Napi::Value();
-    ODE_ParseError parseError;
-    auto result = ode_design_addComponentFromOctopusString(v1, &component, v3, v4, &parseError);
+    if(!Autobind<ODE_ComponentHandle>::read_into(info[1], component)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument component ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_ComponentMetadata metadata;
+    if(!Autobind<ODE_ComponentMetadata>::read_into(info[2], metadata)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument metadata ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_StringRef octopusString;
+    if(!Autobind<ODE_StringRef>::read_into(info[3], octopusString)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument octopusString ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_OUT ODE_ParseError parseError;
+    auto result = ode_design_addComponentFromOctopusString(design, &component, metadata, octopusString, &parseError);
     Autobind<ODE_ComponentHandle>::write_from(info[1], component);
-    Autobind<ODE_ParseError>::write_from(info[4], parseError);
+    Autobind<ODE_OUT ODE_ParseError>::write_from(info[4], parseError);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_design_removeComponent(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_DesignHandle v1;
-    if(!Autobind<ODE_DesignHandle>::read_into(info[0], v1)) return Napi::Value();
-    ODE_ComponentHandle v2;
-    if(!Autobind<ODE_ComponentHandle>::read_into(info[1], v2)) return Napi::Value();
-    auto result = ode_design_removeComponent(v1, v2);
+    ODE_DesignHandle design;
+    if(!Autobind<ODE_DesignHandle>::read_into(info[0], design)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument design ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_ComponentHandle component;
+    if(!Autobind<ODE_ComponentHandle>::read_into(info[1], component)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument component ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_design_removeComponent(design, component);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_design_listMissingFonts(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_DesignHandle v1;
-    if(!Autobind<ODE_DesignHandle>::read_into(info[0], v1)) return Napi::Value();
+    ODE_DesignHandle design;
+    if(!Autobind<ODE_DesignHandle>::read_into(info[0], design)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument design ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
     ODE_StringList fontList;
-    auto result = ode_design_listMissingFonts(v1, &fontList);
+    if(!Autobind<ODE_StringList>::read_into(info[1], fontList)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument fontList ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_design_listMissingFonts(design, &fontList);
     Autobind<ODE_StringList>::write_from(info[1], fontList);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_design_loadFontBytes(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_DesignHandle v1;
-    if(!Autobind<ODE_DesignHandle>::read_into(info[0], v1)) return Napi::Value();
-    ODE_StringRef v2;
-    if(!Autobind<ODE_StringRef>::read_into(info[1], v2)) return Napi::Value();
+    ODE_DesignHandle design;
+    if(!Autobind<ODE_DesignHandle>::read_into(info[0], design)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument design ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_StringRef name;
+    if(!Autobind<ODE_StringRef>::read_into(info[1], name)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument name ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
     ODE_MemoryBuffer data;
-    ODE_StringRef v4;
-    if(!Autobind<ODE_StringRef>::read_into(info[3], v4)) return Napi::Value();
-    auto result = ode_design_loadFontBytes(v1, v2, &data, v4);
+    if(!Autobind<ODE_MemoryBuffer>::read_into(info[2], data)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument data ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_StringRef faceName;
+    if(!Autobind<ODE_StringRef>::read_into(info[3], faceName)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument faceName ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_design_loadFontBytes(design, name, &data, faceName);
     Autobind<ODE_MemoryBuffer>::write_from(info[2], data);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_design_getComponent(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_DesignHandle v1;
-    if(!Autobind<ODE_DesignHandle>::read_into(info[0], v1)) return Napi::Value();
+    ODE_DesignHandle design;
+    if(!Autobind<ODE_DesignHandle>::read_into(info[0], design)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument design ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
     ODE_ComponentHandle component;
-    ODE_StringRef v3;
-    if(!Autobind<ODE_StringRef>::read_into(info[2], v3)) return Napi::Value();
-    auto result = ode_design_getComponent(v1, &component, v3);
+    if(!Autobind<ODE_ComponentHandle>::read_into(info[1], component)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument component ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_StringRef componentId;
+    if(!Autobind<ODE_StringRef>::read_into(info[2], componentId)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument componentId ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_design_getComponent(design, &component, componentId);
     Autobind<ODE_ComponentHandle>::write_from(info[1], component);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_component_addLayer(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_ComponentHandle v1;
-    if(!Autobind<ODE_ComponentHandle>::read_into(info[0], v1)) return Napi::Value();
-    ODE_StringRef v2;
-    if(!Autobind<ODE_StringRef>::read_into(info[1], v2)) return Napi::Value();
-    ODE_StringRef v3;
-    if(!Autobind<ODE_StringRef>::read_into(info[2], v3)) return Napi::Value();
-    ODE_StringRef v4;
-    if(!Autobind<ODE_StringRef>::read_into(info[3], v4)) return Napi::Value();
+    ODE_ComponentHandle component;
+    if(!Autobind<ODE_ComponentHandle>::read_into(info[0], component)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument component ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_StringRef parentLayerId;
+    if(!Autobind<ODE_StringRef>::read_into(info[1], parentLayerId)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument parentLayerId ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_StringRef beforeLayerId;
+    if(!Autobind<ODE_StringRef>::read_into(info[2], beforeLayerId)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument beforeLayerId ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_StringRef layerOctopusString;
+    if(!Autobind<ODE_StringRef>::read_into(info[3], layerOctopusString)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument layerOctopusString ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
     ODE_ParseError parseError;
-    auto result = ode_component_addLayer(v1, v2, v3, v4, &parseError);
+    if(!Autobind<ODE_ParseError>::read_into(info[4], parseError)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument parseError ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_component_addLayer(component, parentLayerId, beforeLayerId, layerOctopusString, &parseError);
     Autobind<ODE_ParseError>::write_from(info[4], parseError);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_component_modifyLayer(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_ComponentHandle v1;
-    if(!Autobind<ODE_ComponentHandle>::read_into(info[0], v1)) return Napi::Value();
-    ODE_StringRef v2;
-    if(!Autobind<ODE_StringRef>::read_into(info[1], v2)) return Napi::Value();
-    ODE_StringRef v3;
-    if(!Autobind<ODE_StringRef>::read_into(info[2], v3)) return Napi::Value();
+    ODE_ComponentHandle component;
+    if(!Autobind<ODE_ComponentHandle>::read_into(info[0], component)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument component ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_StringRef layerId;
+    if(!Autobind<ODE_StringRef>::read_into(info[1], layerId)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument layerId ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_StringRef layerChangeOctopusString;
+    if(!Autobind<ODE_StringRef>::read_into(info[2], layerChangeOctopusString)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument layerChangeOctopusString ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
     ODE_ParseError parseError;
-    auto result = ode_component_modifyLayer(v1, v2, v3, &parseError);
+    if(!Autobind<ODE_ParseError>::read_into(info[3], parseError)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument parseError ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_component_modifyLayer(component, layerId, layerChangeOctopusString, &parseError);
     Autobind<ODE_ParseError>::write_from(info[3], parseError);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_pr1_component_loadAnimation(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_ComponentHandle v1;
-    if(!Autobind<ODE_ComponentHandle>::read_into(info[0], v1)) return Napi::Value();
-    ODE_StringRef v2;
-    if(!Autobind<ODE_StringRef>::read_into(info[1], v2)) return Napi::Value();
+    ODE_ComponentHandle component;
+    if(!Autobind<ODE_ComponentHandle>::read_into(info[0], component)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument component ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_StringRef animationDefinition;
+    if(!Autobind<ODE_StringRef>::read_into(info[1], animationDefinition)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument animationDefinition ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
     ODE_ParseError parseError;
-    auto result = ode_pr1_component_loadAnimation(v1, v2, &parseError);
+    if(!Autobind<ODE_ParseError>::read_into(info[2], parseError)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument parseError ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_pr1_component_loadAnimation(component, animationDefinition, &parseError);
     Autobind<ODE_ParseError>::write_from(info[2], parseError);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_pr1_component_getAnimationValueAtTime(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_ComponentHandle v1;
-    if(!Autobind<ODE_ComponentHandle>::read_into(info[0], v1)) return Napi::Value();
-    int v2;
-    if(!Autobind<int>::read_into(info[1], v2)) return Napi::Value();
-    ODE_Scalar v3;
-    if(!Autobind<ODE_Scalar>::read_into(info[2], v3)) return Napi::Value();
-    ODE_VarDataPtr v4;
-    if(!Autobind<ODE_VarDataPtr>::read_into(info[3], v4)) return Napi::Value();
-    auto result = ode_pr1_component_getAnimationValueAtTime(v1, v2, v3, v4);
+    ODE_ComponentHandle component;
+    if(!Autobind<ODE_ComponentHandle>::read_into(info[0], component)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument component ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    int index;
+    if(!Autobind<int>::read_into(info[1], index)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument index ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_Scalar time;
+    if(!Autobind<ODE_Scalar>::read_into(info[2], time)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument time ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_VarDataPtr value;
+    if(!Autobind<ODE_VarDataPtr>::read_into(info[3], value)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument value ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_pr1_component_getAnimationValueAtTime(component, index, time, value);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_component_listLayers(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_ComponentHandle v1;
-    if(!Autobind<ODE_ComponentHandle>::read_into(info[0], v1)) return Napi::Value();
+    ODE_ComponentHandle component;
+    if(!Autobind<ODE_ComponentHandle>::read_into(info[0], component)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument component ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
     ODE_LayerList layerList;
-    auto result = ode_component_listLayers(v1, &layerList);
+    if(!Autobind<ODE_LayerList>::read_into(info[1], layerList)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument layerList ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_component_listLayers(component, &layerList);
     Autobind<ODE_LayerList>::write_from(info[1], layerList);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_component_identifyLayer(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_ComponentHandle v1;
-    if(!Autobind<ODE_ComponentHandle>::read_into(info[0], v1)) return Napi::Value();
-    ODE_String layerId;
-    ODE_Vector2 v3;
-    if(!Autobind<ODE_Vector2>::read_into(info[2], v3)) return Napi::Value();
-    ODE_Scalar v4;
-    if(!Autobind<ODE_Scalar>::read_into(info[3], v4)) return Napi::Value();
-    auto result = ode_component_identifyLayer(v1, &layerId, v3, v4);
-    Autobind<ODE_String>::write_from(info[1], layerId);
+    ODE_ComponentHandle component;
+    if(!Autobind<ODE_ComponentHandle>::read_into(info[0], component)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument component ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_OUT ODE_String layerId;
+    ODE_Vector2 position;
+    if(!Autobind<ODE_Vector2>::read_into(info[2], position)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument position ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_Scalar radius;
+    if(!Autobind<ODE_Scalar>::read_into(info[3], radius)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument radius ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_component_identifyLayer(component, &layerId, position, radius);
+    Autobind<ODE_OUT ODE_String>::write_from(info[1], layerId);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_component_getLayerMetrics(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_ComponentHandle v1;
-    if(!Autobind<ODE_ComponentHandle>::read_into(info[0], v1)) return Napi::Value();
-    ODE_StringRef v2;
-    if(!Autobind<ODE_StringRef>::read_into(info[1], v2)) return Napi::Value();
+    ODE_ComponentHandle component;
+    if(!Autobind<ODE_ComponentHandle>::read_into(info[0], component)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument component ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    ODE_StringRef layerId;
+    if(!Autobind<ODE_StringRef>::read_into(info[1], layerId)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument layerId ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
     ODE_LayerMetrics layerMetrics;
-    auto result = ode_component_getLayerMetrics(v1, v2, &layerMetrics);
+    if(!Autobind<ODE_LayerMetrics>::read_into(info[2], layerMetrics)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument layerMetrics ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_component_getLayerMetrics(component, layerId, &layerMetrics);
     Autobind<ODE_LayerMetrics>::write_from(info[2], layerMetrics);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_component_listMissingFonts(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_ComponentHandle v1;
-    if(!Autobind<ODE_ComponentHandle>::read_into(info[0], v1)) return Napi::Value();
+    ODE_ComponentHandle component;
+    if(!Autobind<ODE_ComponentHandle>::read_into(info[0], component)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument component ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
     ODE_StringList fontList;
-    auto result = ode_component_listMissingFonts(v1, &fontList);
+    if(!Autobind<ODE_StringList>::read_into(info[1], fontList)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument fontList ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_component_listMissingFonts(component, &fontList);
     Autobind<ODE_StringList>::write_from(info[1], fontList);
     return Napi::String::New(env, Result_to_string(result));
 }
 
 Napi::Value bind_ode_component_getOctopus(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_ComponentHandle v1;
-    if(!Autobind<ODE_ComponentHandle>::read_into(info[0], v1)) return Napi::Value();
+    ODE_ComponentHandle component;
+    if(!Autobind<ODE_ComponentHandle>::read_into(info[0], component)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument component ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
     ODE_String octopusString;
-    auto result = ode_component_getOctopus(v1, &octopusString);
+    if(!Autobind<ODE_String>::read_into(info[1], octopusString)) {
+        auto ex = env.GetAndClearPendingException();
+        Napi::Error::New(env, "Failed to parse argument octopusString ("+ ex.Message() +")").ThrowAsJavaScriptException();
+        return Napi::Value();
+    }
+    auto result = ode_component_getOctopus(component, &octopusString);
     Autobind<ODE_String>::write_from(info[1], octopusString);
     return Napi::String::New(env, Result_to_string(result));
 }
