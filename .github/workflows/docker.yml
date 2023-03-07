@@ -6,6 +6,7 @@ env:
   GITLAB_REGISTRY: registry.avcd.cz
   GITLAB_PROJECT: opendesign/open-design-engine
   GITLAB_USERNAME: registry
+  GITLAB_BASE_CACHE_IMAGE: registry.avcd.cz/opendesign/open-design-engine/build-base
 
 jobs:
   docker:
@@ -25,7 +26,8 @@ jobs:
           registry: ${{ env.GITLAB_REGISTRY }}
           username: ${{ env.GITLAB_USERNAME }}
           password: ${{ secrets.GITLAB_PASSWORD }}
-      - run: |
+      - name: Configure environment variables
+        run: |
           # Looks like metadata-action enable condition only allows boolean variables
           if [ $GITHUB_REF_TYPE == branch ];
           then
@@ -35,6 +37,12 @@ jobs:
             echo "ON_BRANCH=false" >> $GITHUB_ENV;
             echo "ON_TAG=true" >> $GITHUB_ENV;
           fi
+          { echo -n "VCPKG_COMMIT="; jq -r '."builtin-baseline"' vcpkg.json; } >> $GITHUB_ENV
+          { echo -n "GITLAB_BASE_CACHE=${{ env.GITLAB_BASE_CACHE_IMAGE }}:cache-"; {
+            jq -r '."builtin-baseline"' vcpkg.json;
+            # Portion of Dockerfile before "FROM ode-debian-build-base "
+            sed '/FROM ode-debian-build-base /q' dockerfiles/debian-build/Dockerfile;
+          } | sha256sum | head -c 16; echo; } >> $GITHUB_ENV
       - name: Extract base image docker meta
         id: meta-base
         uses: docker/metadata-action@v4
@@ -56,9 +64,11 @@ jobs:
           tags: ${{ steps.meta-base.outputs.tags }}
           labels: ${{ steps.meta-base.outputs.labels }}
           file: ./dockerfiles/debian-build/Dockerfile
+          build-args: |
+            VCPKG_COMMIT=${{ env.VCPKG_COMMIT }}
           target: ode-debian-build-base
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=${{ env.GITLAB_BASE_CACHE }}
+          cache-to: type=registry,ref=${{ env.GITLAB_BASE_CACHE }},mode=max
       - name: Adding base image tag to summary
         run: |
           echo "Base docker image: ${{ fromJSON(steps.meta-base.outputs.json).tags[1] }}" >> $GITHUB_STEP_SUMMARY
@@ -84,8 +94,9 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           file: ./dockerfiles/debian-build/Dockerfile
           build-args: |
+            VCPKG_COMMIT=${{ env.VCPKG_COMMIT }}
             ODE_BUILD_COMMIT="${{ github.sha }}"
-          cache-from: type=gha
+          cache-from: type=registry,ref=${{ env.GITLAB_BASE_CACHE }}
       - name: Adding output tags to summary
         run: |
           echo "Main docker image: ${{ fromJSON(steps.meta.outputs.json).tags[1] }}" >> $GITHUB_STEP_SUMMARY
