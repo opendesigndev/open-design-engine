@@ -6,7 +6,7 @@ env:
   GITLAB_REGISTRY: registry.avcd.cz
   GITLAB_PROJECT: opendesign/open-design-engine
   GITLAB_USERNAME: registry
-  GITLAB_BASE_CACHE: registry.avcd.cz/opendesign/open-design-engine/build-base:cache
+  GITLAB_BASE_CACHE_IMAGE: registry.avcd.cz/opendesign/open-design-engine/build-base
 
 jobs:
   docker:
@@ -38,6 +38,11 @@ jobs:
             echo "ON_TAG=true" >> $GITHUB_ENV;
           fi
           { echo -n "VCPKG_COMMIT="; jq -r '."builtin-baseline"' vcpkg.json; } >> $GITHUB_ENV
+          { echo -n "GITLAB_BASE_CACHE=${{ env.GITLAB_BASE_CACHE_IMAGE }}:cache-"; {
+            jq -r '."builtin-baseline"' vcpkg.json;
+            # Portion of Dockerfile before "FROM ode-debian-build-base "
+            sed '/FROM ode-debian-build-base /q' dockerfiles/debian-build/Dockerfile;
+          } | sha256sum | head -c 16; echo; } >> $GITHUB_ENV
       - name: Extract base image docker meta
         id: meta-base
         uses: docker/metadata-action@v4
