@@ -104,6 +104,13 @@ endif()
 # Global configuration
 add_compile_definitions(GLEW_NO_GLU)
 
+# Set TEXT_RENDERER_TEST_MODULES option for the open-design-text-renderer subproject
+if(ODE_TEST_MODULES)
+    set(TEXT_RENDERER_TEST_MODULES ON CACHE INTERNAL "Build Text Renderer tests and testing utilities" FORCE)
+else()
+    set(TEXT_RENDERER_TEST_MODULES OFF CACHE INTERNAL "Build Text Renderer tests and testing utilities" FORCE)
+endif()
+
 # Modules
 add_subdirectory(liboctopus)
 add_subdirectory(open-design-text-renderer)
