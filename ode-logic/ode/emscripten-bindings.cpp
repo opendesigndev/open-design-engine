@@ -40,7 +40,8 @@ EMSCRIPTEN_BINDINGS(ode) {
     value_object<ODE_Transformation>("Transformation")
         .field("matrix", &ODE_Transformation::matrix);
 
-    class_<ODE_EngineAttributes>("EngineAttributes").constructor<>();
+    class_<ODE_EngineAttributes>("EngineAttributes").constructor<>()
+        .property("padding", &ODE_EngineAttributes::padding);
 
     value_object<ODE_ComponentMetadata>("ComponentMetadata")
         .field("id", &ODE_ComponentMetadata::id)

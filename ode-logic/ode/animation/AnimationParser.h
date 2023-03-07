@@ -24,7 +24,7 @@ public:
             VALUE_OUT_OF_RANGE,
             STRING_EXPECTED,
             UTF16_ENCODING_ERROR
-        } type; 
+        } type;
         int position;
 
         inline Error(Type type = Error::OK, int position = -1) : type(type), position(position) { }
