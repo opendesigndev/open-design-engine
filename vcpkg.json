@@ -10,8 +10,7 @@
         "freetype",
         "harfbuzz",
         "icu",
-        "image-formats",
-        "gtest"
+        "image-formats"
     ],
     "features": {
         "glfw": {

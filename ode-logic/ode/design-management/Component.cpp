@@ -15,7 +15,7 @@ void listLayerMissingFonts(std::set<std::string> &names, const octopus::Layer &l
     switch (layer.type) {
         case octopus::Layer::Type::TEXT:
             if (layer.text.has_value()) {
-                std::vector<std::string> missingFonts = textify::listMissingFonts(TEXTIFY_CONTEXT, layer.text.value());
+                std::vector<std::string> missingFonts = odtr::listMissingFonts(TEXT_RENDERER_CONTEXT, layer.text.value());
                 for (std::string &missingFont : missingFonts)
                     names.insert((std::string &&) missingFont);
             }
@@ -320,7 +320,7 @@ Result<Rasterizer::Shape *, DesignError> Component::getLayerShape(const std::str
         return DesignError::LAYER_NOT_FOUND;
 }
 
-Result<textify::TextShapeHandle, DesignError> Component::getLayerTextShape(const std::string &id) {
+Result<odtr::TextShapeHandle, DesignError> Component::getLayerTextShape(const std::string &id) {
     if (DesignError error = requireBuild())
         return error;
     if (LayerInstance *instance = findInstance(id))

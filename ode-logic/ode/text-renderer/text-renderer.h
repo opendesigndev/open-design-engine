@@ -1,42 +1,42 @@
 
 #pragma once
 
-#include <textify/textify-api.h>
+#include <open-design-text-renderer/text-renderer-api.h>
 #include <ode-essentials.h>
 #include "../core/bounds.h"
-#include "textify-instance.h"
+#include "text-renderer-instance.h"
 #include "FontBase.h"
 
 namespace ode {
 
 class TextShapeHolder {
 
-    textify::TextShapeHandle handle;
+    odtr::TextShapeHandle handle;
 
 public:
-    inline TextShapeHolder(textify::TextShapeHandle handle = nullptr) : handle(handle) { }
+    inline TextShapeHolder(odtr::TextShapeHandle handle = nullptr) : handle(handle) { }
 
     TextShapeHolder(const TextShapeHolder &) = delete;
 
     inline ~TextShapeHolder() {
         if (handle)
-            textify::destroyTextShapes(TEXTIFY_CONTEXT, &handle, 1);
+            odtr::destroyTextShapes(TEXT_RENDERER_CONTEXT, &handle, 1);
     }
 
-    inline TextShapeHolder &operator=(textify::TextShapeHandle newHandle) {
+    inline TextShapeHolder &operator=(odtr::TextShapeHandle newHandle) {
         if (handle)
-            textify::destroyTextShapes(TEXTIFY_CONTEXT, &handle, 1);
+            odtr::destroyTextShapes(TEXT_RENDERER_CONTEXT, &handle, 1);
         handle = newHandle;
         return *this;
     }
 
-    inline operator textify::TextShapeHandle() const {
+    inline operator odtr::TextShapeHandle() const {
         return handle;
     }
 
 };
 
-constexpr PixelBounds fromTextifyBounds(const textify::Rectangle &bounds) {
+constexpr PixelBounds fromTextRendererBounds(const odtr::Rectangle &bounds) {
     return PixelBounds(
         bounds.l,
         bounds.t,
@@ -45,7 +45,7 @@ constexpr PixelBounds fromTextifyBounds(const textify::Rectangle &bounds) {
     );
 }
 
-constexpr UnscaledBounds fromTextifyBounds(const textify::FRectangle &bounds) {
+constexpr UnscaledBounds fromTextRendererBounds(const odtr::FRectangle &bounds) {
     return UnscaledBounds(
         bounds.l,
         bounds.t,
@@ -54,7 +54,7 @@ constexpr UnscaledBounds fromTextifyBounds(const textify::FRectangle &bounds) {
     );
 }
 
-constexpr Matrix3x3d fromTextifyMatrix(const textify::Matrix3f &m) {
+constexpr Matrix3x3d fromTextRendererMatrix(const odtr::Matrix3f &m) {
     return Matrix3x3d(
         m.m[0][0], m.m[0][1], m.m[0][2],
         m.m[1][0], m.m[1][1], m.m[1][2],
