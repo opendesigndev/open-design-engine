@@ -37,6 +37,7 @@ typedef struct {
 /// Attributes of newly created engine instance
 typedef struct {
     // future
+    int padding; // to avoid warnings
 } ODE_EngineAttributes;
 
 /// Metadata of an Octopus component
@@ -216,7 +217,7 @@ ODE_Result ODE_API ode_design_addComponentFromOctopusString(ODE_DesignHandle des
 /// Removes component from design. It is not necessary to call this before ode_destroyDesign
 ODE_Result ODE_API ode_design_removeComponent(ODE_DesignHandle design, ODE_ComponentHandle component);
 
-/** 
+/**
  * Outputs a list of fonts (post-script names) required by a design which haven't been provided yet
  * @param fontList - the list is stored in this output argument. Deallocate with ode_destroyMissingFontList
  */
@@ -318,13 +319,13 @@ ODE_Result ODE_API ode_component_identifyLayer(ODE_ComponentHandle component, OD
  */
 ODE_Result ODE_API ode_component_getLayerMetrics(ODE_ComponentHandle component, ODE_StringRef layerId, ODE_LayerMetrics *layerMetrics);
 
-/** 
+/**
  * Outputs a list of fonts (post-script names) required by a design component which haven't been provided yet
  * @param fontList - the list is stored in this output argument. Deallocate with ode_destroyMissingFontList
  */
 ODE_Result ODE_API ode_component_listMissingFonts(ODE_ComponentHandle component, ODE_StringList *fontList);
 
-/** 
+/**
  * Outputs the Octopus string representing a given design component
  * @param octopusString - output argument where the Octopus JSON will be stored. Deallocate with ode_destroyString
  */

@@ -14,7 +14,7 @@ bool DistanceThresholdShader::initialize(const SharedResource &res, int precisio
     if (!res)
         return false;
     char stepsDefine[64];
-    sprintf(stepsDefine, "#define STEPS %d\n", precision);
+    snprintf(stepsDefine, sizeof(stepsDefine), "#define STEPS %d\n", precision);
     const StringLiteral fsSrc = ODE_STRLIT(
         ODE_GLSL_FVARYING "vec2 texCoord;"
         "uniform sampler2D sdf;"

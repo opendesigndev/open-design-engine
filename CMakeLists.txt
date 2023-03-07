@@ -8,6 +8,9 @@ include(version.cmake)
 option(ODE_RENDERER_ENABLED "Build ODE with rendering capabilities" ON)
 option(ODE_TEST_MODULES "Build tests and testing utilities (optional)" ON)
 option(ODE_SKIA_GPU "Enable GPU acceleration for Skia library" ON)
+if(EMSCRIPTEN)
+    option(ODE_USE_WEBGL2 "Use WebGL version 2 (otherwise WebGL 1 is used)" OFF)
+endif()
 
 # Make sure that vcpkg toolchain file is set
 if(NOT CMAKE_TOOLCHAIN_FILE AND NOT EMSCRIPTEN)
@@ -66,6 +69,10 @@ project(open-design-engine VERSION ${ODE_VERSION} LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
+if(NOT MSVC)
+    add_compile_options(-Wno-empty-body)
+endif()
+
 # Fake library to convince cmake that everything is OK
 # TODO get rid of this and find a different solution
 if(EMSCRIPTEN)
@@ -96,6 +103,15 @@ endif()
 
 # Global configuration
 add_compile_definitions(GLEW_NO_GLU)
+
+# Set TEXT_RENDERER_TEST_MODULES option for the open-design-text-renderer subproject
+if(NOT DEFINED TEXT_RENDERER_TEST_MODULES)
+    if(ODE_TEST_MODULES)
+        set(TEXT_RENDERER_TEST_MODULES ON CACHE INTERNAL "Build Text Renderer tests and testing utilities" FORCE)
+    else()
+        set(TEXT_RENDERER_TEST_MODULES OFF CACHE INTERNAL "Build Text Renderer tests and testing utilities" FORCE)
+    endif()
+endif()
 
 # Modules
 add_subdirectory(liboctopus)

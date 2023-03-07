@@ -9,7 +9,7 @@
 #include "../core/LayerBounds.h"
 #include "../core/LayerMetrics.h"
 #include "../core/LayerInstanceSpecifier.h"
-#include "../textify/textify.h"
+#include "../text-renderer/text-renderer.h"
 #include "../animation/DocumentAnimation.h"
 
 namespace ode {
@@ -42,7 +42,7 @@ public:
     TransformationMatrix transformation() const;
     double featureScale() const;
     Rasterizer::Shape *getShape();
-    textify::TextShapeHandle getTextShape();
+    odtr::TextShapeHandle getTextShape();
 
     octopus::Layer *operator->();
     const octopus::Layer *operator->() const;

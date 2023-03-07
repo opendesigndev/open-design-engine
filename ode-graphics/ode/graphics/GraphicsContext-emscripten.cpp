@@ -50,6 +50,9 @@ void GraphicsContext::initialize(const char *target, const Vector2i &dimensions,
     attributes.antialias = false;
     attributes.depth = false;
     attributes.premultipliedAlpha = false; // TODO TRUE?
+    #ifdef ODE_USE_WEBGL2
+        attributes.majorVersion = 2;
+    #endif
 
     data->handle = emscripten_webgl_create_context(target, &attributes);
     if (data->handle <= 0)

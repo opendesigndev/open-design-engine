@@ -20,6 +20,11 @@ target_include_directories(ode-graphics INTERFACE
 # Macro configuration
 if(EMSCRIPTEN)
     target_compile_definitions(ode-graphics PUBLIC ODE_WEBGL_COMPATIBILITY)
+    if(ODE_USE_WEBGL2)
+        target_compile_definitions(ode-graphics PUBLIC ODE_USE_WEBGL2)
+    else()
+        target_compile_definitions(ode-graphics PUBLIC ODE_WEBGL1_COMPATIBILITY)
+    endif()
 else()
     target_compile_definitions(ode-graphics PUBLIC ODE_GRAPHICS_GLFW_CONTEXT)
 endif()

@@ -253,8 +253,8 @@ PlacedImagePtr Renderer::drawLayerStrokeFill(Component &component, const LayerIn
 
 PlacedImagePtr Renderer::drawLayerText(Component &component, const LayerInstanceSpecifier &layer, double scale, double time) {
     // TODO new text rendering
-    if (Result<textify::TextShapeHandle, DesignError> shape = component.getLayerTextShape(layer->id)) {
-        textify::Dimensions dimensions = textify::getDrawBufferDimensions(TEXTIFY_CONTEXT, shape.value());
+    if (Result<odtr::TextShapeHandle, DesignError> shape = component.getLayerTextShape(layer->id)) {
+        odtr::Dimensions dimensions = odtr::getDrawBufferDimensions(TEXT_RENDERER_CONTEXT, shape.value());
         // Hack to add 1 pixel padding for clamp-to-edge, in-place pixel move
         BitmapPtr bitmap(new Bitmap(PixelFormat::PREMULTIPLIED_RGBA, Vector2i(dimensions.width+2, dimensions.height+2)));
         size_t pxSize = pixelSize(bitmap->format());
@@ -262,7 +262,7 @@ PlacedImagePtr Renderer::drawLayerText(Component &component, const LayerInstance
         bitmap->clear();
         BitmapRef misalignedBitmap(bitmap->format(), (*bitmap)(1, 1), dimensions.width, dimensions.height);
         SparseBitmapRef bitmapMid(bitmap->format(), (*bitmap)(1, 1), dimensions.width, dimensions.height, bitmapStride);
-        textify::DrawTextResult result = textify::drawText(TEXTIFY_CONTEXT, shape.value(), misalignedBitmap.pixels, misalignedBitmap.width(), misalignedBitmap.height());
+        odtr::DrawTextResult result = odtr::drawText(TEXT_RENDERER_CONTEXT, shape.value(), misalignedBitmap.pixels, misalignedBitmap.width(), misalignedBitmap.height());
         // Fix misaligned pixel rows
         for (int y = bitmapMid.height()-1; y > 0; --y) {
             memmove(bitmapMid(0, y), misalignedBitmap(0, y), pxSize*bitmapMid.width());
@@ -277,7 +277,7 @@ PlacedImagePtr Renderer::drawLayerText(Component &component, const LayerInstance
         padding.a.y = padding.b.y = bounds.dimensions().y/dimensions.height;
         bounds += padding;
         PlacedImagePtr image(ImagePtr(new BitmapImage(bitmap, Image::NORMAL, Image::NO_BORDER)), bounds);
-        Matrix3x3d imageTransform = Matrix3x3d(TransformationMatrix::scale(scale)*layer.parentTransform*TransformationMatrix(layer->transform)*animationTransform(component, layer, time))*fromTextifyMatrix(result.transform);
+        Matrix3x3d imageTransform = Matrix3x3d(TransformationMatrix::scale(scale)*layer.parentTransform*TransformationMatrix(layer->transform)*animationTransform(component, layer, time))*fromTextRendererMatrix(result.transform);
         return transformImage(image, imageTransform);
     }
     return nullptr;
@@ -330,7 +330,10 @@ void Renderer::screenDraw(const PixelBounds &viewport, const PlacedImagePtr &ima
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(float(bgColor.r), float(bgColor.g), float(bgColor.b), float(bgColor.a));
     glClear(GL_COLOR_BUFFER_BIT);
-    blitShader.bind(viewport, image.bounds(), image.bounds());
+    PixelBounds bottomUpViewport = viewport;
+    bottomUpViewport.a.y = viewport.b.y;
+    bottomUpViewport.b.y = viewport.a.y;
+    blitShader.bind(bottomUpViewport, image.bounds(), image.bounds());
     tex->bind(AlphaMultShader::UNIT_IN);
     billboard.draw();
     glDisable(GL_BLEND);

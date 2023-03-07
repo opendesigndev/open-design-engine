@@ -14,7 +14,7 @@ bool DistanceTransformShader::initialize(const SharedResource &res, char channel
     if (!res)
         return false;
     char macros[256];
-    sprintf(macros,
+    snprintf(macros, sizeof(macros),
         "#define STEPS %d\n"
         "#define CHANNEL %c\n",
         precision, channel

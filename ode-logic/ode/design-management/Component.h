@@ -10,7 +10,7 @@
 #include <octopus-manifest/component.h>
 #include <ode-essentials.h>
 #include <ode-rasterizer.h>
-#include "../textify/textify.h"
+#include "../text-renderer/text-renderer.h"
 #include "../core/bounds.h"
 #include "../core/LayerBounds.h"
 #include "../core/LayerMetrics.h"
@@ -94,8 +94,8 @@ public:
     Result<LayerMetrics, DesignError> getLayerMetrics(const std::string &id);
     /// Returns the pointer to Rasterizer Shape of a given SHAPE layer
     Result<Rasterizer::Shape *, DesignError> getLayerShape(const std::string &id);
-    /// Returns the Textify TextShapeHandle of a given TEXT layer
-    Result<textify::TextShapeHandle, DesignError> getLayerTextShape(const std::string &id);
+    /// Returns the Text Renderer TextShapeHandle of a given TEXT layer
+    Result<odtr::TextShapeHandle, DesignError> getLayerTextShape(const std::string &id);
     /// Returns animations of a given layer
     Result<const DocumentAnimation *, DesignError> getAnimation(const std::string &id);
     /// Returns value of a specific animation at a given time

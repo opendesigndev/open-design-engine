@@ -2,6 +2,7 @@
 #include "EffectRenderer.h"
 
 #include <algorithm>
+#include <ode/core/effect-margin.h>
 
 namespace ode {
 
@@ -77,9 +78,14 @@ PlacedImagePtr EffectRenderer::drawEffect(const octopus::Effect &effect, const P
             if (effect.glow.has_value())
                 return drawShadow(effect.type, effect.glow.value(), basis, scale);
             return nullptr;
+        case octopus::Effect::Type::GAUSSIAN_BLUR:
         case octopus::Effect::Type::BLUR:
             if (effect.blur.has_value())
                 return drawGaussianBlur(scale*effect.blur.value(), basis);
+            return nullptr;
+        case octopus::Effect::Type::BOUNDED_BLUR:
+            if (effect.blur.has_value())
+                return drawBoundedBlur(scale*effect.blur.value(), basis);
             return nullptr;
         case octopus::Effect::Type::OTHER:
             return nullptr;
@@ -271,7 +277,7 @@ PlacedImagePtr EffectRenderer::drawGaussianBlur(double blur, const PlacedImagePt
     TexturePtr basisTex = basis->asTexture();
     if (!basisTex)
         return nullptr;
-    ScaledBounds bounds = basis.bounds()+ScaledMargin(GAUSSIAN_BLUR_MARGIN_FACTOR*blur);
+    ScaledBounds bounds = basis.bounds()+ScaledMargin(GAUSSIAN_BLUR_RANGE_FACTOR*blur);
     PixelBounds pixelBounds = outerPixelBounds(bounds);
     TextureFrameBufferPtr intermediateTex = tfbManager.acquire(pixelBounds);
     intermediateTex->bind();

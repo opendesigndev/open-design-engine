@@ -16,7 +16,7 @@ bool GaussianBlurShader::initialize(const SharedResource &res, char channel, int
     char channelDef[] = " .?";
     channelDef[2] = channel;
     char macros[256];
-    sprintf(macros,
+    snprintf(macros, sizeof(macros),
         "#define STEPS %d\n"
         "#define SUM_TYPE %s\n"
         "#define CHANNELS%s\n",

@@ -228,7 +228,7 @@ def parseStruct(entities, groups, desc, namespace = []):
             members.append(Member("constructor_bind", api, match.group(2).strip(), None, memberDesc))
             memberDesc = None
             body = body[match.end():]
-            
+
         # ODE_BIND_METHOD
         elif (match := reBindMethod.search(body)):
             api = match.group(1).strip()+'('+','.join([x.strip() for x in match.group(2).split(',')])+')'
@@ -305,7 +305,7 @@ def parseStruct(entities, groups, desc, namespace = []):
         elif (match := reSkipB.search(body)):
             memberDesc = None
             body = body[match.end():]
-            
+
         else:
             body = body[1:]
 
@@ -354,7 +354,7 @@ def parseHeader(header):
                 entities.append(Entity("typedef", type, [], name, desc, []))
             desc = None
             header = header[match.end():]
-            
+
         # Handle
         elif (match := reHandle.search(header)):
             type = match.group(1).strip()
@@ -393,10 +393,10 @@ def parseHeader(header):
         elif (match := reSkipB.search(header)):
             desc = None
             header = header[match.end():]
-        
+
         else:
             header = header[1:]
-    
+
     return entities
 
 

@@ -36,8 +36,8 @@ bool LayerInstance::initializeText(FontBase *fontBase) {
         if (fontBase)
             fontBase->loadFonts(layer->text.value());
 
-        if ((textShape = textify::shapeText(TEXTIFY_CONTEXT, layer->text.value()))) {
-            layerBounds.bounds = fromTextifyBounds(textify::getBounds(TEXTIFY_CONTEXT, textShape));
+        if ((textShape = odtr::shapeText(TEXT_RENDERER_CONTEXT, layer->text.value()))) {
+            layerBounds.bounds = fromTextRendererBounds(odtr::getBounds(TEXT_RENDERER_CONTEXT, textShape));
             layerBounds.logicalBounds = (UntransformedBounds) layerBounds.bounds;
             layerBounds.untransformedBounds = layerBounds.logicalBounds;
         }
@@ -112,7 +112,7 @@ Rasterizer::Shape *LayerInstance::getShape() {
     return shape.get();
 }
 
-textify::TextShapeHandle LayerInstance::getTextShape() {
+odtr::TextShapeHandle LayerInstance::getTextShape() {
     return textShape;
 }
 

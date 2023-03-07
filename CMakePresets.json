@@ -1,0 +1,201 @@
+{
+  "version": 4,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 23,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "with-skia-gpu",
+      "hidden": true,
+      "cacheVariables": {
+        "ODE_SKIA_GPU": "ON"
+      }
+    }, {
+      "name": "without-skia-gpu",
+      "hidden": true,
+      "cacheVariables": {
+        "ODE_SKIA_GPU": "OFF"
+      }
+    }, {
+      "name": "with-tools",
+      "hidden": true,
+      "cacheVariables": {
+        "ODE_TEST_MODULES": "ON"
+      }
+    }, {
+      "name": "without-tools",
+      "hidden": true,
+      "cacheVariables": {
+        "ODE_TEST_MODULES": "OFF"
+      }
+    }, {
+      "name": "win64",
+      "displayName": "Windows 64-bit default configuration",
+      "architecture": "x64",
+      "binaryDir": "${sourceDir}/build/win64",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    }, {
+      "name": "win32",
+      "displayName": "Windows 32-bit default configuration",
+      "inherits": "win64",
+      "architecture": "Win32",
+      "binaryDir": "${sourceDir}/build/win32"
+    }, {
+      "name": "osx-rel",
+      "displayName": "Mac OS default release configuration",
+      "binaryDir": "${sourceDir}/build/osx-rel",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    }, {
+      "name": "osx-dbg",
+      "displayName": "Mac OS default debug configuration",
+      "inherits": "osx-rel",
+      "binaryDir": "${sourceDir}/build/osx-dbg",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    }, {
+      "name": "linux-rel",
+      "displayName": "Linux default release configuration",
+      "binaryDir": "${sourceDir}/build/linux-rel",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ODE_SKIA_GPU": "OFF"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    }, {
+      "name": "linux-dbg",
+      "displayName": "Linux default debug configuration",
+      "inherits": "linux-rel",
+      "binaryDir": "${sourceDir}/build/linux-dbg",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    }, {
+      "name": "win64-vs2022",
+      "displayName": "Windows 64-bit Visual Studio 2022 configuration",
+      "inherits": "win64",
+      "generator": "Visual Studio 17 2022"
+    }, {
+      "name": "win32-vs2022",
+      "displayName": "Windows 32-bit Visual Studio 2022 configuration",
+      "inherits": "win32",
+      "generator": "Visual Studio 17 2022"
+    }, {
+      "name": "win64-no-skia-gpu",
+      "displayName": "Windows 64-bit configuration with Skia-GPU disabled",
+      "inherits": [ "win64", "without-skia-gpu" ]
+    }, {
+      "name": "win32-no-skia-gpu",
+      "displayName": "Windows 32-bit configuration with Skia-GPU disabled",
+      "inherits": [ "win32", "without-skia-gpu" ]
+    }, {
+      "name": "osx-no-skia-gpu-rel",
+      "displayName": "Mac OS release configuration with Skia-GPU disabled",
+      "inherits": [ "osx-rel", "without-skia-gpu" ]
+    }, {
+      "name": "osx-no-skia-gpu-dbg",
+      "displayName": "Mac OS debug configuration with Skia-GPU disabled",
+      "inherits": [ "osx-dbg", "without-skia-gpu" ]
+    }, {
+      "name": "win64-github-actions",
+      "displayName": "Configuration preset for GitHub actions Windows build",
+      "inherits": "win64-vs2022",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "VCPKG_TARGET_TRIPLET": "x64-windows-static-release",
+        "VCPKG_HOST_TRIPLET": "x64-windows-static-release",
+        "TEXT_RENDERER_TEST_MODULES": "OFF"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "win64-rel",
+      "configurePreset": "win64",
+      "configuration": "Release"
+    }, {
+      "name": "win64-dbg",
+      "configurePreset": "win64",
+      "configuration": "Debug"
+    }, {
+      "name": "win32-rel",
+      "configurePreset": "win32",
+      "configuration": "Release"
+    }, {
+      "name": "win32-dbg",
+      "configurePreset": "win32",
+      "configuration": "Debug"
+    }, {
+      "name": "osx-rel",
+      "configurePreset": "osx-rel"
+    }, {
+      "name": "osx-dbg",
+      "configurePreset": "osx-dbg"
+    }, {
+      "name": "linux-rel",
+      "configurePreset": "linux-rel"
+    }, {
+      "name": "linux-dbg",
+      "configurePreset": "linux-dbg"
+    }, {
+      "name": "win64-vs2022-rel",
+      "configurePreset": "win64-vs2022",
+      "configuration": "Release"
+    }, {
+      "name": "win64-vs2022-dbg",
+      "configurePreset": "win64-vs2022",
+      "configuration": "Debug"
+    }, {
+      "name": "win32-vs2022-rel",
+      "configurePreset": "win32-vs2022",
+      "configuration": "Release"
+    }, {
+      "name": "win32-vs2022-dbg",
+      "configurePreset": "win32-vs2022",
+      "configuration": "Debug"
+    }, {
+      "name": "win64-no-skia-gpu-rel",
+      "configurePreset": "win64-no-skia-gpu",
+      "configuration": "Release"
+    }, {
+      "name": "win64-no-skia-gpu-dbg",
+      "configurePreset": "win64-no-skia-gpu",
+      "configuration": "Debug"
+    }, {
+      "name": "win32-no-skia-gpu-rel",
+      "configurePreset": "win32-no-skia-gpu",
+      "configuration": "Release"
+    }, {
+      "name": "win32-no-skia-gpu-dbg",
+      "configurePreset": "win32-no-skia-gpu",
+      "configuration": "Debug"
+    }, {
+      "name": "osx-no-skia-gpu-rel",
+      "configurePreset": "osx-no-skia-gpu-rel"
+    }, {
+      "name": "osx-no-skia-gpu-dbg",
+      "configurePreset": "osx-no-skia-gpu-dbg"
+    }, {
+      "name": "win64-github-actions",
+      "configurePreset": "win64-github-actions",
+      "configuration": "Release"
+    }
+  ]
+}

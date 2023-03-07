@@ -42,6 +42,7 @@ export type Transformation = {
 export const EngineAttributes: { new (): ode.EngineAttributes };
 export type EngineAttributes = {
     [EngineSymbol]: "EngineAttributes";
+    padding: ode.Int;
     delete(): void;
 };
 

@@ -1,4 +1,16 @@
 
+## Version 0.2.2 (2023-03-07)
+
+- Octopus 3.0.2 compatibility (glows not removed yet)
+  - `GAUSSIAN_BLUR` and `BOUNDED_BLUR` effect support
+  - Modification of `maskChannels` via layer changes
+- Fixed upside down output to screen
+- Computation of effect margins more accurate
+- Parsers and serializers generated with new version of json-cpp-gen
+- Removed usage of deprecated `sprintf`, warning fixes
+- Added CMake presets
+- Emscripten binding fixes
+
 ## Version 0.2.1 (2023-02-28)
 
 - Added support for "bounded blur" (equivalent to box blur applied twice)

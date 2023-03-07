@@ -198,6 +198,8 @@ ODE_Result ODE_API ode_destroyMissingFontList(ODE_StringList fontList) {
 // Engine
 
 ODE_Result ODE_API ode_initializeEngineAttributes(ODE_EngineAttributes *engineAttributes) {
+    ODE_ASSERT(engineAttributes);
+    engineAttributes->padding = 0;
     return ODE_RESULT_OK;
 }
 
@@ -333,14 +335,14 @@ ODE_Result ODE_API ode_design_listMissingFonts(ODE_DesignHandle design, ODE_Stri
 }
 
 ODE_Result ODE_NATIVE_API ode_design_loadFontFile(ODE_DesignHandle design, ODE_StringRef name, ODE_StringRef path, ODE_StringRef faceName) {
-    if (!textify::addFontFile(TEXTIFY_CONTEXT, ode_stringDeref(name), ode_stringDeref(faceName), ode_stringDeref(path), false))
+    if (!odtr::addFontFile(TEXT_RENDERER_CONTEXT, ode_stringDeref(name), ode_stringDeref(faceName), ode_stringDeref(path), false))
         return ODE_RESULT_FONT_ERROR;
     return ODE_RESULT_OK;
 }
 
 ODE_Result ODE_API ode_design_loadFontBytes(ODE_DesignHandle design, ODE_StringRef name, ODE_MemoryBuffer *data, ODE_StringRef faceName) {
     ODE_ASSERT(data);
-    if (!textify::addFontBytes(TEXTIFY_CONTEXT, ode_stringDeref(name), ode_stringDeref(faceName), reinterpret_cast<const uint8_t *>(data->data), data->length, false))
+    if (!odtr::addFontBytes(TEXT_RENDERER_CONTEXT, ode_stringDeref(name), ode_stringDeref(faceName), reinterpret_cast<const uint8_t *>(data->data), data->length, false))
         return ODE_RESULT_FONT_ERROR;
     // Transfer data pointer from memory buffer to engine
     design.ptr->engine->fontDataBuffers.push_back(reinterpret_cast<void *>(data->data));

@@ -26,7 +26,10 @@
 
 #if defined(_WIN32) || defined(ODE_GRAPHICS_OPENGL3_CORE)
     #define ODE_GL_ENABLE_VERTEX_ARRAYS
-#elif !defined(glBindSampler) && (defined(ODE_WEBGL1_COMPATIBILITY) || !defined(__EMSCRIPTEN__))
+#elif defined(__EMSCRIPTEN__) ? defined(ODE_WEBGL1_COMPATIBILITY) : !defined(glBindSampler)
+    #ifdef glBindSampler
+        #undef glBindSampler
+    #endif
     #define glBindSampler (static_cast<void (*)(int, decltype(nullptr))>(nullptr))
 #endif
 
