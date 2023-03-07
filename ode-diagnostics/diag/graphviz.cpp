@@ -12,7 +12,7 @@ namespace debug {
 
 static std::string gvNodeName(const Rendexpr *ptr) {
     char buffer[64];
-    sprintf(buffer, "E%p", ptr);
+    snprintf(buffer, sizeof(buffer), "E%p", ptr);
     return buffer;
 }
 

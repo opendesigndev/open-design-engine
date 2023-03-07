@@ -198,6 +198,8 @@ ODE_Result ODE_API ode_destroyMissingFontList(ODE_StringList fontList) {
 // Engine
 
 ODE_Result ODE_API ode_initializeEngineAttributes(ODE_EngineAttributes *engineAttributes) {
+    ODE_ASSERT(engineAttributes);
+    engineAttributes->padding = 0;
     return ODE_RESULT_OK;
 }
 

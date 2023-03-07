@@ -37,6 +37,7 @@ typedef struct {
 /// Attributes of newly created engine instance
 typedef struct {
     // future
+    int padding; // to avoid warnings
 } ODE_EngineAttributes;
 
 /// Metadata of an Octopus component

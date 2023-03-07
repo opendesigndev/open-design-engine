@@ -69,6 +69,10 @@ project(open-design-engine VERSION ${ODE_VERSION} LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
+if(NOT MSVC)
+    add_compile_options(-Wno-empty-body)
+endif()
+
 # Fake library to convince cmake that everything is OK
 # TODO get rid of this and find a different solution
 if(EMSCRIPTEN)

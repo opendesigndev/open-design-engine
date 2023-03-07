@@ -13,6 +13,10 @@ static bool embedInMask(const nonstd::optional<octopus::MaskBasis> &maskBasis) {
     return maskBasis.has_value() && (maskBasis.value() == octopus::MaskBasis::BODY_EMBED || maskBasis.value() == octopus::MaskBasis::FILL_EMBED);
 }
 
+static bool isBlur(octopus::Effect::Type effectType) {
+    return effectType == octopus::Effect::Type::GAUSSIAN_BLUR || effectType == octopus::Effect::Type::BOUNDED_BLUR || effectType == octopus::Effect::Type::BLUR;
+}
+
 static ChannelMatrix getChannelMatrix(const nonstd::optional<std::array<double, 5> > &octopusMaskChannels) {
     if (octopusMaskChannels.has_value()) {
         return ChannelMatrix { {
@@ -39,7 +43,7 @@ static octopus::BlendMode combineBlendMode(octopus::BlendMode outer, octopus::Bl
 
 static Rendexptr layerBackground(const LayerInstanceSpecifier &layer) {
     for (const octopus::Effect &effect : layer->effects) {
-        if (effect.visible && effect.type == octopus::Effect::Type::BLUR && effect.basis == octopus::EffectBasis::LAYER_AND_EFFECTS)
+        if (effect.visible && isBlur(effect.type) && effect.basis == octopus::EffectBasis::LAYER_AND_EFFECTS)
             return Rendexptr();
     }
     return makeBackground();
@@ -96,6 +100,8 @@ void assembleForegroundLayerEffects(const LayerInstanceSpecifier &layer, const L
                 case octopus::Effect::Type::INNER_GLOW:
                     overlay = blend(overlay, drawLayerEffect(facets.get(effect.basis), layer, i), effect.blendMode, inlayPoint);
                     break;
+                case octopus::Effect::Type::GAUSSIAN_BLUR:
+                case octopus::Effect::Type::BOUNDED_BLUR:
                 case octopus::Effect::Type::BLUR:
                     // Resolved elsewhere
                 case octopus::Effect::Type::OTHER:
@@ -116,7 +122,7 @@ RendexSubtree finalizeLayerAssembly(const LayerInstanceSpecifier &layer, const L
     Rendexptr layerAndEffects;
     int i = 0;
     for (const octopus::Effect &effect : layer->effects) {
-        if (effect.visible && effect.type == octopus::Effect::Type::BLUR && effect.basis == octopus::EffectBasis::LAYER_AND_EFFECTS) {
+        if (effect.visible && isBlur(effect.type) && effect.basis == octopus::EffectBasis::LAYER_AND_EFFECTS) {
             /*
              * In the presence of this type of effect, the composition of the whole layer will be different.
              * Its entire likeness including effects will be combined first and then blended with the background using layer's blendMode.
@@ -148,7 +154,7 @@ RendexSubtree finalizeLayerAssembly(const LayerInstanceSpecifier &layer, const L
 Rendexptr applyFillReplacementEffects(const LayerInstanceSpecifier &layer, const LayerBounds &bounds, Facets &facets, Rendexptr fill) {
     int i = 0;
     for (const octopus::Effect &effect : layer->effects) {
-        if (effect.visible && effect.type == octopus::Effect::Type::BLUR) {
+        if (effect.visible && isBlur(effect.type)) {
             switch (effect.basis) {
                 case octopus::EffectBasis::FILL:
                     fill = applyFilters(effect.filters, drawLayerEffect(fill, layer, i));

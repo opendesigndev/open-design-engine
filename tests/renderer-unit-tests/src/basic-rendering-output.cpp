@@ -260,10 +260,12 @@ int basicRenderingOutput(GraphicsContext &gc) {
 
     // Blur effect test
     octopus::Effect blurEffect;
-    blurEffect.type = octopus::Effect::Type::BLUR;
+    blurEffect.type = octopus::Effect::Type::GAUSSIAN_BLUR;
     blurEffect.basis = octopus::EffectBasis::FILL;
-    blurEffect.blur = 8;
+    blurEffect.blur = 4;
     renderer.renderOctopusIntoFile(buildOctopus("TEST36", imageShape.addEffect(blurEffect)));
+    imageShape.effects[0].type = octopus::Effect::Type::BOUNDED_BLUR;
+    renderer.renderOctopusIntoFile(buildOctopus("TEST37", imageShape));
 
     // Edge cases
 

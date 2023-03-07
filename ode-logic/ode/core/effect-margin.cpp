@@ -1,8 +1,6 @@
 
 #include "effect-margin.h"
 
-#define BLUR_RANGE_SIGMA_MULTIPLIER 2.0
-
 namespace ode {
 
 UntransformedMargin effectMargin(const octopus::Effect &effect) {
@@ -25,7 +23,7 @@ UntransformedMargin effectMargin(const octopus::Effect &effect) {
             break;
         case octopus::Effect::Type::DROP_SHADOW:
             if (effect.shadow.has_value()) {
-                UntransformedMargin margin(BLUR_RANGE_SIGMA_MULTIPLIER*effect.shadow->blur+effect.shadow->choke);
+                UntransformedMargin margin(effect.shadow->blur+effect.shadow->choke);
                 margin.a.x -= effect.shadow->offset.x;
                 margin.a.y -= effect.shadow->offset.y;
                 margin.b.x += effect.shadow->offset.x;
@@ -35,11 +33,16 @@ UntransformedMargin effectMargin(const octopus::Effect &effect) {
             break;
         case octopus::Effect::Type::OUTER_GLOW:
             if (effect.glow.has_value())
-                return UntransformedMargin(BLUR_RANGE_SIGMA_MULTIPLIER*effect.glow->blur+effect.glow->choke);
+                return UntransformedMargin(effect.glow->blur+effect.glow->choke);
             break;
+        case octopus::Effect::Type::GAUSSIAN_BLUR:
         case octopus::Effect::Type::BLUR:
             if (effect.blur.has_value())
-                return UntransformedMargin(BLUR_RANGE_SIGMA_MULTIPLIER*effect.blur.value());
+                return UntransformedMargin(GAUSSIAN_BLUR_RANGE_FACTOR*effect.blur.value());
+            break;
+        case octopus::Effect::Type::BOUNDED_BLUR:
+            if (effect.blur.has_value())
+                return UntransformedMargin(effect.blur.value());
             break;
         case octopus::Effect::Type::OTHER:
             // TODO warning

@@ -6,6 +6,8 @@
 #include "ode/core/TransformationMatrix.h"
 #include "ode/core/ChannelMatrix.h"
 #include "ode/core/LayerInstanceSpecifier.h"
+#include "ode/core/LayerMetrics.h"
+#include "ode/core/effect-margin.h"
 #include "ode/core/octopus-type-conversions.h"
 #include "ode/render-expressions/render-expressions.h"
 #include "ode/render-expressions/render-operations.h"

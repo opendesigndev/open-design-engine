@@ -224,7 +224,7 @@ DesignError Component::modifyLayer(const std::string &id, const octopus::LayerCh
                             (layerChange.values.shape.has_value() && layer.type != octopus::Layer::Type::SHAPE) ||
                             (layerChange.values.text.has_value() && layer.type != octopus::Layer::Type::TEXT) ||
                             (layerChange.values.maskBasis.has_value() && layer.type != octopus::Layer::Type::MASK_GROUP) ||
-                            //(layerChange.values.maskChannels.has_value() && layer.type != octopus::Layer::Type::MASK_GROUP) || TODO
+                            (layerChange.values.maskChannels.has_value() && layer.type != octopus::Layer::Type::MASK_GROUP) ||
                             (layerChange.values.componentId.has_value() && layer.type != octopus::Layer::Type::COMPONENT_REFERENCE)
                         )
                             return DesignError::WRONG_LAYER_TYPE;
@@ -239,7 +239,7 @@ DesignError Component::modifyLayer(const std::string &id, const octopus::LayerCh
                         MOD_APPLY(shape, BOUNDS_CHANGE);
                         MOD_APPLY(text, BOUNDS_CHANGE);
                         MOD_APPLY(maskBasis, COMPOSITION_CHANGE);
-                        //MOD_APPLY(maskChannels, COMPOSITION_CHANGE); TODO
+                        MOD_APPLY(maskChannels, COMPOSITION_CHANGE);
                         MOD_APPLY(componentId, HIERARCHY_CHANGE);
                         MOD_APPLY(effects, COMPOSITION_CHANGE);
                         break;

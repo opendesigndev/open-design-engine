@@ -21,6 +21,10 @@
         "types": [
             "ode::DocumentAnimation"
         ],
+        "replacementIncludes": [
+            "<octopus/general.h>",
+            "ode/animation/DocumentAnimation.h"
+        ],
         "headerOutput": "ode/animation/AnimationParser.h",
         "sourceOutput": "ode/animation/AnimationParser.cpp"
     } ],
@@ -28,6 +32,11 @@
         "name": "ode::AnimationSerializer",
         "types": [
             "ode::DocumentAnimation"
+        ],
+        "replacementIncludes": [
+            "<nonstd/serialize_float.hpp>",
+            "<octopus/general.h>",
+            "ode/animation/DocumentAnimation.h"
         ],
         "headerOutput": "ode/animation/AnimationSerializer.h",
         "sourceOutput": "ode/animation/AnimationSerializer.cpp"
