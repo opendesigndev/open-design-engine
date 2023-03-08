@@ -3,10 +3,10 @@
 if [ -d "${0%/*}" ]; then cd "${0%/*}" ; fi # go to directory containing this script
 
 echo running build_skia.sh: $*
-set -x
+set -xe
 cd src
 
-if [ ! -f bin/gn ]; then ./bin/fetch-gn; fi
+if [ ! -f bin/gn ]; then python3 ./bin/fetch-gn; fi
 
 EXTRA_CFLAGS="-Wno-undef-prefix"
 
@@ -23,13 +23,12 @@ if [[ $@ == *debug* ]]; then
 fi
 echo "build type: ${BUILD_TYPE}"
 
-# PLATFORM taken from env
 BUILD_PATH=../out/wasm/${BUILD_TYPE}
 
 mkdir -p "${BUILD_PATH}"
 
-git checkout .
-find ../patches/ -type f -print0 | sort -z | xargs -r0 git apply
+git checkout . || true
+patch -u BUILD.gn -i ../patches/03-build-gn-no-modules-deps.patch
 
 ./bin/gn gen ${BUILD_PATH} --args="\
     target_cpu=\"wasm\" \
@@ -69,7 +68,7 @@ find ../patches/ -type f -print0 | sort -z | xargs -r0 git apply
 
 ninja -C ${BUILD_PATH} libskia.a && echo ${BUILD_PATH}/libskia.a
 
-git checkout .
+git checkout . || true
 
 cd ..
 mkdir -p out/include

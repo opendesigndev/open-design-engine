@@ -52,7 +52,8 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           push: true
-          context: ode-animation-prototype/docker/
+          context: .
+          file: ode-animation-prototype/docker/Dockerfile
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
