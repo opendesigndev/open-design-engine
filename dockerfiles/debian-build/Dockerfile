@@ -1,7 +1,7 @@
 
 # Cachables
 
-FROM debian:11-slim@sha256:9b42b2e7eddd84eaddb67b45567cdc0e03ec826bf252352f300147cfb8ce5a6d AS ode-debian-build-base
+FROM public.ecr.aws/debian/debian:11.6-slim AS ode-debian-build-base
 
 ARG VCPKG_COMMIT
 
