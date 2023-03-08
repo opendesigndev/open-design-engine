@@ -8,6 +8,8 @@ temp/
 vcpkg_installed
 node_modules
 CMakeUserPresets.json
+package
+package-lock.json
 
 # VS Code
 .vscode

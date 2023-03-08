@@ -1,0 +1,12 @@
+{
+    "name": "@opendesign/engine-source",
+    "private": "true",
+    "version": "0.2.2",
+    "main": "./typescript-bindings/ode.js",
+    "scripts": {
+        "install": "cmake-js compile -O build/npm --CDODE_TEST_MODULES=OFF --CDODE_SKIA_GPU=OFF --CDODE_NAPI=ON"
+    },
+    "dependencies": {
+        "cmake-js": "^7.2.1"
+    }
+}

@@ -1,5 +1,7 @@
 
 cmake_minimum_required(VERSION 3.16)
+cmake_policy(SET CMP0091 NEW)
+cmake_policy(SET CMP0042 NEW)
 
 # Read version from vcpkg.json
 include(version.cmake)
@@ -139,8 +141,11 @@ if(ODE_RENDERER_ENABLED)
     add_subdirectory(ode-graphics)
     add_subdirectory(ode-renderer)
     #add_subdirectory(ode-interactive)
-    add_subdirectory(ode-animation-prototype)
-    add_subdirectory(ode-napi)
+    if(ODE_NAPI)
+        add_subdirectory(ode-napi)
+    else()
+        add_subdirectory(ode-animation-prototype)
+    endif()
 endif()
 if(ODE_TEST_MODULES)
     add_subdirectory(ode-diagnostics)
