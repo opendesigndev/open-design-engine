@@ -1,5 +1,6 @@
 name: wasm
-on: push
+on:
+  push
 
 env:
   GITLAB_REGISTRY: registry.avcd.cz
@@ -26,8 +27,6 @@ jobs:
           password: ${{ secrets.GITLAB_PASSWORD }}
       - run: |
           # Looks like metadata-action enable condition only allows boolean variables
-          echo $GITHUB_REF_TYPE
-          echo $GITHUB_REF
           if [ $GITHUB_REF_TYPE == branch ];
           then
             echo "ON_BRANCH=true" >> $GITHUB_ENV;
@@ -36,8 +35,6 @@ jobs:
             echo "ON_BRANCH=false" >> $GITHUB_ENV;
             echo "ON_TAG=true" >> $GITHUB_ENV;
           fi
-          echo $ON_BRANCH
-          echo $ON_TAG
       - name: Extract job Docker meta
         id: meta
         uses: docker/metadata-action@v4
