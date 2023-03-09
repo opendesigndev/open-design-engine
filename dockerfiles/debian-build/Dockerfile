@@ -7,7 +7,7 @@ FROM public.ecr.aws/debian/debian:11.6-slim AS ode-debian-build-config-from-arg
 
 # When setting VCPKG_COMMIT_VALUE, also set VCPKG_COMMIT_SOURCE=arg
 ARG VCPKG_COMMIT_VALUE=
-RUN VCPKG_COMMIT=$VCPKG_COMMIT_VALUE
+RUN export VCPKG_COMMIT=$VCPKG_COMMIT_VALUE
 
 # Optional intermediate target that can be skipped when vcpkg commit is explicitly specified
 # If the vcpkg commit is not set, it will be deduced from vcpkg.json
@@ -16,7 +16,7 @@ FROM ode-debian-build-config-from-arg AS ode-debian-build-config-from-manifest
 
 ONBUILD COPY vcpkg.json /tmp/vcpkg.json
 ONBUILD RUN apt update -qq && apt install -qqy jq
-ONBUILD RUN VCPKG_COMMIT=`jq -r '."builtin-baseline"' /tmp/vcpkg.json`
+ONBUILD RUN export VCPKG_COMMIT=`jq -r '."builtin-baseline"' /tmp/vcpkg.json`
 
 FROM ode-debian-build-config-from-${VCPKG_COMMIT_SOURCE} AS ode-debian-build-base
 
