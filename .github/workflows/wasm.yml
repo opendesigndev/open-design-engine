@@ -6,6 +6,7 @@ env:
   GITLAB_REGISTRY: registry.avcd.cz
   GITLAB_PROJECT: opendesign/open-design-engine/wasm
   GITLAB_USERNAME: registry
+  GITLAB_BASE_CACHE_IMAGE: registry.avcd.cz/opendesign/open-design-engine/wasm-base
 
 jobs:
   wasm:
@@ -56,8 +57,8 @@ jobs:
           file: ode-animation-prototype/docker/Dockerfile
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=${{ env.GITLAB_BASE_CACHE_IMAGE }}
+          cache-to: type=registry,ref=${{ env.GITLAB_BASE_CACHE_IMAGE }},mode=max
       - name: Adding output tags to summary
         run: |
           echo "Main docker image: ${{ fromJSON(steps.meta.outputs.json).tags[1] }}" >> $GITHUB_STEP_SUMMARY
