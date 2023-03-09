@@ -494,7 +494,8 @@ def implementArrayGetter(arrayType, name, className, arrayMember, lengthMember):
     return src
 
 def generateEmscriptenBindings(entities, apiPath):
-    src = '\n#ifdef __EMSCRIPTEN__\n\n'
+    src = '\n#ifdef __EMSCRIPTEN__\n'
+    src += '#ifndef NAPI_BINDINGS\n\n'
     src += '#include <array>\n'
     src += '#include <emscripten/bind.h>\n'
     src += '#include '+('"utils.h"' if 'ode-essentials' in apiPath else '<ode/utils.h>')+'\n'
@@ -593,6 +594,7 @@ def generateEmscriptenBindings(entities, apiPath):
     bindings += '\n}\n\n'
     src += implementation
     src += bindings
+    src += '#endif // NAPI_BINDINGS\n'
     src += '#endif // __EMSCRIPTEN__\n'
     return src
 

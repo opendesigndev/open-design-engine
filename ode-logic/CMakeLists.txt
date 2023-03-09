@@ -42,5 +42,7 @@ if (MSVC)
 endif()
 
 # EXECUTABLE
-add_executable(ode-logic-cli "${CMAKE_CURRENT_SOURCE_DIR}/main.cpp")
-target_link_libraries(ode-logic-cli PRIVATE ode-logic)
+if(NOT EMSCRIPTEN)
+    add_executable(ode-logic-cli "${CMAKE_CURRENT_SOURCE_DIR}/main.cpp")
+    target_link_libraries(ode-logic-cli PRIVATE ode-logic)
+endif()

@@ -97,6 +97,11 @@ if(EMSCRIPTEN)
     target_include_directories(null PUBLIC "${EMSCRIPTEN_SYSROOT}/include")
 endif()
 
+if(NAPI_BINDINGS)
+    # We can remove this once we remove embind-based wasm bindings
+    add_definitions(-DNAPI_BINDINGS)
+endif()
+
 # Third-party packages
 find_package(Freetype REQUIRED)
 if(EMSCRIPTEN)
