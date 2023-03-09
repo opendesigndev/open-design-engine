@@ -73,7 +73,7 @@ jobs:
           file: ./dockerfiles/debian-build/Dockerfile
           build-args: |
             VCPKG_COMMIT_SOURCE=arg
-            VCPKG_COMMIT_VALUE=${{ env.VCPKG_COMMIT }}
+            VCPKG_COMMIT=${{ env.VCPKG_COMMIT }}
           target: ode-debian-build-base
           cache-from: type=registry,ref=${{ env.GITLAB_BASE_CACHE }}
           cache-to: type=registry,ref=${{ env.GITLAB_BASE_CACHE }},mode=max
@@ -103,7 +103,7 @@ jobs:
           file: ./dockerfiles/debian-build/Dockerfile
           build-args: |
             VCPKG_COMMIT_SOURCE=arg
-            VCPKG_COMMIT_VALUE=${{ env.VCPKG_COMMIT }}
+            VCPKG_COMMIT=${{ env.VCPKG_COMMIT }}
             ODE_BUILD_COMMIT="${{ github.sha }}"
           cache-from: type=registry,ref=${{ env.GITLAB_BASE_CACHE }}
       - name: Adding output tags to summary
