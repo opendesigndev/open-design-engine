@@ -1,6 +1,4 @@
 #pragma once
-// https://github.com/nodejs/node-addon-api/blob/main/doc/external_buffer.md
-#define NODE_API_NO_EXTERNAL_BUFFERS_ALLOWED
 #define NODE_ADDON_API_DISABLE_DEPRECATED
 // ^12.22.0 || ^14.17.0 || >=15.12.0, allows type_tag
 #define NAPI_VERSION 8

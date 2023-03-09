@@ -30,10 +30,6 @@ public:
         if (value.IsNull()) return T {};
         Napi::Function obj = value.As<Napi::Function>();
         if (env.IsExceptionPending()) return {};
-        if (!obj.InstanceOf(addon.exports.Get(Handle<T>::name).Unwrap().As<Napi::Function>()).Unwrap()) {
-            Napi::Error::New(env, "Incorrect argument type (instanceof)").ThrowAsJavaScriptException();
-            return {};
-        }
         auto maybe = obj.Get("ptr");
         if (env.IsExceptionPending()) return {};
         if (maybe.IsNothing()) {

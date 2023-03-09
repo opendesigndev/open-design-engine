@@ -82,7 +82,7 @@ typedef enum {
 typedef double ODE_Scalar;
 
 // Raw data pointer types
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) && !defined(NAPI_BINDINGS)
     typedef uintptr_t ODE_VarDataPtr;
     typedef uintptr_t ODE_ConstDataPtr;
     typedef uintptr_t ODE_ConstCharPtr;

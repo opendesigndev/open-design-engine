@@ -163,7 +163,7 @@ ODE_Result ODE_API ode_createDesign(ODE_EngineHandle engine, ODE_DesignHandle *d
  * @param path - path to design file
  * @param parseError - output argument to store details of parse error if ODE_RESULT_OCTOPUS_PARSE_ERROR or ODE_RESULT_OCTOPUS_MANIFEST_PARSE_ERROR is returned. Can be null if this information is not needed.
  */
-ODE_Result ODE_FUTURE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_DesignHandle *design, ODE_StringRef path, ODE_ParseError *parseError);
+ODE_Result ODE_FUTURE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_DesignHandle *design, ODE_StringRef path, ODE_OUT ODE_ParseError *parseError);
 
 /**
  * Loads a design from an Octopus Manifest file - deallocate with ode_destroyDesign
@@ -172,7 +172,7 @@ ODE_Result ODE_FUTURE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_De
  * @param path - path to Octopus manifest file
  * @param parseError - output argument to store details of parse error if ODE_RESULT_OCTOPUS_MANIFEST_PARSE_ERROR or ODE_RESULT_OCTOPUS_PARSE_ERROR is returned. Can be null if this information is not needed.
  */
-ODE_Result ODE_NATIVE_API ode_loadDesignFromManifestFile(ODE_EngineHandle engine, ODE_DesignHandle *design, ODE_StringRef path, ODE_ParseError *parseError);
+ODE_Result ODE_NATIVE_API ode_loadDesignFromManifestFile(ODE_EngineHandle engine, ODE_DesignHandle *design, ODE_StringRef path, ODE_OUT ODE_ParseError *parseError);
 
 /**
  * Loads a design from an Octopus Manifest string - deallocate with ode_destroyDesign
@@ -181,7 +181,7 @@ ODE_Result ODE_NATIVE_API ode_loadDesignFromManifestFile(ODE_EngineHandle engine
  * @param manifestString - Octopus manifest JSON string reference
  * @param parseError - output argument to store details of parse error if ODE_RESULT_OCTOPUS_MANIFEST_PARSE_ERROR or ODE_RESULT_OCTOPUS_PARSE_ERROR is returned. Can be null if this information is not needed.
  */
-ODE_Result ODE_API ode_loadDesignFromManifestString(ODE_EngineHandle engine, ODE_DesignHandle *design, ODE_StringRef manifestString, ODE_ParseError *parseError);
+ODE_Result ODE_API ode_loadDesignFromManifestString(ODE_EngineHandle engine, ODE_DesignHandle *design, ODE_StringRef manifestString, ODE_OUT ODE_ParseError *parseError);
 
 /// Destroys a design and its components
 ODE_Result ODE_API ode_destroyDesign(ODE_DesignHandle design);
@@ -192,7 +192,7 @@ ODE_Result ODE_API ode_destroyDesign(ODE_DesignHandle design);
  * @param path - path to Octopus manifest file
  * @param parseError - output argument to store details of parse error if ODE_RESULT_OCTOPUS_MANIFEST_PARSE_ERROR or ODE_RESULT_OCTOPUS_PARSE_ERROR is returned. Can be null if this information is not needed.
  */
-ODE_Result ODE_NATIVE_API ode_design_loadManifestFile(ODE_DesignHandle design, ODE_StringRef path, ODE_ParseError *parseError);
+ODE_Result ODE_NATIVE_API ode_design_loadManifestFile(ODE_DesignHandle design, ODE_StringRef path, ODE_OUT ODE_ParseError *parseError);
 
 /**
  * Loads an Octopus Manifest from JSON string into an existing design. Caller must ensure no conflicts with preexisting content
@@ -200,7 +200,7 @@ ODE_Result ODE_NATIVE_API ode_design_loadManifestFile(ODE_DesignHandle design, O
  * @param manifestString - Octopus manifest JSON string reference
  * @param parseError - output argument to store details of parse error if ODE_RESULT_OCTOPUS_MANIFEST_PARSE_ERROR or ODE_RESULT_OCTOPUS_PARSE_ERROR is returned. Can be null if this information is not needed.
  */
-ODE_Result ODE_API ode_design_loadManifestString(ODE_DesignHandle design, ODE_StringRef manifestString, ODE_ParseError *parseError);
+ODE_Result ODE_API ode_design_loadManifestString(ODE_DesignHandle design, ODE_StringRef manifestString, ODE_OUT ODE_ParseError *parseError);
 
 /**
  * Loads a component manifest from JSON string and adds the component to design
@@ -209,7 +209,7 @@ ODE_Result ODE_API ode_design_loadManifestString(ODE_DesignHandle design, ODE_St
  * @param componentManifestString - component manifest JSON string reference
  * @param parseError - output argument to store details of parse error if ODE_RESULT_OCTOPUS_MANIFEST_PARSE_ERROR or ODE_RESULT_OCTOPUS_PARSE_ERROR is returned. Can be null if this information is not needed.
  */
-ODE_Result ODE_FUTURE_API ode_design_addComponentFromManifestString(ODE_DesignHandle design, ODE_ComponentHandle *component, ODE_StringRef componentManifestString, ODE_ParseError *parseError);
+ODE_Result ODE_FUTURE_API ode_design_addComponentFromManifestString(ODE_DesignHandle design, ODE_ComponentHandle *component, ODE_StringRef componentManifestString, ODE_OUT ODE_ParseError *parseError);
 
 /**
  * Loads a component from Octopus JSON string and adds the component to design
@@ -257,9 +257,9 @@ ODE_Result ODE_API ode_design_getComponent(ODE_DesignHandle design, ODE_Componen
 
 // Component
 
-ODE_Result ODE_FUTURE_API ode_component_loadOctopusFile(ODE_ComponentHandle component, ODE_StringRef path, ODE_StringRef assetBasePath, ODE_ParseError *parseError);
-ODE_Result ODE_FUTURE_API ode_component_loadOctopusString(ODE_ComponentHandle component, ODE_StringRef octopusString, ODE_StringRef assetBasePath, ODE_ParseError *parseError);
-ODE_Result ODE_FUTURE_API ode_component_setRootLayer(ODE_ComponentHandle component, ODE_StringRef layerOctopusString, ODE_ParseError *parseError);
+ODE_Result ODE_FUTURE_API ode_component_loadOctopusFile(ODE_ComponentHandle component, ODE_StringRef path, ODE_StringRef assetBasePath, ODE_OUT ODE_ParseError *parseError);
+ODE_Result ODE_FUTURE_API ode_component_loadOctopusString(ODE_ComponentHandle component, ODE_StringRef octopusString, ODE_StringRef assetBasePath, ODE_OUT ODE_ParseError *parseError);
+ODE_Result ODE_FUTURE_API ode_component_setRootLayer(ODE_ComponentHandle component, ODE_StringRef layerOctopusString, ODE_OUT ODE_ParseError *parseError);
 
 /**
  * Adds a layer to component
@@ -269,7 +269,7 @@ ODE_Result ODE_FUTURE_API ode_component_setRootLayer(ODE_ComponentHandle compone
  * @param layerOctopusString - the Octopus representation of the single layer being inserted as a JSON string reference
  * @param parseError - output argument to store details of parse error if ODE_RESULT_OCTOPUS_PARSE_ERROR is returned. Can be null if this information is not needed.
  */
-ODE_Result ODE_API ode_component_addLayer(ODE_ComponentHandle component, ODE_StringRef parentLayerId, ODE_StringRef beforeLayerId, ODE_StringRef layerOctopusString, ODE_ParseError *parseError);
+ODE_Result ODE_API ode_component_addLayer(ODE_ComponentHandle component, ODE_StringRef parentLayerId, ODE_StringRef beforeLayerId, ODE_StringRef layerOctopusString, ODE_OUT ODE_ParseError *parseError);
 
 ODE_Result ODE_FUTURE_API ode_component_removeLayer(ODE_ComponentHandle component, ODE_StringRef layerId);
 
@@ -282,7 +282,7 @@ ODE_Result ODE_FUTURE_API ode_component_removeLayer(ODE_ComponentHandle componen
  *     THE ONLY IMPLEMENTED "subject" IS CURRENTLY "LAYER"
  * @param parseError - output argument to store details of parse error if ODE_RESULT_OCTOPUS_PARSE_ERROR is returned. Can be null if this information is not needed.
  */
-ODE_Result ODE_API ode_component_modifyLayer(ODE_ComponentHandle component, ODE_StringRef layerId, ODE_StringRef layerChangeOctopusString, ODE_ParseError *parseError);
+ODE_Result ODE_API ode_component_modifyLayer(ODE_ComponentHandle component, ODE_StringRef layerId, ODE_StringRef layerChangeOctopusString, ODE_OUT ODE_ParseError *parseError);
 
 /**
  * Permanently applies a transformation matrix to a single layer within a component
@@ -299,7 +299,7 @@ ODE_Result ODE_API ode_component_transformLayer(ODE_ComponentHandle component, O
  * @param animationDefinition - the animation definition encoded as a JSON string
  * @param parseError - output argument to store details of parse error if ODE_RESULT_ANIMATION_PARSE_ERROR is returned. Can be null if this information is not needed.
  */
-ODE_Result ODE_API ode_pr1_component_loadAnimation(ODE_ComponentHandle component, ODE_StringRef animationDefinition, ODE_ParseError *parseError);
+ODE_Result ODE_API ode_pr1_component_loadAnimation(ODE_ComponentHandle component, ODE_StringRef animationDefinition, ODE_OUT ODE_ParseError *parseError);
 
 /**
  * PROTOTYPE - Evaluates the value of a layer's animation at a specific point in time

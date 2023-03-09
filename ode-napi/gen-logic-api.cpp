@@ -513,15 +513,10 @@ Napi::Value bind_ode_loadDesignFromManifestString(const Napi::CallbackInfo& info
         Napi::Error::New(env, "Failed to parse argument manifestString ("+ ex.Message() +")").ThrowAsJavaScriptException();
         return Napi::Value();
     }
-    ODE_ParseError parseError;
-    if(!Autobind<ODE_ParseError>::read_into(info[3], parseError)) {
-        auto ex = env.GetAndClearPendingException();
-        Napi::Error::New(env, "Failed to parse argument parseError ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
-    }
+    ODE_OUT ODE_ParseError parseError;
     auto result = ode_loadDesignFromManifestString(engine, &design, manifestString, &parseError);
     Autobind<ODE_DesignHandle>::write_from(info[1], design);
-    Autobind<ODE_ParseError>::write_from(info[3], parseError);
+    Autobind<ODE_OUT ODE_ParseError>::write_from(info[3], parseError);
     return Napi::String::New(env, Result_to_string(result));
 }
 
@@ -551,14 +546,9 @@ Napi::Value bind_ode_design_loadManifestString(const Napi::CallbackInfo& info) {
         Napi::Error::New(env, "Failed to parse argument manifestString ("+ ex.Message() +")").ThrowAsJavaScriptException();
         return Napi::Value();
     }
-    ODE_ParseError parseError;
-    if(!Autobind<ODE_ParseError>::read_into(info[2], parseError)) {
-        auto ex = env.GetAndClearPendingException();
-        Napi::Error::New(env, "Failed to parse argument parseError ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
-    }
+    ODE_OUT ODE_ParseError parseError;
     auto result = ode_design_loadManifestString(design, manifestString, &parseError);
-    Autobind<ODE_ParseError>::write_from(info[2], parseError);
+    Autobind<ODE_OUT ODE_ParseError>::write_from(info[2], parseError);
     return Napi::String::New(env, Result_to_string(result));
 }
 
@@ -714,14 +704,9 @@ Napi::Value bind_ode_component_addLayer(const Napi::CallbackInfo& info) {
         Napi::Error::New(env, "Failed to parse argument layerOctopusString ("+ ex.Message() +")").ThrowAsJavaScriptException();
         return Napi::Value();
     }
-    ODE_ParseError parseError;
-    if(!Autobind<ODE_ParseError>::read_into(info[4], parseError)) {
-        auto ex = env.GetAndClearPendingException();
-        Napi::Error::New(env, "Failed to parse argument parseError ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
-    }
+    ODE_OUT ODE_ParseError parseError;
     auto result = ode_component_addLayer(component, parentLayerId, beforeLayerId, layerOctopusString, &parseError);
-    Autobind<ODE_ParseError>::write_from(info[4], parseError);
+    Autobind<ODE_OUT ODE_ParseError>::write_from(info[4], parseError);
     return Napi::String::New(env, Result_to_string(result));
 }
 
@@ -745,14 +730,9 @@ Napi::Value bind_ode_component_modifyLayer(const Napi::CallbackInfo& info) {
         Napi::Error::New(env, "Failed to parse argument layerChangeOctopusString ("+ ex.Message() +")").ThrowAsJavaScriptException();
         return Napi::Value();
     }
-    ODE_ParseError parseError;
-    if(!Autobind<ODE_ParseError>::read_into(info[3], parseError)) {
-        auto ex = env.GetAndClearPendingException();
-        Napi::Error::New(env, "Failed to parse argument parseError ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
-    }
+    ODE_OUT ODE_ParseError parseError;
     auto result = ode_component_modifyLayer(component, layerId, layerChangeOctopusString, &parseError);
-    Autobind<ODE_ParseError>::write_from(info[3], parseError);
+    Autobind<ODE_OUT ODE_ParseError>::write_from(info[3], parseError);
     return Napi::String::New(env, Result_to_string(result));
 }
 
@@ -770,14 +750,9 @@ Napi::Value bind_ode_pr1_component_loadAnimation(const Napi::CallbackInfo& info)
         Napi::Error::New(env, "Failed to parse argument animationDefinition ("+ ex.Message() +")").ThrowAsJavaScriptException();
         return Napi::Value();
     }
-    ODE_ParseError parseError;
-    if(!Autobind<ODE_ParseError>::read_into(info[2], parseError)) {
-        auto ex = env.GetAndClearPendingException();
-        Napi::Error::New(env, "Failed to parse argument parseError ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
-    }
+    ODE_OUT ODE_ParseError parseError;
     auto result = ode_pr1_component_loadAnimation(component, animationDefinition, &parseError);
-    Autobind<ODE_ParseError>::write_from(info[2], parseError);
+    Autobind<ODE_OUT ODE_ParseError>::write_from(info[2], parseError);
     return Napi::String::New(env, Result_to_string(result));
 }
 
