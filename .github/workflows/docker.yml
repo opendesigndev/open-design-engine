@@ -1,4 +1,4 @@
-name: docker
+name: Portable Docker build
 on:
   push
 
@@ -72,6 +72,7 @@ jobs:
           labels: ${{ steps.meta-base.outputs.labels }}
           file: ./dockerfiles/debian-build/Dockerfile
           build-args: |
+            VCPKG_COMMIT_SOURCE=arg
             VCPKG_COMMIT=${{ env.VCPKG_COMMIT }}
           target: ode-debian-build-base
           cache-from: type=registry,ref=${{ env.GITLAB_BASE_CACHE }}
@@ -101,6 +102,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           file: ./dockerfiles/debian-build/Dockerfile
           build-args: |
+            VCPKG_COMMIT_SOURCE=arg
             VCPKG_COMMIT=${{ env.VCPKG_COMMIT }}
             ODE_BUILD_COMMIT="${{ github.sha }}"
           cache-from: type=registry,ref=${{ env.GITLAB_BASE_CACHE }}
