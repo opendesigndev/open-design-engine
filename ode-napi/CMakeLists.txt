@@ -1,5 +1,6 @@
 
 cmake_minimum_required(VERSION 3.16)
+cmake_policy(SET CMP0135 NEW)
 
 set(ODE_NAPI_SOURCES
     "addon.cpp"
@@ -85,7 +86,7 @@ if(EMSCRIPTEN)
     target_link_options(ode-napi PRIVATE "SHELL:-s USE_ICU=1")
     target_link_options(ode-napi PRIVATE "SHELL:-s USE_FREETYPE=1")
     target_link_options(ode-napi PRIVATE "SHELL:-s LLD_REPORT_UNDEFINED")
-    target_link_options(ode-napi PRIVATE "SHELL:-s EXPORTED_RUNTIME_METHODS=malloc,free")
+    target_link_options(ode-napi PRIVATE "SHELL:-s EXPORTED_FUNCTIONS=\"['_malloc','_free']\"")
     target_link_options(ode-napi PRIVATE "SHELL:--no-entry")
     target_link_options(ode-napi PRIVATE "SHELL:--bind")
     target_link_options(ode-napi PRIVATE "SHELL:-Wl,--whole-archive")
