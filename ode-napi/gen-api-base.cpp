@@ -6,10 +6,10 @@
 #include "gen.h"
 
 Napi::Value node_napi_StringList_getEntry(const Napi::CallbackInfo& info);
-Napi::Value node_napi_destroyString(const Napi::CallbackInfo& info);
-Napi::Value node_napi_allocateMemoryBuffer(const Napi::CallbackInfo& info);
-Napi::Value node_napi_reallocateMemoryBuffer(const Napi::CallbackInfo& info);
-Napi::Value node_napi_destroyMemoryBuffer(const Napi::CallbackInfo& info);
+void node_napi_destroyString(const Napi::CallbackInfo& info);
+void node_napi_allocateMemoryBuffer(const Napi::CallbackInfo& info);
+void node_napi_reallocateMemoryBuffer(const Napi::CallbackInfo& info);
+void node_napi_destroyMemoryBuffer(const Napi::CallbackInfo& info);
 
 Napi::Object init_gen_api_base(Napi::Env env, Napi::Object exports) {
 
@@ -237,66 +237,66 @@ Napi::Value ode_napi_serialize(Napi::Env env, const ODE_StringList& source) {
     return obj;
 }
 
-Napi::Value node_napi_destroyString(const Napi::CallbackInfo& info) {
-    auto env = info.Env();
+void node_napi_destroyString(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
     ODE_String string;
     if(!Autobind<ODE_String>::read_into(info[0], string)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument string ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     auto result = ode_destroyString(string);
-    return ode_napi_serialize(env, result);
+    check_result(env, result);
 }
 
-Napi::Value node_napi_allocateMemoryBuffer(const Napi::CallbackInfo& info) {
-    auto env = info.Env();
+void node_napi_allocateMemoryBuffer(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
     ODE_MemoryBuffer buffer;
     if(!Autobind<ODE_MemoryBuffer>::read_into(info[0], buffer)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument buffer ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     size_t length;
     if(!Autobind<size_t>::read_into(info[1], length)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument length ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     auto result = ode_allocateMemoryBuffer(&buffer, length);
     Autobind<ODE_MemoryBuffer>::write_from(info[0], buffer);
-    return ode_napi_serialize(env, result);
+    check_result(env, result);
 }
 
-Napi::Value node_napi_reallocateMemoryBuffer(const Napi::CallbackInfo& info) {
-    auto env = info.Env();
+void node_napi_reallocateMemoryBuffer(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
     ODE_MemoryBuffer buffer;
     if(!Autobind<ODE_MemoryBuffer>::read_into(info[0], buffer)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument buffer ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     size_t length;
     if(!Autobind<size_t>::read_into(info[1], length)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument length ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     auto result = ode_reallocateMemoryBuffer(&buffer, length);
     Autobind<ODE_MemoryBuffer>::write_from(info[0], buffer);
-    return ode_napi_serialize(env, result);
+    check_result(env, result);
 }
 
-Napi::Value node_napi_destroyMemoryBuffer(const Napi::CallbackInfo& info) {
-    auto env = info.Env();
+void node_napi_destroyMemoryBuffer(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
     ODE_MemoryBuffer buffer;
     if(!Autobind<ODE_MemoryBuffer>::read_into(info[0], buffer)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument buffer ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     auto result = ode_destroyMemoryBuffer(&buffer);
     Autobind<ODE_MemoryBuffer>::write_from(info[0], buffer);
-    return ode_napi_serialize(env, result);
+    check_result(env, result);
 }
 

@@ -690,11 +690,15 @@ def generateNapiBindings(entities, apiPath):
         
         # Function
         elif entity.category == 'function':
-            signature = f'Napi::Value node_napi_{emName}(const Napi::CallbackInfo& info)'
+            is_result = entity.type == 'ODE_Result'
+            return_type = 'void' if is_result else 'Napi::Value'
+            empty_return = 'return;' if is_result else 'return Napi::Value();'
+            signature = f'{return_type} node_napi_{emName}(const Napi::CallbackInfo& info)'
             src_head += signature + ';\n'
+
             src_tail += (
                 f'{signature} {{\n'
-                f'    auto env = info.Env();\n'
+                f'    Napi::Env env = info.Env();\n'
             )
             call = ""
             i = 0
@@ -727,19 +731,27 @@ def generateNapiBindings(entities, apiPath):
                         f'    if(!Autobind<{t}>::read_into(info[{i-1}], {mem.name})) {{\n'
                         f'        auto ex = env.GetAndClearPendingException();\n'
                         f'        Napi::Error::New(env, "Failed to parse argument {mem.name} ("+ ex.Message() +")").ThrowAsJavaScriptException();\n'
-                        f'        return Napi::Value();\n'
+                        f'        {empty_return}\n'
                         f'    }}\n'
                     )
                 if inout_type == "INOUT" or inout_type == "OUT":
                     outputs += f'    Autobind<{t}>::write_from(info[{i-1}], {mem.name});\n'
-
-            src_tail += (
-                f'    auto result = {fullName}({call});\n'
-                f'{outputs}'
-                f'    return ode_napi_serialize(env, result);\n'
-                f'}}\n'
-                '\n'
-            )
+            if is_result:
+                src_tail += (
+                    f'    auto result = {fullName}({call});\n'
+                    f'{outputs}'
+                    f'    check_result(env, result);\n'
+                    f'}}\n'
+                    '\n'
+                )
+            else:
+                src_tail += (
+                    f'    auto result = {fullName}({call});\n'
+                    f'{outputs}'
+                    f'    return ode_napi_serialize(env, result);\n'
+                    f'}}\n'
+                    '\n'
+                )
             src_body += f'    exports.Set("{emName}", Napi::Function::New<node_napi_{emName}>(env, "{emName}"));'
         elif entity.category == 'array_instance':
             src_body += f"    // TODO: {entity.category} {emName}\n"

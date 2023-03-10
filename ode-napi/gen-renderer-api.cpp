@@ -5,16 +5,16 @@
 #include "napi-wrap.h"
 #include "gen.h"
 
-Napi::Value node_napi_destroyBitmap(const Napi::CallbackInfo& info);
-Napi::Value node_napi_createRendererContext(const Napi::CallbackInfo& info);
-Napi::Value node_napi_destroyRendererContext(const Napi::CallbackInfo& info);
-Napi::Value node_napi_createDesignImageBase(const Napi::CallbackInfo& info);
-Napi::Value node_napi_destroyDesignImageBase(const Napi::CallbackInfo& info);
-Napi::Value node_napi_design_loadImagePixels(const Napi::CallbackInfo& info);
-Napi::Value node_napi_pr1_drawComponent(const Napi::CallbackInfo& info);
-Napi::Value node_napi_pr1_createAnimationRenderer(const Napi::CallbackInfo& info);
-Napi::Value node_napi_pr1_destroyAnimationRenderer(const Napi::CallbackInfo& info);
-Napi::Value node_napi_pr1_animation_drawFrame(const Napi::CallbackInfo& info);
+void node_napi_destroyBitmap(const Napi::CallbackInfo& info);
+void node_napi_createRendererContext(const Napi::CallbackInfo& info);
+void node_napi_destroyRendererContext(const Napi::CallbackInfo& info);
+void node_napi_createDesignImageBase(const Napi::CallbackInfo& info);
+void node_napi_destroyDesignImageBase(const Napi::CallbackInfo& info);
+void node_napi_design_loadImagePixels(const Napi::CallbackInfo& info);
+void node_napi_pr1_drawComponent(const Napi::CallbackInfo& info);
+void node_napi_pr1_createAnimationRenderer(const Napi::CallbackInfo& info);
+void node_napi_pr1_destroyAnimationRenderer(const Napi::CallbackInfo& info);
+void node_napi_pr1_animation_drawFrame(const Napi::CallbackInfo& info);
 
 Napi::Object init_gen_renderer_api(Napi::Env env, Napi::Object exports) {
 
@@ -211,217 +211,217 @@ Napi::Value ode_napi_serialize(Napi::Env env, const ODE_PR1_AnimationRendererHan
     return Handle<ODE_PR1_AnimationRendererHandle>::serialize(env, source);
 }
 
-Napi::Value node_napi_destroyBitmap(const Napi::CallbackInfo& info) {
-    auto env = info.Env();
+void node_napi_destroyBitmap(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
     ODE_Bitmap bitmap;
     if(!Autobind<ODE_Bitmap>::read_into(info[0], bitmap)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument bitmap ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     auto result = ode_destroyBitmap(bitmap);
-    return ode_napi_serialize(env, result);
+    check_result(env, result);
 }
 
-Napi::Value node_napi_createRendererContext(const Napi::CallbackInfo& info) {
-    auto env = info.Env();
+void node_napi_createRendererContext(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
     ODE_EngineHandle engine;
     if(!Autobind<ODE_EngineHandle>::read_into(info[0], engine)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument engine ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     ODE_RendererContextHandle rendererContext;
     if(!Autobind<ODE_RendererContextHandle>::read_into(info[1], rendererContext)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument rendererContext ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     ODE_StringRef target;
     if(!Autobind<ODE_StringRef>::read_into(info[2], target)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument target ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     auto result = ode_createRendererContext(engine, &rendererContext, target);
     Autobind<ODE_RendererContextHandle>::write_from(info[1], rendererContext);
-    return ode_napi_serialize(env, result);
+    check_result(env, result);
 }
 
-Napi::Value node_napi_destroyRendererContext(const Napi::CallbackInfo& info) {
-    auto env = info.Env();
+void node_napi_destroyRendererContext(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
     ODE_RendererContextHandle rendererContext;
     if(!Autobind<ODE_RendererContextHandle>::read_into(info[0], rendererContext)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument rendererContext ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     auto result = ode_destroyRendererContext(rendererContext);
-    return ode_napi_serialize(env, result);
+    check_result(env, result);
 }
 
-Napi::Value node_napi_createDesignImageBase(const Napi::CallbackInfo& info) {
-    auto env = info.Env();
+void node_napi_createDesignImageBase(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
     ODE_RendererContextHandle rendererContext;
     if(!Autobind<ODE_RendererContextHandle>::read_into(info[0], rendererContext)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument rendererContext ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     ODE_DesignHandle design;
     if(!Autobind<ODE_DesignHandle>::read_into(info[1], design)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument design ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     ODE_DesignImageBaseHandle designImageBase;
     if(!Autobind<ODE_DesignImageBaseHandle>::read_into(info[2], designImageBase)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument designImageBase ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     auto result = ode_createDesignImageBase(rendererContext, design, &designImageBase);
     Autobind<ODE_DesignImageBaseHandle>::write_from(info[2], designImageBase);
-    return ode_napi_serialize(env, result);
+    check_result(env, result);
 }
 
-Napi::Value node_napi_destroyDesignImageBase(const Napi::CallbackInfo& info) {
-    auto env = info.Env();
+void node_napi_destroyDesignImageBase(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
     ODE_DesignImageBaseHandle designImageBase;
     if(!Autobind<ODE_DesignImageBaseHandle>::read_into(info[0], designImageBase)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument designImageBase ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     auto result = ode_destroyDesignImageBase(designImageBase);
-    return ode_napi_serialize(env, result);
+    check_result(env, result);
 }
 
-Napi::Value node_napi_design_loadImagePixels(const Napi::CallbackInfo& info) {
-    auto env = info.Env();
+void node_napi_design_loadImagePixels(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
     ODE_DesignImageBaseHandle designImageBase;
     if(!Autobind<ODE_DesignImageBaseHandle>::read_into(info[0], designImageBase)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument designImageBase ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     ODE_StringRef key;
     if(!Autobind<ODE_StringRef>::read_into(info[1], key)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument key ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     ODE_BitmapRef bitmap;
     if(!Autobind<ODE_BitmapRef>::read_into(info[2], bitmap)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument bitmap ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     auto result = ode_design_loadImagePixels(designImageBase, key, bitmap);
-    return ode_napi_serialize(env, result);
+    check_result(env, result);
 }
 
-Napi::Value node_napi_pr1_drawComponent(const Napi::CallbackInfo& info) {
-    auto env = info.Env();
+void node_napi_pr1_drawComponent(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
     ODE_RendererContextHandle rendererContext;
     if(!Autobind<ODE_RendererContextHandle>::read_into(info[0], rendererContext)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument rendererContext ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     ODE_ComponentHandle component;
     if(!Autobind<ODE_ComponentHandle>::read_into(info[1], component)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument component ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     ODE_DesignImageBaseHandle designImageBase;
     if(!Autobind<ODE_DesignImageBaseHandle>::read_into(info[2], designImageBase)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument designImageBase ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     ODE_Bitmap outputBitmap;
     if(!Autobind<ODE_Bitmap>::read_into(info[3], outputBitmap)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument outputBitmap ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     ODE_PR1_FrameView frameView;
     if(!Autobind<ODE_PR1_FrameView>::read_into(info[4], frameView)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument frameView ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     auto result = ode_pr1_drawComponent(rendererContext, component, designImageBase, &outputBitmap, &frameView);
     Autobind<ODE_Bitmap>::write_from(info[3], outputBitmap);
-    return ode_napi_serialize(env, result);
+    check_result(env, result);
 }
 
-Napi::Value node_napi_pr1_createAnimationRenderer(const Napi::CallbackInfo& info) {
-    auto env = info.Env();
+void node_napi_pr1_createAnimationRenderer(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
     ODE_RendererContextHandle rendererContext;
     if(!Autobind<ODE_RendererContextHandle>::read_into(info[0], rendererContext)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument rendererContext ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     ODE_ComponentHandle component;
     if(!Autobind<ODE_ComponentHandle>::read_into(info[1], component)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument component ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     ODE_PR1_AnimationRendererHandle animationRenderer;
     if(!Autobind<ODE_PR1_AnimationRendererHandle>::read_into(info[2], animationRenderer)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument animationRenderer ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     ODE_DesignImageBaseHandle imageBase;
     if(!Autobind<ODE_DesignImageBaseHandle>::read_into(info[3], imageBase)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument imageBase ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     auto result = ode_pr1_createAnimationRenderer(rendererContext, component, &animationRenderer, imageBase);
     Autobind<ODE_PR1_AnimationRendererHandle>::write_from(info[2], animationRenderer);
-    return ode_napi_serialize(env, result);
+    check_result(env, result);
 }
 
-Napi::Value node_napi_pr1_destroyAnimationRenderer(const Napi::CallbackInfo& info) {
-    auto env = info.Env();
+void node_napi_pr1_destroyAnimationRenderer(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
     ODE_PR1_AnimationRendererHandle animationRenderer;
     if(!Autobind<ODE_PR1_AnimationRendererHandle>::read_into(info[0], animationRenderer)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument animationRenderer ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     auto result = ode_pr1_destroyAnimationRenderer(animationRenderer);
-    return ode_napi_serialize(env, result);
+    check_result(env, result);
 }
 
-Napi::Value node_napi_pr1_animation_drawFrame(const Napi::CallbackInfo& info) {
-    auto env = info.Env();
+void node_napi_pr1_animation_drawFrame(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
     ODE_PR1_AnimationRendererHandle renderer;
     if(!Autobind<ODE_PR1_AnimationRendererHandle>::read_into(info[0], renderer)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument renderer ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     ODE_PR1_FrameView frameView;
     if(!Autobind<ODE_PR1_FrameView>::read_into(info[1], frameView)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument frameView ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     ODE_Scalar time;
     if(!Autobind<ODE_Scalar>::read_into(info[2], time)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument time ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
+        return;
     }
     auto result = ode_pr1_animation_drawFrame(renderer, &frameView, time);
-    return ode_napi_serialize(env, result);
+    check_result(env, result);
 }
 
