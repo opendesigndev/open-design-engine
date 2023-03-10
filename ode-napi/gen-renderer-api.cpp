@@ -5,16 +5,16 @@
 #include "napi-wrap.h"
 #include "gen.h"
 
-Napi::Value bind_ode_destroyBitmap(const Napi::CallbackInfo& info);
-Napi::Value bind_ode_createRendererContext(const Napi::CallbackInfo& info);
-Napi::Value bind_ode_destroyRendererContext(const Napi::CallbackInfo& info);
-Napi::Value bind_ode_createDesignImageBase(const Napi::CallbackInfo& info);
-Napi::Value bind_ode_destroyDesignImageBase(const Napi::CallbackInfo& info);
-Napi::Value bind_ode_design_loadImagePixels(const Napi::CallbackInfo& info);
-Napi::Value bind_ode_pr1_drawComponent(const Napi::CallbackInfo& info);
-Napi::Value bind_ode_pr1_createAnimationRenderer(const Napi::CallbackInfo& info);
-Napi::Value bind_ode_pr1_destroyAnimationRenderer(const Napi::CallbackInfo& info);
-Napi::Value bind_ode_pr1_animation_drawFrame(const Napi::CallbackInfo& info);
+Napi::Value node_napi_destroyBitmap(const Napi::CallbackInfo& info);
+Napi::Value node_napi_createRendererContext(const Napi::CallbackInfo& info);
+Napi::Value node_napi_destroyRendererContext(const Napi::CallbackInfo& info);
+Napi::Value node_napi_createDesignImageBase(const Napi::CallbackInfo& info);
+Napi::Value node_napi_destroyDesignImageBase(const Napi::CallbackInfo& info);
+Napi::Value node_napi_design_loadImagePixels(const Napi::CallbackInfo& info);
+Napi::Value node_napi_pr1_drawComponent(const Napi::CallbackInfo& info);
+Napi::Value node_napi_pr1_createAnimationRenderer(const Napi::CallbackInfo& info);
+Napi::Value node_napi_pr1_destroyAnimationRenderer(const Napi::CallbackInfo& info);
+Napi::Value node_napi_pr1_animation_drawFrame(const Napi::CallbackInfo& info);
 
 Napi::Object init_gen_renderer_api(Napi::Env env, Napi::Object exports) {
 
@@ -28,16 +28,16 @@ Napi::Object init_gen_renderer_api(Napi::Env env, Napi::Object exports) {
     Handle<ODE_RendererContextHandle>::Export(exports);
     Handle<ODE_DesignImageBaseHandle>::Export(exports);
     Handle<ODE_PR1_AnimationRendererHandle>::Export(exports);
-    exports.Set("destroyBitmap", Napi::Function::New<bind_ode_destroyBitmap>(env, "destroyBitmap"));
-    exports.Set("createRendererContext", Napi::Function::New<bind_ode_createRendererContext>(env, "createRendererContext"));
-    exports.Set("destroyRendererContext", Napi::Function::New<bind_ode_destroyRendererContext>(env, "destroyRendererContext"));
-    exports.Set("createDesignImageBase", Napi::Function::New<bind_ode_createDesignImageBase>(env, "createDesignImageBase"));
-    exports.Set("destroyDesignImageBase", Napi::Function::New<bind_ode_destroyDesignImageBase>(env, "destroyDesignImageBase"));
-    exports.Set("design_loadImagePixels", Napi::Function::New<bind_ode_design_loadImagePixels>(env, "design_loadImagePixels"));
-    exports.Set("pr1_drawComponent", Napi::Function::New<bind_ode_pr1_drawComponent>(env, "pr1_drawComponent"));
-    exports.Set("pr1_createAnimationRenderer", Napi::Function::New<bind_ode_pr1_createAnimationRenderer>(env, "pr1_createAnimationRenderer"));
-    exports.Set("pr1_destroyAnimationRenderer", Napi::Function::New<bind_ode_pr1_destroyAnimationRenderer>(env, "pr1_destroyAnimationRenderer"));
-    exports.Set("pr1_animation_drawFrame", Napi::Function::New<bind_ode_pr1_animation_drawFrame>(env, "pr1_animation_drawFrame"));    return exports;
+    exports.Set("destroyBitmap", Napi::Function::New<node_napi_destroyBitmap>(env, "destroyBitmap"));
+    exports.Set("createRendererContext", Napi::Function::New<node_napi_createRendererContext>(env, "createRendererContext"));
+    exports.Set("destroyRendererContext", Napi::Function::New<node_napi_destroyRendererContext>(env, "destroyRendererContext"));
+    exports.Set("createDesignImageBase", Napi::Function::New<node_napi_createDesignImageBase>(env, "createDesignImageBase"));
+    exports.Set("destroyDesignImageBase", Napi::Function::New<node_napi_destroyDesignImageBase>(env, "destroyDesignImageBase"));
+    exports.Set("design_loadImagePixels", Napi::Function::New<node_napi_design_loadImagePixels>(env, "design_loadImagePixels"));
+    exports.Set("pr1_drawComponent", Napi::Function::New<node_napi_pr1_drawComponent>(env, "pr1_drawComponent"));
+    exports.Set("pr1_createAnimationRenderer", Napi::Function::New<node_napi_pr1_createAnimationRenderer>(env, "pr1_createAnimationRenderer"));
+    exports.Set("pr1_destroyAnimationRenderer", Napi::Function::New<node_napi_pr1_destroyAnimationRenderer>(env, "pr1_destroyAnimationRenderer"));
+    exports.Set("pr1_animation_drawFrame", Napi::Function::New<node_napi_pr1_animation_drawFrame>(env, "pr1_animation_drawFrame"));    return exports;
 }
 
 template<>
@@ -69,19 +69,18 @@ bool Autobind<ODE_Bitmap>::read_into(const Napi::Value& value, ODE_Bitmap& parse
     }
     return true;
 }
-template<>
-Napi::Value Autobind<ODE_Bitmap>::serialize(Napi::Env env, const ODE_Bitmap& source){
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_Bitmap& source) {
     Napi::Object obj = Napi::Object::New(env);
-    Napi::Value format = Autobind<int>::serialize(env, source.format);
+    Napi::Value format = ode_napi_serialize(env, source.format);
     if(format.IsEmpty()) return Napi::Value();
     obj.Set("format", format);
-    Napi::Value pixels = Autobind<uintptr_t>::serialize(env, (uintptr_t)source.pixels);
+    Napi::Value pixels = ode_napi_serialize(env, (uintptr_t)source.pixels);
     if(pixels.IsEmpty()) return Napi::Value();
     obj.Set("pixels", pixels);
-    Napi::Value width = Autobind<int>::serialize(env, source.width);
+    Napi::Value width = ode_napi_serialize(env, source.width);
     if(width.IsEmpty()) return Napi::Value();
     obj.Set("width", width);
-    Napi::Value height = Autobind<int>::serialize(env, source.height);
+    Napi::Value height = ode_napi_serialize(env, source.height);
     if(height.IsEmpty()) return Napi::Value();
     obj.Set("height", height);
     return obj;
@@ -116,19 +115,18 @@ bool Autobind<ODE_BitmapRef>::read_into(const Napi::Value& value, ODE_BitmapRef&
     }
     return true;
 }
-template<>
-Napi::Value Autobind<ODE_BitmapRef>::serialize(Napi::Env env, const ODE_BitmapRef& source){
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_BitmapRef& source) {
     Napi::Object obj = Napi::Object::New(env);
-    Napi::Value format = Autobind<int>::serialize(env, source.format);
+    Napi::Value format = ode_napi_serialize(env, source.format);
     if(format.IsEmpty()) return Napi::Value();
     obj.Set("format", format);
-    Napi::Value pixels = Autobind<uintptr_t>::serialize(env, (uintptr_t)source.pixels);
+    Napi::Value pixels = ode_napi_serialize(env, (uintptr_t)source.pixels);
     if(pixels.IsEmpty()) return Napi::Value();
     obj.Set("pixels", pixels);
-    Napi::Value width = Autobind<int>::serialize(env, source.width);
+    Napi::Value width = ode_napi_serialize(env, source.width);
     if(width.IsEmpty()) return Napi::Value();
     obj.Set("width", width);
-    Napi::Value height = Autobind<int>::serialize(env, source.height);
+    Napi::Value height = ode_napi_serialize(env, source.height);
     if(height.IsEmpty()) return Napi::Value();
     obj.Set("height", height);
     return obj;
@@ -160,19 +158,18 @@ bool Autobind<ODE_PR1_FrameView>::read_into(const Napi::Value& value, ODE_PR1_Fr
     }
     return true;
 }
-template<>
-Napi::Value Autobind<ODE_PR1_FrameView>::serialize(Napi::Env env, const ODE_PR1_FrameView& source){
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_PR1_FrameView& source) {
     Napi::Object obj = Napi::Object::New(env);
-    Napi::Value width = Autobind<int>::serialize(env, source.width);
+    Napi::Value width = ode_napi_serialize(env, source.width);
     if(width.IsEmpty()) return Napi::Value();
     obj.Set("width", width);
-    Napi::Value height = Autobind<int>::serialize(env, source.height);
+    Napi::Value height = ode_napi_serialize(env, source.height);
     if(height.IsEmpty()) return Napi::Value();
     obj.Set("height", height);
-    Napi::Value offset = Autobind<ODE_Vector2>::serialize(env, source.offset);
+    Napi::Value offset = ode_napi_serialize(env, source.offset);
     if(offset.IsEmpty()) return Napi::Value();
     obj.Set("offset", offset);
-    Napi::Value scale = Autobind<ODE_Scalar>::serialize(env, source.scale);
+    Napi::Value scale = ode_napi_serialize(env, source.scale);
     if(scale.IsEmpty()) return Napi::Value();
     obj.Set("scale", scale);
     return obj;
@@ -186,9 +183,8 @@ bool Autobind<ODE_RendererContextHandle>::read_into(const Napi::Value& value, OD
     if(optional) { target = *optional; return true; }
     return false;
 }
-template<>
-Napi::Value Autobind<ODE_RendererContextHandle>::serialize(Napi::Env env, const ODE_RendererContextHandle& src) {
-    return Handle<ODE_RendererContextHandle>::serialize(env, src);
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_RendererContextHandle& source) {
+    return Handle<ODE_RendererContextHandle>::serialize(env, source);
 }
 
 template<>
@@ -199,9 +195,8 @@ bool Autobind<ODE_DesignImageBaseHandle>::read_into(const Napi::Value& value, OD
     if(optional) { target = *optional; return true; }
     return false;
 }
-template<>
-Napi::Value Autobind<ODE_DesignImageBaseHandle>::serialize(Napi::Env env, const ODE_DesignImageBaseHandle& src) {
-    return Handle<ODE_DesignImageBaseHandle>::serialize(env, src);
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_DesignImageBaseHandle& source) {
+    return Handle<ODE_DesignImageBaseHandle>::serialize(env, source);
 }
 
 template<>
@@ -212,12 +207,11 @@ bool Autobind<ODE_PR1_AnimationRendererHandle>::read_into(const Napi::Value& val
     if(optional) { target = *optional; return true; }
     return false;
 }
-template<>
-Napi::Value Autobind<ODE_PR1_AnimationRendererHandle>::serialize(Napi::Env env, const ODE_PR1_AnimationRendererHandle& src) {
-    return Handle<ODE_PR1_AnimationRendererHandle>::serialize(env, src);
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_PR1_AnimationRendererHandle& source) {
+    return Handle<ODE_PR1_AnimationRendererHandle>::serialize(env, source);
 }
 
-Napi::Value bind_ode_destroyBitmap(const Napi::CallbackInfo& info) {
+Napi::Value node_napi_destroyBitmap(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_Bitmap bitmap;
     if(!Autobind<ODE_Bitmap>::read_into(info[0], bitmap)) {
@@ -226,10 +220,10 @@ Napi::Value bind_ode_destroyBitmap(const Napi::CallbackInfo& info) {
         return Napi::Value();
     }
     auto result = ode_destroyBitmap(bitmap);
-    return Napi::String::New(env, Result_to_string(result));
+    return ode_napi_serialize(env, result);
 }
 
-Napi::Value bind_ode_createRendererContext(const Napi::CallbackInfo& info) {
+Napi::Value node_napi_createRendererContext(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_EngineHandle engine;
     if(!Autobind<ODE_EngineHandle>::read_into(info[0], engine)) {
@@ -251,10 +245,10 @@ Napi::Value bind_ode_createRendererContext(const Napi::CallbackInfo& info) {
     }
     auto result = ode_createRendererContext(engine, &rendererContext, target);
     Autobind<ODE_RendererContextHandle>::write_from(info[1], rendererContext);
-    return Napi::String::New(env, Result_to_string(result));
+    return ode_napi_serialize(env, result);
 }
 
-Napi::Value bind_ode_destroyRendererContext(const Napi::CallbackInfo& info) {
+Napi::Value node_napi_destroyRendererContext(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_RendererContextHandle rendererContext;
     if(!Autobind<ODE_RendererContextHandle>::read_into(info[0], rendererContext)) {
@@ -263,10 +257,10 @@ Napi::Value bind_ode_destroyRendererContext(const Napi::CallbackInfo& info) {
         return Napi::Value();
     }
     auto result = ode_destroyRendererContext(rendererContext);
-    return Napi::String::New(env, Result_to_string(result));
+    return ode_napi_serialize(env, result);
 }
 
-Napi::Value bind_ode_createDesignImageBase(const Napi::CallbackInfo& info) {
+Napi::Value node_napi_createDesignImageBase(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_RendererContextHandle rendererContext;
     if(!Autobind<ODE_RendererContextHandle>::read_into(info[0], rendererContext)) {
@@ -288,10 +282,10 @@ Napi::Value bind_ode_createDesignImageBase(const Napi::CallbackInfo& info) {
     }
     auto result = ode_createDesignImageBase(rendererContext, design, &designImageBase);
     Autobind<ODE_DesignImageBaseHandle>::write_from(info[2], designImageBase);
-    return Napi::String::New(env, Result_to_string(result));
+    return ode_napi_serialize(env, result);
 }
 
-Napi::Value bind_ode_destroyDesignImageBase(const Napi::CallbackInfo& info) {
+Napi::Value node_napi_destroyDesignImageBase(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_DesignImageBaseHandle designImageBase;
     if(!Autobind<ODE_DesignImageBaseHandle>::read_into(info[0], designImageBase)) {
@@ -300,10 +294,10 @@ Napi::Value bind_ode_destroyDesignImageBase(const Napi::CallbackInfo& info) {
         return Napi::Value();
     }
     auto result = ode_destroyDesignImageBase(designImageBase);
-    return Napi::String::New(env, Result_to_string(result));
+    return ode_napi_serialize(env, result);
 }
 
-Napi::Value bind_ode_design_loadImagePixels(const Napi::CallbackInfo& info) {
+Napi::Value node_napi_design_loadImagePixels(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_DesignImageBaseHandle designImageBase;
     if(!Autobind<ODE_DesignImageBaseHandle>::read_into(info[0], designImageBase)) {
@@ -324,10 +318,10 @@ Napi::Value bind_ode_design_loadImagePixels(const Napi::CallbackInfo& info) {
         return Napi::Value();
     }
     auto result = ode_design_loadImagePixels(designImageBase, key, bitmap);
-    return Napi::String::New(env, Result_to_string(result));
+    return ode_napi_serialize(env, result);
 }
 
-Napi::Value bind_ode_pr1_drawComponent(const Napi::CallbackInfo& info) {
+Napi::Value node_napi_pr1_drawComponent(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_RendererContextHandle rendererContext;
     if(!Autobind<ODE_RendererContextHandle>::read_into(info[0], rendererContext)) {
@@ -361,10 +355,10 @@ Napi::Value bind_ode_pr1_drawComponent(const Napi::CallbackInfo& info) {
     }
     auto result = ode_pr1_drawComponent(rendererContext, component, designImageBase, &outputBitmap, &frameView);
     Autobind<ODE_Bitmap>::write_from(info[3], outputBitmap);
-    return Napi::String::New(env, Result_to_string(result));
+    return ode_napi_serialize(env, result);
 }
 
-Napi::Value bind_ode_pr1_createAnimationRenderer(const Napi::CallbackInfo& info) {
+Napi::Value node_napi_pr1_createAnimationRenderer(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_RendererContextHandle rendererContext;
     if(!Autobind<ODE_RendererContextHandle>::read_into(info[0], rendererContext)) {
@@ -392,10 +386,10 @@ Napi::Value bind_ode_pr1_createAnimationRenderer(const Napi::CallbackInfo& info)
     }
     auto result = ode_pr1_createAnimationRenderer(rendererContext, component, &animationRenderer, imageBase);
     Autobind<ODE_PR1_AnimationRendererHandle>::write_from(info[2], animationRenderer);
-    return Napi::String::New(env, Result_to_string(result));
+    return ode_napi_serialize(env, result);
 }
 
-Napi::Value bind_ode_pr1_destroyAnimationRenderer(const Napi::CallbackInfo& info) {
+Napi::Value node_napi_pr1_destroyAnimationRenderer(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_PR1_AnimationRendererHandle animationRenderer;
     if(!Autobind<ODE_PR1_AnimationRendererHandle>::read_into(info[0], animationRenderer)) {
@@ -404,10 +398,10 @@ Napi::Value bind_ode_pr1_destroyAnimationRenderer(const Napi::CallbackInfo& info
         return Napi::Value();
     }
     auto result = ode_pr1_destroyAnimationRenderer(animationRenderer);
-    return Napi::String::New(env, Result_to_string(result));
+    return ode_napi_serialize(env, result);
 }
 
-Napi::Value bind_ode_pr1_animation_drawFrame(const Napi::CallbackInfo& info) {
+Napi::Value node_napi_pr1_animation_drawFrame(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_PR1_AnimationRendererHandle renderer;
     if(!Autobind<ODE_PR1_AnimationRendererHandle>::read_into(info[0], renderer)) {
@@ -428,6 +422,6 @@ Napi::Value bind_ode_pr1_animation_drawFrame(const Napi::CallbackInfo& info) {
         return Napi::Value();
     }
     auto result = ode_pr1_animation_drawFrame(renderer, &frameView, time);
-    return Napi::String::New(env, Result_to_string(result));
+    return ode_napi_serialize(env, result);
 }
 

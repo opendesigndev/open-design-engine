@@ -4,4 +4,9 @@
 #include <napi.h>
 #include <ode/api-base.h>
 
-std::string Result_to_string(ODE_Result value);
+std::string ode_napi_enum_to_string(ODE_Result value);
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_Result& source);
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_StringRef& source);
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_String& source);
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_MemoryBuffer& source);
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_StringList& source);

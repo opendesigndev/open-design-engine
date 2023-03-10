@@ -24,10 +24,10 @@ NODE_API_MODULE(ode, Init)
 
 bool check_result(Napi::Env env, ODE_Result result) {
     if (result != ODE_RESULT_OK) {
-        Napi::Error::New(env, Result_to_string(result)).ThrowAsJavaScriptException();
-        return true;
+        Napi::Error::New(env, ode_napi_enum_to_string(result)).ThrowAsJavaScriptException();
+        return false;
     }
-    return false;
+    return true;
 }
 
 Addon::Addon(Napi::Object exports) {
@@ -37,31 +37,6 @@ Addon::Addon(Napi::Object exports) {
 Addon &Addon::from_env(const Napi::Env &env) {
     auto ptr = env.GetInstanceData<Addon>();
     return *ptr;
-}
-
-
-template<>
-bool Autobind<double[6]>::read_into(const Napi::Value &value, double(&parsed)[6]) {
-    Napi::Array obj = value.As<Napi::Array>();
-    for (auto i = 0; i < 6; ++i) {
-        if (!Autobind<double>::read_into(obj.Get(i).Unwrap(), parsed[i])) {
-            Napi::TypeError::New(value.Env(), "Missing value for element").ThrowAsJavaScriptException();
-            return false;
-        }
-    }
-    return true;
-}
-
-template<>
-Napi::Value Autobind<double[6]>::serialize(Napi::Env env, const double(&source)[6]) {
-    auto arr = Napi::Array::New(env, 6);
-    arr.Set((uint32_t) 0, source[0]);
-    arr.Set((uint32_t) 1, source[1]);
-    arr.Set((uint32_t) 2, source[2]);
-    arr.Set((uint32_t) 3, source[3]);
-    arr.Set((uint32_t) 4, source[4]);
-    arr.Set((uint32_t) 5, source[5]);
-    return arr;
 }
 
 bool copy_values(Napi::Value from, Napi::Value to) {

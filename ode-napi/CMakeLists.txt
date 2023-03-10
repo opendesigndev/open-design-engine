@@ -6,8 +6,8 @@ set(ODE_NAPI_SOURCES
     "gen-api-base.cpp"
     "gen-logic-api.cpp"
     "gen-renderer-api.cpp"
-    "api-base.cpp"
-    "logic-api.cpp"
+    "manual-api-base.cpp"
+    "manual-logic-api.cpp"
 )
 
 # LIBRARY / EXECUTABLE

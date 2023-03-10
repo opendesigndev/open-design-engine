@@ -4,5 +4,17 @@
 #include <napi.h>
 #include <ode/logic-api.h>
 
-std::string LayerType_to_string(ODE_LayerType value);
-std::string ParseError_Type_to_string(ODE_ParseError::Type value);
+std::string ode_napi_enum_to_string(ODE_LayerType value);
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_LayerType& source);
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_Transformation& source);
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_EngineAttributes& source);
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_ComponentMetadata& source);
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_LayerList::Entry& source);
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_LayerList& source);
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_LayerMetrics& source);
+std::string ode_napi_enum_to_string(ODE_ParseError::Type value);
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_ParseError::Type& source);
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_ParseError& source);
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_EngineHandle& source);
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_DesignHandle& source);
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_ComponentHandle& source);

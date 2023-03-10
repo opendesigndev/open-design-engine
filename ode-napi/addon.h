@@ -8,12 +8,12 @@
 #include <napi.h>
 #include <ode/api-base.h>
 #include <optional>
+#include "manual-api-base.h"
 
 Napi::Object init_gen_api_base(Napi::Env env, Napi::Object exports);
 Napi::Object init_gen_logic_api(Napi::Env env, Napi::Object exports);
 Napi::Object init_gen_renderer_api(Napi::Env env, Napi::Object exports);
 
-Napi::Object init_api_base(Napi::Env env, Napi::Object exports);
 Napi::Object init_logic_api(Napi::Env env, Napi::Object exports);
 
 // To be used in functions which return void/constructors
@@ -40,9 +40,8 @@ public:
         if (value.IsNothing()) return false;
         return Autobind<T>::read_into(value.Unwrap(), target);
     }
-    static Napi::Value serialize(Napi::Env env, const T &src);
     static bool write_from(Napi::Value src, const T &target) {
-        return copy_values(Autobind<T>::serialize(src.Env(), target), src);
+        return copy_values(ode_napi_serialize(src.Env(), target), src);
     }
 };
 

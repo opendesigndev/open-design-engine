@@ -5,11 +5,11 @@
 #include "napi-wrap.h"
 #include "gen.h"
 
-Napi::Value bind_ode_StringList_getEntry(const Napi::CallbackInfo& info);
-Napi::Value bind_ode_destroyString(const Napi::CallbackInfo& info);
-Napi::Value bind_ode_allocateMemoryBuffer(const Napi::CallbackInfo& info);
-Napi::Value bind_ode_reallocateMemoryBuffer(const Napi::CallbackInfo& info);
-Napi::Value bind_ode_destroyMemoryBuffer(const Napi::CallbackInfo& info);
+Napi::Value node_napi_StringList_getEntry(const Napi::CallbackInfo& info);
+Napi::Value node_napi_destroyString(const Napi::CallbackInfo& info);
+Napi::Value node_napi_allocateMemoryBuffer(const Napi::CallbackInfo& info);
+Napi::Value node_napi_reallocateMemoryBuffer(const Napi::CallbackInfo& info);
+Napi::Value node_napi_destroyMemoryBuffer(const Napi::CallbackInfo& info);
 
 Napi::Object init_gen_api_base(Napi::Env env, Napi::Object exports) {
 
@@ -61,15 +61,15 @@ Napi::Object init_gen_api_base(Napi::Env env, Napi::Object exports) {
 
 
 
-    exports.Set("StringList_getEntry", Napi::Function::New<bind_ode_StringList_getEntry>(env, "StringList_getEntry"));
+    exports.Set("StringList_getEntry", Napi::Function::New<node_napi_StringList_getEntry>(env, "StringList_getEntry"));
 
-    exports.Set("destroyString", Napi::Function::New<bind_ode_destroyString>(env, "destroyString"));
-    exports.Set("allocateMemoryBuffer", Napi::Function::New<bind_ode_allocateMemoryBuffer>(env, "allocateMemoryBuffer"));
-    exports.Set("reallocateMemoryBuffer", Napi::Function::New<bind_ode_reallocateMemoryBuffer>(env, "reallocateMemoryBuffer"));
-    exports.Set("destroyMemoryBuffer", Napi::Function::New<bind_ode_destroyMemoryBuffer>(env, "destroyMemoryBuffer"));    return exports;
+    exports.Set("destroyString", Napi::Function::New<node_napi_destroyString>(env, "destroyString"));
+    exports.Set("allocateMemoryBuffer", Napi::Function::New<node_napi_allocateMemoryBuffer>(env, "allocateMemoryBuffer"));
+    exports.Set("reallocateMemoryBuffer", Napi::Function::New<node_napi_reallocateMemoryBuffer>(env, "reallocateMemoryBuffer"));
+    exports.Set("destroyMemoryBuffer", Napi::Function::New<node_napi_destroyMemoryBuffer>(env, "destroyMemoryBuffer"));    return exports;
 }
 
-std::string Result_to_string(ODE_Result value) {
+std::string ode_napi_enum_to_string(ODE_Result value) {
     switch(value) {
         case ODE_RESULT_OK: return "OK";
         case ODE_RESULT_UNKNOWN_ERROR: return "UNKNOWN_ERROR";
@@ -102,9 +102,8 @@ std::string Result_to_string(ODE_Result value) {
         default: return "UNKNOWN_Result_"+std::to_string(uint32_t(value));
     }
 }
-template<>
-Napi::Value Autobind<ODE_Result>::serialize(Napi::Env env, const ODE_Result& source){
-    return Napi::String::New(env, Result_to_string(source));
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_Result& source) {
+    return Napi::String::New(env, ode_napi_enum_to_string(source));
 }
 
 template<>
@@ -126,13 +125,12 @@ bool Autobind<ODE_StringRef>::read_into(const Napi::Value& value, ODE_StringRef&
     }
     return true;
 }
-template<>
-Napi::Value Autobind<ODE_StringRef>::serialize(Napi::Env env, const ODE_StringRef& source){
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_StringRef& source) {
     Napi::Object obj = Napi::Object::New(env);
-    Napi::Value data = Autobind<uintptr_t>::serialize(env, (uintptr_t)source.data);
+    Napi::Value data = ode_napi_serialize(env, (uintptr_t)source.data);
     if(data.IsEmpty()) return Napi::Value();
     obj.Set("data", data);
-    Napi::Value length = Autobind<int>::serialize(env, source.length);
+    Napi::Value length = ode_napi_serialize(env, source.length);
     if(length.IsEmpty()) return Napi::Value();
     obj.Set("length", length);
     return obj;
@@ -160,13 +158,12 @@ bool Autobind<ODE_String>::read_into(const Napi::Value& value, ODE_String& parse
     // TODO: ptr_getter_bind
     return true;
 }
-template<>
-Napi::Value Autobind<ODE_String>::serialize(Napi::Env env, const ODE_String& source){
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_String& source) {
     Napi::Object obj = Napi::Object::New(env);
-    Napi::Value data = Autobind<uintptr_t>::serialize(env, (uintptr_t)source.data);
+    Napi::Value data = ode_napi_serialize(env, (uintptr_t)source.data);
     if(data.IsEmpty()) return Napi::Value();
     obj.Set("data", data);
-    Napi::Value length = Autobind<int>::serialize(env, source.length);
+    Napi::Value length = ode_napi_serialize(env, source.length);
     if(length.IsEmpty()) return Napi::Value();
     obj.Set("length", length);
     return obj;
@@ -191,24 +188,23 @@ bool Autobind<ODE_MemoryBuffer>::read_into(const Napi::Value& value, ODE_MemoryB
     }
     return true;
 }
-template<>
-Napi::Value Autobind<ODE_MemoryBuffer>::serialize(Napi::Env env, const ODE_MemoryBuffer& source){
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_MemoryBuffer& source) {
     Napi::Object obj = Napi::Object::New(env);
-    Napi::Value data = Autobind<uintptr_t>::serialize(env, (uintptr_t)source.data);
+    Napi::Value data = ode_napi_serialize(env, (uintptr_t)source.data);
     if(data.IsEmpty()) return Napi::Value();
     obj.Set("data", data);
-    Napi::Value length = Autobind<size_t>::serialize(env, source.length);
+    Napi::Value length = ode_napi_serialize(env, source.length);
     if(length.IsEmpty()) return Napi::Value();
     obj.Set("length", length);
     return obj;
 }
 
-Napi::Value bind_ode_StringList_getEntry(const Napi::CallbackInfo& info) {
+Napi::Value node_napi_StringList_getEntry(const Napi::CallbackInfo& info) {
     //ODE_StringList self;
     //if(!Autobind<ODE_StringList>::read_into(info[0], self)) { return Napi::Value(); };
     //int i = info[1].As<Napi::Number>().Uint32Value();
     //ODE_ASSERT(i >= 0 && i < self.n);
-    //return Autobind::serialize(info.Env(), self.entries[idx]);
+    //return ode_napi_serialize(info.Env(), self.entries[idx]);
     return Napi::String::New(info.Env(), "TODO");
 }
 template<>
@@ -230,19 +226,18 @@ bool Autobind<ODE_StringList>::read_into(const Napi::Value& value, ODE_StringLis
     }
     return true;
 }
-template<>
-Napi::Value Autobind<ODE_StringList>::serialize(Napi::Env env, const ODE_StringList& source){
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_StringList& source) {
     Napi::Object obj = Napi::Object::New(env);
-    Napi::Value entries = Autobind<uintptr_t>::serialize(env, (uintptr_t)source.entries);
+    Napi::Value entries = ode_napi_serialize(env, (uintptr_t)source.entries);
     if(entries.IsEmpty()) return Napi::Value();
     obj.Set("entries", entries);
-    Napi::Value n = Autobind<int>::serialize(env, source.n);
+    Napi::Value n = ode_napi_serialize(env, source.n);
     if(n.IsEmpty()) return Napi::Value();
     obj.Set("n", n);
     return obj;
 }
 
-Napi::Value bind_ode_destroyString(const Napi::CallbackInfo& info) {
+Napi::Value node_napi_destroyString(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_String string;
     if(!Autobind<ODE_String>::read_into(info[0], string)) {
@@ -251,10 +246,10 @@ Napi::Value bind_ode_destroyString(const Napi::CallbackInfo& info) {
         return Napi::Value();
     }
     auto result = ode_destroyString(string);
-    return Napi::String::New(env, Result_to_string(result));
+    return ode_napi_serialize(env, result);
 }
 
-Napi::Value bind_ode_allocateMemoryBuffer(const Napi::CallbackInfo& info) {
+Napi::Value node_napi_allocateMemoryBuffer(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_MemoryBuffer buffer;
     if(!Autobind<ODE_MemoryBuffer>::read_into(info[0], buffer)) {
@@ -270,10 +265,10 @@ Napi::Value bind_ode_allocateMemoryBuffer(const Napi::CallbackInfo& info) {
     }
     auto result = ode_allocateMemoryBuffer(&buffer, length);
     Autobind<ODE_MemoryBuffer>::write_from(info[0], buffer);
-    return Napi::String::New(env, Result_to_string(result));
+    return ode_napi_serialize(env, result);
 }
 
-Napi::Value bind_ode_reallocateMemoryBuffer(const Napi::CallbackInfo& info) {
+Napi::Value node_napi_reallocateMemoryBuffer(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_MemoryBuffer buffer;
     if(!Autobind<ODE_MemoryBuffer>::read_into(info[0], buffer)) {
@@ -289,10 +284,10 @@ Napi::Value bind_ode_reallocateMemoryBuffer(const Napi::CallbackInfo& info) {
     }
     auto result = ode_reallocateMemoryBuffer(&buffer, length);
     Autobind<ODE_MemoryBuffer>::write_from(info[0], buffer);
-    return Napi::String::New(env, Result_to_string(result));
+    return ode_napi_serialize(env, result);
 }
 
-Napi::Value bind_ode_destroyMemoryBuffer(const Napi::CallbackInfo& info) {
+Napi::Value node_napi_destroyMemoryBuffer(const Napi::CallbackInfo& info) {
     auto env = info.Env();
     ODE_MemoryBuffer buffer;
     if(!Autobind<ODE_MemoryBuffer>::read_into(info[0], buffer)) {
@@ -302,6 +297,6 @@ Napi::Value bind_ode_destroyMemoryBuffer(const Napi::CallbackInfo& info) {
     }
     auto result = ode_destroyMemoryBuffer(&buffer);
     Autobind<ODE_MemoryBuffer>::write_from(info[0], buffer);
-    return Napi::String::New(env, Result_to_string(result));
+    return ode_napi_serialize(env, result);
 }
 
