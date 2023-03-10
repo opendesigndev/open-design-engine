@@ -1052,7 +1052,7 @@ def relPath(path):
 def generateBindings(headerPath):
     emscriptenBindingsPath = os.path.join(os.path.dirname(headerPath), "emscripten-bindings.cpp")
     napiBindingsPath = os.path.join(relPath("ode-napi"), "gen-"+os.path.splitext(os.path.basename(headerPath))[0])
-    typescriptBindingsPath = os.path.join(relPath("typescript-bindings"), os.path.splitext(os.path.basename(headerPath))[0]+".d.ts")
+    typescriptBindingsPath = os.path.join(relPath("ode-napi"), "typescript-bindings", os.path.splitext(os.path.basename(headerPath))[0]+".d.ts")
     with open(headerPath, "r") as f:
         header = f.read()
     entities = parseHeader(header)
@@ -1069,7 +1069,7 @@ def generateBindings(headerPath):
         f.write(preamble+typescriptBindings)
 
 def generateTopLevelBindings(paths):
-    typescriptBindingsPath = os.path.join(relPath("typescript-bindings/ode.d.ts"))
+    typescriptBindingsPath = os.path.join(relPath("ode-napi"), "typescript-bindings", "ode.d.ts")
     typescriptBindings = generateTopLevelTypescriptBindings()
     with open(typescriptBindingsPath, "w") as f:
         f.write(preamble+typescriptBindings)
