@@ -703,7 +703,6 @@ def generateNapiBindings(entities, apiPath):
                 t = mem.type
                 if call != "":
                     call += ", "
-                if mem.name == "parseError": print(mem)
 
                 inout_type = "IN"
                 if t.startswith("ODE_IN_OUT"): inout_type = "INOUT"
@@ -744,15 +743,20 @@ def generateNapiBindings(entities, apiPath):
         elif entity.category == 'array_instance':
             src_body += f"    // TODO: {entity.category} {emName}\n"
         elif entity.category == 'struct':
-            src_tail += (
+            read_into = (
                 f'template<>\n'
                 f'bool Autobind<{fullName}>::read_into(const Napi::Value& value, {fullName}& parsed){{\n'
                 f'    Napi::Env env = value.Env();\n'
                 f'    Napi::Object obj = value.As<Napi::Object>();\n'
             )
+            serialize = (
+                f'template<>\n'
+                f'Napi::Value Autobind<{fullName}>::serialize(Napi::Env env, const {fullName}& source){{\n'
+                f'    Napi::Object obj = Napi::Object::New(env);\n'
+            )
             for member in entity.members:
                 if member.category == 'member_variable' and (member.type.endswith("*") or member.type.endswith("Ptr")):
-                    src_tail += (
+                    read_into += (
                         f'    uintptr_t ptr_{member.name};\n'
                         f'    if(Autobind<uintptr_t>::read_into(obj.Get("{member.name}"), ptr_{member.name})) {{\n'
                         f'        parsed.{member.name} = reinterpret_cast<{member.type}>(ptr_{member.name});\n'
@@ -762,35 +766,50 @@ def generateNapiBindings(entities, apiPath):
                         f'        return false;\n'
                         f'    }}\n'
                     )
+                    serialize += f'    Napi::Value {member.name} = Autobind<uintptr_t>::serialize(env, (uintptr_t)source.{member.name});\n'
                 elif member.category == 'member_variable':
-                    src_tail += (
+                    read_into += (
                         f'    if(!Autobind<{member.type}>::read_into(obj.Get("{member.name}"), parsed.{member.name})) {{\n'
                         f'        env.GetAndClearPendingException();\n'
                         f'        Napi::Error::New(env, "Invalid value for field {member.name}").ThrowAsJavaScriptException();\n'
                         f'        return false;\n'
                         f'    }}\n'
                     )
-            src_tail += (
-                f'    return true;\n'
-                f'}}\n'
-                f'template<>\n'
-                f'Napi::Value Autobind<{fullName}>::serialize(Napi::Env env, const {fullName}& source){{\n'
-                f'    Napi::Object obj = Napi::Object::New(env);\n'
-            )
-            for member in entity.members:
-                if member.category == 'member_variable' and (member.type.endswith("*") or member.type.endswith("Ptr")):
-                    src_tail += f'    Napi::Value {member.name} = Autobind<uintptr_t>::serialize(env, (uintptr_t)source.{member.name});\n'
-                elif member.category == 'member_variable':
-                    src_tail += f'    Napi::Value {member.name} = Autobind<{member.type}>::serialize(env, source.{member.name});\n'
-                if member.category == 'member_variable':
+                    serialize += f'    Napi::Value {member.name} = Autobind<{member.type}>::serialize(env, source.{member.name});\n'
+                elif member.category == 'array_getter_bind':
+                    print(member)
+                    [entries,n] = member.value.split(',')
+                    fn_name = f'{emName}_{member.name}'
+                    signature = f'Napi::Value bind_ode_{fn_name}(const Napi::CallbackInfo& info)'
+                    src_head += f'{signature};\n'
                     src_tail += (
+                        f'{signature} {{\n'
+                        f'    //{fullName} self;\n'
+                        f'    //if(!Autobind<{fullName}>::read_into(info[0], self)) {{ return Napi::Value(); }};\n'
+                        f'    //int i = info[1].As<Napi::Number>().Uint32Value();\n'
+                        f'    //ODE_ASSERT(i >= 0 && i < self.{n});\n'
+                        f'    //return Autobind::serialize(info.Env(), self.{entries}[idx]);\n'
+                        f'    return Napi::String::New(info.Env(), "TODO");\n'
+                        f'}}\n'
+                    )
+                    src_body += f'    exports.Set("{fn_name}", Napi::Function::New<bind_ode_{fn_name}>(env, "{fn_name}"));\n'
+                else:
+                    read_into += f"    // TODO: {member.category}\n"
+                
+                if member.category == 'member_variable':
+                    serialize += (
                         f'    if({member.name}.IsEmpty()) return Napi::Value();\n'
                         f'    obj.Set("{member.name}", {member.name});\n'
                     )
-            src_tail += (
+            read_into += (
+                f'    return true;\n'
+                f'}}\n'
+            ) 
+            serialize += (
                 f'    return obj;\n'
                 f'}}\n\n'
             )
+            src_tail += read_into + serialize
         else:
             src_body += f"    // TODO: {entity.category} {emName}\n"
 

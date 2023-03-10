@@ -19,7 +19,7 @@ class Handle {
             return Napi::Value();
         }
 
-        obj.Set("ptr", Napi::Number::New(env, 0));
+        obj.Set(Handle<T>::name, Napi::Number::New(env, 0));
         return obj;
     }
 
@@ -30,10 +30,10 @@ public:
         if (value.IsNull()) return T {};
         Napi::Function obj = value.As<Napi::Function>();
         if (env.IsExceptionPending()) return {};
-        auto maybe = obj.Get("ptr");
+        auto maybe = obj.Get(Handle<T>::name);
         if (env.IsExceptionPending()) return {};
         if (maybe.IsNothing()) {
-            Napi::Error::New(env, "Incorrect argument type (no ptr)").ThrowAsJavaScriptException();
+            Napi::Error::New(env, "Incorrect argument type (no Handle)").ThrowAsJavaScriptException();
             return {};
         }
         auto ptr = (void *) (uintptr_t) (int64_t) maybe.Unwrap().As<Napi::Number>();
@@ -44,7 +44,7 @@ public:
 
     static Napi::Value serialize(Napi::Env env, T handle) {
         auto obj = Napi::Object::New(env);
-        obj.Set("ptr", (uintptr_t) handle.ptr);
+        obj.Set(Handle<T>::name, (uintptr_t) handle.ptr);
         return obj;
     }
 

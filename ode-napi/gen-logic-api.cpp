@@ -5,6 +5,7 @@
 #include "napi-wrap.h"
 #include "gen-api-base.h"
 #include "gen-logic-api.h"
+Napi::Value bind_ode_LayerList_getEntry(const Napi::CallbackInfo& info);
 Napi::Value bind_ode_destroyLayerList(const Napi::CallbackInfo& info);
 Napi::Value bind_ode_destroyMissingFontList(const Napi::CallbackInfo& info);
 Napi::Value bind_ode_initializeEngineAttributes(const Napi::CallbackInfo& info);
@@ -53,6 +54,7 @@ Napi::Object init_gen_logic_api(Napi::Env env, Napi::Object exports) {
 
 
 
+    exports.Set("LayerList_getEntry", Napi::Function::New<bind_ode_LayerList_getEntry>(env, "LayerList_getEntry"));
 
 
     {
@@ -244,6 +246,14 @@ Napi::Value Autobind<ODE_LayerList::Entry>::serialize(Napi::Env env, const ODE_L
     return obj;
 }
 
+Napi::Value bind_ode_LayerList_getEntry(const Napi::CallbackInfo& info) {
+    //ODE_LayerList self;
+    //if(!Autobind<ODE_LayerList>::read_into(info[0], self)) { return Napi::Value(); };
+    //int i = info[1].As<Napi::Number>().Uint32Value();
+    //ODE_ASSERT(i >= 0 && i < self.n);
+    //return Autobind::serialize(info.Env(), self.entries[idx]);
+    return Napi::String::New(info.Env(), "TODO");
+}
 template<>
 bool Autobind<ODE_LayerList>::read_into(const Napi::Value& value, ODE_LayerList& parsed){
     Napi::Env env = value.Env();
@@ -432,14 +442,9 @@ Napi::Value bind_ode_destroyMissingFontList(const Napi::CallbackInfo& info) {
 
 Napi::Value bind_ode_initializeEngineAttributes(const Napi::CallbackInfo& info) {
     auto env = info.Env();
-    ODE_EngineAttributes engineAttributes;
-    if(!Autobind<ODE_EngineAttributes>::read_into(info[0], engineAttributes)) {
-        auto ex = env.GetAndClearPendingException();
-        Napi::Error::New(env, "Failed to parse argument engineAttributes ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
-    }
+    ODE_OUT ODE_EngineAttributes engineAttributes;
     auto result = ode_initializeEngineAttributes(&engineAttributes);
-    Autobind<ODE_EngineAttributes>::write_from(info[0], engineAttributes);
+    Autobind<ODE_OUT ODE_EngineAttributes>::write_from(info[0], engineAttributes);
     return Napi::String::New(env, Result_to_string(result));
 }
 
@@ -611,14 +616,9 @@ Napi::Value bind_ode_design_listMissingFonts(const Napi::CallbackInfo& info) {
         Napi::Error::New(env, "Failed to parse argument design ("+ ex.Message() +")").ThrowAsJavaScriptException();
         return Napi::Value();
     }
-    ODE_StringList fontList;
-    if(!Autobind<ODE_StringList>::read_into(info[1], fontList)) {
-        auto ex = env.GetAndClearPendingException();
-        Napi::Error::New(env, "Failed to parse argument fontList ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
-    }
+    ODE_OUT ODE_StringList fontList;
     auto result = ode_design_listMissingFonts(design, &fontList);
-    Autobind<ODE_StringList>::write_from(info[1], fontList);
+    Autobind<ODE_OUT ODE_StringList>::write_from(info[1], fontList);
     return Napi::String::New(env, Result_to_string(result));
 }
 
@@ -794,14 +794,9 @@ Napi::Value bind_ode_component_listLayers(const Napi::CallbackInfo& info) {
         Napi::Error::New(env, "Failed to parse argument component ("+ ex.Message() +")").ThrowAsJavaScriptException();
         return Napi::Value();
     }
-    ODE_LayerList layerList;
-    if(!Autobind<ODE_LayerList>::read_into(info[1], layerList)) {
-        auto ex = env.GetAndClearPendingException();
-        Napi::Error::New(env, "Failed to parse argument layerList ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return Napi::Value();
-    }
+    ODE_OUT ODE_LayerList layerList;
     auto result = ode_component_listLayers(component, &layerList);
-    Autobind<ODE_LayerList>::write_from(info[1], layerList);
+    Autobind<ODE_OUT ODE_LayerList>::write_from(info[1], layerList);
     return Napi::String::New(env, Result_to_string(result));
 }
 

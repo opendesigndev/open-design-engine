@@ -5,6 +5,7 @@
 #include "napi-wrap.h"
 #include "gen-api-base.h"
 #include "gen-api-base.h"
+Napi::Value bind_ode_StringList_getEntry(const Napi::CallbackInfo& info);
 Napi::Value bind_ode_destroyString(const Napi::CallbackInfo& info);
 Napi::Value bind_ode_allocateMemoryBuffer(const Napi::CallbackInfo& info);
 Napi::Value bind_ode_reallocateMemoryBuffer(const Napi::CallbackInfo& info);
@@ -60,6 +61,7 @@ Napi::Object init_gen_api_base(Napi::Env env, Napi::Object exports) {
 
 
 
+    exports.Set("StringList_getEntry", Napi::Function::New<bind_ode_StringList_getEntry>(env, "StringList_getEntry"));
 
     exports.Set("destroyString", Napi::Function::New<bind_ode_destroyString>(env, "destroyString"));
     exports.Set("allocateMemoryBuffer", Napi::Function::New<bind_ode_allocateMemoryBuffer>(env, "allocateMemoryBuffer"));
@@ -140,6 +142,7 @@ template<>
 bool Autobind<ODE_String>::read_into(const Napi::Value& value, ODE_String& parsed){
     Napi::Env env = value.Env();
     Napi::Object obj = value.As<Napi::Object>();
+    // TODO: constructor_bind
     uintptr_t ptr_data;
     if(Autobind<uintptr_t>::read_into(obj.Get("data"), ptr_data)) {
         parsed.data = reinterpret_cast<char *>(ptr_data);
@@ -153,6 +156,8 @@ bool Autobind<ODE_String>::read_into(const Napi::Value& value, ODE_String& parse
         Napi::Error::New(env, "Invalid value for field length").ThrowAsJavaScriptException();
         return false;
     }
+    // TODO: method_bind
+    // TODO: ptr_getter_bind
     return true;
 }
 template<>
@@ -198,6 +203,14 @@ Napi::Value Autobind<ODE_MemoryBuffer>::serialize(Napi::Env env, const ODE_Memor
     return obj;
 }
 
+Napi::Value bind_ode_StringList_getEntry(const Napi::CallbackInfo& info) {
+    //ODE_StringList self;
+    //if(!Autobind<ODE_StringList>::read_into(info[0], self)) { return Napi::Value(); };
+    //int i = info[1].As<Napi::Number>().Uint32Value();
+    //ODE_ASSERT(i >= 0 && i < self.n);
+    //return Autobind::serialize(info.Env(), self.entries[idx]);
+    return Napi::String::New(info.Env(), "TODO");
+}
 template<>
 bool Autobind<ODE_StringList>::read_into(const Napi::Value& value, ODE_StringList& parsed){
     Napi::Env env = value.Env();

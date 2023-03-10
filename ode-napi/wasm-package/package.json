@@ -8,5 +8,8 @@
     },
     "exports": {
         ".": "./index.js"
+    },
+    "dependencies": {
+        "@emnapi/runtime": "^0.32.2"
     }
 }

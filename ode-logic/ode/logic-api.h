@@ -141,7 +141,7 @@ ODE_Result ODE_API ode_destroyMissingFontList(ODE_StringList fontList);
 // Engine
 
 /// Fills the ODE_EngineAttributes structure with default values of attributes
-ODE_Result ODE_API ode_initializeEngineAttributes(ODE_EngineAttributes *engineAttributes);
+ODE_Result ODE_API ode_initializeEngineAttributes(ODE_OUT ODE_EngineAttributes *engineAttributes);
 /// Creates an instance of Open Design Engine with the given attributes and saves its handle to the engine argument. Use ode_destroyEngine to destroy it
 ODE_Result ODE_API ode_createEngine(ODE_EngineHandle *engine, const ODE_EngineAttributes *engineAttributes);
 /// Destroys an instance of Open Design Engine
@@ -228,7 +228,7 @@ ODE_Result ODE_API ode_design_removeComponent(ODE_DesignHandle design, ODE_Compo
  * Outputs a list of fonts (post-script names) required by a design which haven't been provided yet
  * @param fontList - the list is stored in this output argument. Deallocate with ode_destroyMissingFontList
  */
-ODE_Result ODE_API ode_design_listMissingFonts(ODE_DesignHandle design, ODE_StringList *fontList);
+ODE_Result ODE_API ode_design_listMissingFonts(ODE_DesignHandle design, ODE_OUT ODE_StringList *fontList);
 
 /**
  * Loads a font for a design from a font file
@@ -317,7 +317,7 @@ ODE_Result ODE_API ode_pr1_component_getAnimationValueAtTime(ODE_ComponentHandle
  * Outputs a list of all layers within a component and their metadata
  * @param layerList - output argument where the layer list is stored. Deallocate with ode_destroyLayerList
  */
-ODE_Result ODE_API ode_component_listLayers(ODE_ComponentHandle component, ODE_LayerList *layerList);
+ODE_Result ODE_API ode_component_listLayers(ODE_ComponentHandle component, ODE_OUT ODE_LayerList *layerList);
 
 /**
  * Finds the component's topmost layer at a given position
