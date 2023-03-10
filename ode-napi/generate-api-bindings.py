@@ -1,6 +1,7 @@
 
 import os
 import re
+import sys
 
 # Data structures for the parsed entities (struct, enum, function etc.)
 class Entity:
@@ -25,8 +26,6 @@ class Member: # a struct member, enum value, or function argument
         return str(self.__dict__)
 
 typesUsedAsPtrInAPI = set()
-
-
 
 ###########################
 #         PARSING         #
@@ -400,9 +399,8 @@ def parseHeader(header):
     return entities
 
 
-
 ###########################
-#   EMSCRIPTEN BINDINGS   #
+#         UTILS           #
 ###########################
 
 padding = '    '
@@ -414,16 +412,6 @@ def removePrefix(s):
 def jsTypeName(name):
     return removePrefix(name).replace('::', '_')
 
-def makeMethodFunctionName(emName, methodName):
-    functionName = 'ode_'
-    prevChar = '_'
-    for c in emName:
-        if prevChar == '_':
-            functionName += c.lower()
-        else:
-            functionName += c
-        prevChar = c
-    return functionName+'_'+methodName
 
 def isValueObject(entity):
     if entity.category == 'struct' and not namespacedName(entity.namespace, entity.name) in typesUsedAsPtrInAPI and entity.members:
@@ -474,129 +462,6 @@ def commonEnumPrefixLength(entity):
         return len('ODE_')
     return 0
 
-def implementPtrGetter(ptrType, name, className, ptrMember):
-    src = ptrType+' '+name+'(const '+className+' &x) {\n'
-    src += padding+'return reinterpret_cast<'+ptrType+'>(x.'+ptrMember+');\n'
-    src += '}\n\n'
-    return src
-
-def implementArrayGetter(arrayType, name, className, arrayMember, lengthMember):
-    arrayType = arrayType.strip()
-    if arrayType.endswith('*'):
-        elementType = arrayType[:-1]
-    else:
-        return ''
-    elementConstRef = elementType.strip()+' const &' if '*' in elementType else 'const '+elementType+'&'
-    src = elementConstRef+name+'(const '+className+' &x, int i) {\n'
-    src += padding+'ODE_ASSERT(i >= 0 && i < x.'+lengthMember+');\n'
-    src += padding+'return x.'+arrayMember+'[i];\n'
-    src += '}\n\n'
-    return src
-
-def generateEmscriptenBindings(entities, apiPath):
-    src = '\n#ifdef __EMSCRIPTEN__\n'
-    src += '#ifndef NAPI_BINDINGS\n\n'
-    src += '#include <array>\n'
-    src += '#include <emscripten/bind.h>\n'
-    src += '#include '+('"utils.h"' if 'ode-essentials' in apiPath else '<ode/utils.h>')+'\n'
-    src += '#include "'+os.path.basename(apiPath)+'"\n\n'
-    src += 'using namespace emscripten;\n\n'
-    implementation = ''
-    bindings = 'EMSCRIPTEN_BINDINGS(ode) {\n'
-
-    prevCategory = None
-    for entity in entities:
-        fullName = namespacedName(entity.namespace, entity.name)
-        emName = jsTypeName(fullName)
-
-        # Separate different categories by newline
-        if entity.category != prevCategory:
-            bindings += '\n'
-
-        # Define or constant
-        if entity.category == 'define' or entity.category == 'const':
-            bindings += padding+'constant("'+emName+'", '+fullName+');\n'
-            prevCategory = entity.category
-
-        # Enumeration
-        elif entity.category == 'enum':
-            commonPrefixLen = commonEnumPrefixLength(entity)
-            bindings += padding+'enum_<'+fullName+'>("'+emName+'")'
-            for value in entity.members:
-                bindings += '\n'+padding+padding+'.value("'+value.name[commonPrefixLen:]+'", '+namespacedName(entity.namespace, value.name)+')'
-            bindings += ';\n'
-
-        # Array instance / array typedef
-        elif (entity.category == 'array_instance' or (entity.category == 'typedef' and entity.type.count('[') == 1)) and (match := reArrayType.search(entity.type)):
-            bindings += padding+'value_array<std::array<'+entity.type[:match.start()]+', '+match.group(1)+'> >("'+emName+'")'
-            for i in range(int(match.group(1))):
-                bindings += '\n'+padding+padding+'.element(emscripten::index<'+str(i)+'>())'
-            bindings += ';\n'
-
-        # Handle
-        elif entity.category == 'handle':
-            bindings += padding+'class_<'+fullName+'>("'+emName+'").constructor<>();\n'
-            prevCategory = entity.category
-
-        # Value object struct
-        elif isValueObject(entity):
-            bindings += padding+'value_object<'+fullName+'>("'+emName+'")'
-            for member in entity.members:
-                if member.category == 'member_variable':
-                    bindings += '\n'+padding+padding+'.field("'+member.name+'", &'+fullName+'::'+member.name+')'
-            bindings += ';\n'
-
-        # Struct
-        elif entity.category == 'struct':
-            bindings += padding+'class_<'+fullName+'>("'+emName+'").constructor<>'
-            for member in entity.members:
-                if member.category == 'constructor_bind':
-                    bindings += '('+member.name+')'
-                    break
-            if (bindings.endswith('<>')):
-                bindings += '()'
-            for member in entity.members:
-                if member.category == 'member_variable' and not '*' in member.type:
-                    bindings += '\n'+padding+padding+'.property("'+member.name+'", &'+fullName+'::'+member.name+')'
-                elif member.category == 'method_bind':
-                    bindings += '\n'+padding+padding+'.function("'+member.name+'", '+member.value+')'
-                elif member.category == 'ptr_getter_bind':
-                    ptrType = 'ODE_ConstDataPtr' if findMemberType(entity.members, member.value).startswith('const ') else 'ODE_VarDataPtr'
-                    functionName = makeMethodFunctionName(emName, member.name)
-                    bindings += '\n'+padding+padding+'.function("'+member.name+'", &'+functionName+')'
-                    implementation += implementPtrGetter(ptrType, functionName, entity.name, member.value)
-                elif member.category == 'array_getter_bind':
-                    arrayMember, lengthMember = member.value.split(',', 1)
-                    functionName = makeMethodFunctionName(emName, member.name)
-                    bindings += '\n'+padding+padding+'.function("'+member.name+'", &'+functionName+')'
-                    implementation += implementArrayGetter(findMemberType(entity.members, arrayMember), functionName, entity.name, arrayMember, lengthMember)
-            bindings += ';\n'
-
-        # Tuple struct
-        elif entity.category == 'tuple':
-            bindings += padding+'value_array<'+fullName+'>("'+emName+'")'
-            for member in entity.members:
-                if member.category == 'member_variable':
-                    bindings += '\n'+padding+padding+'.element(&'+fullName+'::'+member.name+')'
-            bindings += ';\n'
-
-        # Function
-        elif entity.category == 'function':
-            bindings += padding+'function("'+emName+'", &'+fullName+', allow_raw_pointers());\n'
-            prevCategory = entity.category
-
-        else:
-            # Undo newline separation if no output
-            if entity.category != prevCategory:
-                bindings = bindings[:-1]
-
-
-    bindings += '\n}\n\n'
-    src += implementation
-    src += bindings
-    src += '#endif // NAPI_BINDINGS\n'
-    src += '#endif // __EMSCRIPTEN__\n'
-    return src
 
 ###########################
 #   N-API BINDINGS        #
@@ -809,7 +674,6 @@ def generateNapiBindings(entities, apiPath):
                     )
                     serialize += f'    Napi::Value {member.name} = ode_napi_serialize(env, source.{member.name});\n'
                 elif member.category == 'array_getter_bind':
-                    print(member)
                     [entries,n] = member.value.split(',')
                     fn_name = f'{emName}_{member.name}'
                     signature = f'Napi::Value node_napi_{fn_name}(const Napi::CallbackInfo& info)'
@@ -1051,28 +915,26 @@ def relPath(path):
 # Make sure not to rewrite the file if not necessary to make recompilation
 # reasonably fast.
 def write(file, contents):
-    with open(file, "r") as f:
-        if f.read() == contents: return
+    dirname = os.path.dirname(file)
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
     with open(file, "w") as f:
         f.write(contents)
 
-def generateBindings(headerPath):
-    emscriptenBindingsPath = os.path.join(os.path.dirname(headerPath), "emscripten-bindings.cpp")
-    napiBindingsPath = os.path.join(relPath("ode-napi"), "gen-"+os.path.splitext(os.path.basename(headerPath))[0])
-    typescriptBindingsPath = os.path.join(relPath("ode-napi"), "typescript-bindings", os.path.splitext(os.path.basename(headerPath))[0]+".d.ts")
+def generateBindings(headerPath, out_path):
+    napiBindingsPath = os.path.join(out_path, "src", "gen-"+os.path.splitext(os.path.basename(headerPath))[0])
+    typescriptBindingsPath = os.path.join(out_path, "package", os.path.splitext(os.path.basename(headerPath))[0]+".d.ts")
     with open(headerPath, "r") as f:
         header = f.read()
     entities = parseHeader(header)
-    emscriptenBindings = generateEmscriptenBindings(entities, headerPath)
-    write(emscriptenBindingsPath, preamble+emscriptenBindings)
     (napiBindings, napiHeader) = generateNapiBindings(entities, headerPath)
     write(napiBindingsPath+".cpp", preamble+napiBindings)
     write(napiBindingsPath+".h", preamble+napiHeader)
     typescriptBindings = generateTypescriptBindings(entities)
     write(typescriptBindingsPath, preamble+typescriptBindings)
 
-def generateTopLevelBindings(paths):
-    typescriptBindingsPath = os.path.join(relPath("ode-napi"), "typescript-bindings", "index.d.ts")
+def generateTopLevelBindings(paths, out_path):
+    typescriptBindingsPath = os.path.join(out_path, "package", "index.d.ts")
     typescriptBindings = generateTopLevelTypescriptBindings()
     write(typescriptBindingsPath, preamble+typescriptBindings)
     
@@ -1080,9 +942,10 @@ def generateTopLevelBindings(paths):
     for path in paths:
         basename = os.path.basename(path)
         includes += f'#include "gen-{basename}"\n'
-    write(os.path.join(relPath("ode-napi"), "gen.h"), "#pragma once\n"+preamble+includes)
+    write(os.path.join(out_path, "src", "gen.h"), "#pragma once\n"+preamble+includes)
 
-paths = ["ode-essentials/ode/api-base.h","ode-logic/ode/logic-api.h","ode-renderer/ode/renderer-api.h"]
+out_path = sys.argv[1]
+paths = sys.argv[2:]
 for path in paths:
-    generateBindings(relPath(path))
-generateTopLevelBindings(paths)
+    generateBindings(relPath(path), out_path)
+generateTopLevelBindings(paths, out_path)

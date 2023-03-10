@@ -3,9 +3,9 @@ cmake_minimum_required(VERSION 3.16)
 
 set(ODE_NAPI_SOURCES
     "addon.cpp"
-    "gen-api-base.cpp"
-    "gen-logic-api.cpp"
-    "gen-renderer-api.cpp"
+    ${CMAKE_CURRENT_BINARY_DIR}/src/gen-api-base.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/src/gen-logic-api.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/src/gen-renderer-api.cpp
     "manual-api-base.cpp"
     "manual-logic-api.cpp"
 )
@@ -26,6 +26,34 @@ target_link_libraries(ode-napi PRIVATE ode-napi-lib)
 target_include_directories(ode-napi INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:include>
+)
+target_include_directories(ode-napi PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+)
+
+SET(ODE_NAPI_CODEGEN_INPUT
+    ../ode-essentials/ode/api-base.h
+    ../ode-logic/ode/logic-api.h
+    ../ode-renderer/ode/renderer-api.h
+)
+
+add_custom_command(
+        OUTPUT
+            ${CMAKE_CURRENT_BINARY_DIR}/package/api-base.d.ts
+            ${CMAKE_CURRENT_BINARY_DIR}/package/common.d.ts
+            ${CMAKE_CURRENT_BINARY_DIR}/package/exports.d.ts
+            ${CMAKE_CURRENT_BINARY_DIR}/package/index.d.ts
+            ${CMAKE_CURRENT_BINARY_DIR}/package/logic-api.d.ts
+            ${CMAKE_CURRENT_BINARY_DIR}/src/gen-api-base.cpp
+            ${CMAKE_CURRENT_BINARY_DIR}/src/gen-logic-api.cpp
+            ${CMAKE_CURRENT_BINARY_DIR}/src/gen-renderer-api.cpp
+        MAIN_DEPENDENCY
+            generate-api-bindings.py
+        DEPENDS
+            ${ODE_NAPI_CODEGEN_INPUT}
+            generate-api-bindings.py
+        COMMAND python3 "${CMAKE_CURRENT_LIST_DIR}/generate-api-bindings.py" "${CMAKE_CURRENT_BINARY_DIR}" ${ODE_NAPI_CODEGEN_INPUT}
+        VERBATIM
 )
 
 if(EMSCRIPTEN)
@@ -79,12 +107,7 @@ if(EMSCRIPTEN)
     copy_to_npm_package(ode.wasm)
     copy_to_npm_package(package.json)
     copy_to_npm_package(index.js)
-    file(GLOB TS_BINDINGS ${CMAKE_CURRENT_LIST_DIR}/typescript-bindings/*.d.ts)
-    foreach(file_abs IN LISTS TS_BINDINGS)
-        file(RELATIVE_PATH file "${CMAKE_CURRENT_LIST_DIR}" "${file_abs}")
-        file(RELATIVE_PATH file_name "${CMAKE_CURRENT_LIST_DIR}/typescript-bindings" "${file_abs}")
-        configure_file(${file} ${CMAKE_CURRENT_BINARY_DIR}/package/${file_name} COPYONLY)
-    endforeach()
+    configure_file(typescript-bindings/internal.d.ts ${CMAKE_CURRENT_BINARY_DIR}/package/internal.d.ts COPYONLY)
 else()
     # Removes some warning
     set_target_properties(ode-napi PROPERTIES
