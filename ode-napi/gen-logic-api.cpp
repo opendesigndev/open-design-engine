@@ -17,17 +17,17 @@ void node_napi_destroyDesign(const Napi::CallbackInfo& info);
 void node_napi_design_loadManifestString(const Napi::CallbackInfo& info);
 void node_napi_design_addComponentFromOctopusString(const Napi::CallbackInfo& info);
 void node_napi_design_removeComponent(const Napi::CallbackInfo& info);
-void node_napi_design_listMissingFonts(const Napi::CallbackInfo& info);
+Napi::Value node_napi_design_listMissingFonts(const Napi::CallbackInfo& info);
 void node_napi_design_loadFontBytes(const Napi::CallbackInfo& info);
 void node_napi_design_getComponent(const Napi::CallbackInfo& info);
 void node_napi_component_addLayer(const Napi::CallbackInfo& info);
 void node_napi_component_modifyLayer(const Napi::CallbackInfo& info);
 void node_napi_pr1_component_loadAnimation(const Napi::CallbackInfo& info);
 void node_napi_pr1_component_getAnimationValueAtTime(const Napi::CallbackInfo& info);
-void node_napi_component_listLayers(const Napi::CallbackInfo& info);
+Napi::Value node_napi_component_listLayers(const Napi::CallbackInfo& info);
 void node_napi_component_identifyLayer(const Napi::CallbackInfo& info);
 void node_napi_component_getLayerMetrics(const Napi::CallbackInfo& info);
-void node_napi_component_listMissingFonts(const Napi::CallbackInfo& info);
+Napi::Value node_napi_component_listMissingFonts(const Napi::CallbackInfo& info);
 void node_napi_component_getOctopus(const Napi::CallbackInfo& info);
 
 Napi::Object init_gen_logic_api(Napi::Env env, Napi::Object exports) {
@@ -586,18 +586,18 @@ void node_napi_design_removeComponent(const Napi::CallbackInfo& info) {
     if(!check_result(env,result)) return;
 }
 
-void node_napi_design_listMissingFonts(const Napi::CallbackInfo& info) {
+Napi::Value node_napi_design_listMissingFonts(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     ODE_DesignHandle design;
     if(!Autobind<ODE_DesignHandle>::read_into(info[0], design)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument design ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return;
+        return Napi::Value();
     }
-    ODE_OUT ODE_StringList fontList;
+    ODE_OUT_RETURN ODE_StringList fontList;
     auto result = ode_design_listMissingFonts(design, &fontList);
-    Autobind<ODE_OUT ODE_StringList>::write_from(info[1], fontList);
-    if(!check_result(env,result)) return;
+    if(!check_result(env,result)) return Napi::Value();
+    return ode_napi_serialize(env, fontList);
 }
 
 void node_napi_design_loadFontBytes(const Napi::CallbackInfo& info) {
@@ -764,18 +764,18 @@ void node_napi_pr1_component_getAnimationValueAtTime(const Napi::CallbackInfo& i
     if(!check_result(env,result)) return;
 }
 
-void node_napi_component_listLayers(const Napi::CallbackInfo& info) {
+Napi::Value node_napi_component_listLayers(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     ODE_ComponentHandle component;
     if(!Autobind<ODE_ComponentHandle>::read_into(info[0], component)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument component ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return;
+        return Napi::Value();
     }
-    ODE_OUT ODE_LayerList layerList;
+    ODE_OUT_RETURN ODE_LayerList layerList;
     auto result = ode_component_listLayers(component, &layerList);
-    Autobind<ODE_OUT ODE_LayerList>::write_from(info[1], layerList);
-    if(!check_result(env,result)) return;
+    if(!check_result(env,result)) return Napi::Value();
+    return ode_napi_serialize(env, layerList);
 }
 
 void node_napi_component_identifyLayer(const Napi::CallbackInfo& info) {
@@ -829,23 +829,18 @@ void node_napi_component_getLayerMetrics(const Napi::CallbackInfo& info) {
     if(!check_result(env,result)) return;
 }
 
-void node_napi_component_listMissingFonts(const Napi::CallbackInfo& info) {
+Napi::Value node_napi_component_listMissingFonts(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     ODE_ComponentHandle component;
     if(!Autobind<ODE_ComponentHandle>::read_into(info[0], component)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument component ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return;
+        return Napi::Value();
     }
-    ODE_StringList fontList;
-    if(!Autobind<ODE_StringList>::read_into(info[1], fontList)) {
-        auto ex = env.GetAndClearPendingException();
-        Napi::Error::New(env, "Failed to parse argument fontList ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return;
-    }
+    ODE_OUT_RETURN ODE_StringList fontList;
     auto result = ode_component_listMissingFonts(component, &fontList);
-    Autobind<ODE_StringList>::write_from(info[1], fontList);
-    if(!check_result(env,result)) return;
+    if(!check_result(env,result)) return Napi::Value();
+    return ode_napi_serialize(env, fontList);
 }
 
 void node_napi_component_getOctopus(const Napi::CallbackInfo& info) {

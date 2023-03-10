@@ -10,6 +10,7 @@ export type LoadODEOptions = {
 
 export default function loadODE(options?: LoadODEOptions): Promise<ODE>;
 export const version: string;
+export const wasm: string;
 
 export {
     type Result,

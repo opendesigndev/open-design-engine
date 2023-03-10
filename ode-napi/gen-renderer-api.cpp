@@ -12,7 +12,7 @@ Napi::Value node_napi_createDesignImageBase(const Napi::CallbackInfo& info);
 void node_napi_destroyDesignImageBase(const Napi::CallbackInfo& info);
 void node_napi_design_loadImagePixels(const Napi::CallbackInfo& info);
 void node_napi_pr1_drawComponent(const Napi::CallbackInfo& info);
-void node_napi_pr1_createAnimationRenderer(const Napi::CallbackInfo& info);
+Napi::Value node_napi_pr1_createAnimationRenderer(const Napi::CallbackInfo& info);
 void node_napi_pr1_destroyAnimationRenderer(const Napi::CallbackInfo& info);
 void node_napi_pr1_animation_drawFrame(const Napi::CallbackInfo& info);
 
@@ -348,35 +348,30 @@ void node_napi_pr1_drawComponent(const Napi::CallbackInfo& info) {
     if(!check_result(env,result)) return;
 }
 
-void node_napi_pr1_createAnimationRenderer(const Napi::CallbackInfo& info) {
+Napi::Value node_napi_pr1_createAnimationRenderer(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     ODE_RendererContextHandle rendererContext;
     if(!Autobind<ODE_RendererContextHandle>::read_into(info[0], rendererContext)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument rendererContext ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return;
+        return Napi::Value();
     }
     ODE_ComponentHandle component;
     if(!Autobind<ODE_ComponentHandle>::read_into(info[1], component)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument component ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return;
+        return Napi::Value();
     }
-    ODE_PR1_AnimationRendererHandle animationRenderer;
-    if(!Autobind<ODE_PR1_AnimationRendererHandle>::read_into(info[2], animationRenderer)) {
-        auto ex = env.GetAndClearPendingException();
-        Napi::Error::New(env, "Failed to parse argument animationRenderer ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return;
-    }
+    ODE_OUT_RETURN ODE_PR1_AnimationRendererHandle animationRenderer;
     ODE_DesignImageBaseHandle imageBase;
-    if(!Autobind<ODE_DesignImageBaseHandle>::read_into(info[3], imageBase)) {
+    if(!Autobind<ODE_DesignImageBaseHandle>::read_into(info[2], imageBase)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument imageBase ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return;
+        return Napi::Value();
     }
     auto result = ode_pr1_createAnimationRenderer(rendererContext, component, &animationRenderer, imageBase);
-    Autobind<ODE_PR1_AnimationRendererHandle>::write_from(info[2], animationRenderer);
-    if(!check_result(env,result)) return;
+    if(!check_result(env,result)) return Napi::Value();
+    return ode_napi_serialize(env, animationRenderer);
 }
 
 void node_napi_pr1_destroyAnimationRenderer(const Napi::CallbackInfo& info) {

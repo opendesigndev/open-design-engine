@@ -228,7 +228,7 @@ ODE_Result ODE_API ode_design_removeComponent(ODE_DesignHandle design, ODE_Compo
  * Outputs a list of fonts (post-script names) required by a design which haven't been provided yet
  * @param fontList - the list is stored in this output argument. Deallocate with ode_destroyMissingFontList
  */
-ODE_Result ODE_API ode_design_listMissingFonts(ODE_DesignHandle design, ODE_OUT ODE_StringList *fontList);
+ODE_Result ODE_API ode_design_listMissingFonts(ODE_DesignHandle design, ODE_OUT_RETURN ODE_StringList *fontList);
 
 /**
  * Loads a font for a design from a font file
@@ -317,7 +317,7 @@ ODE_Result ODE_API ode_pr1_component_getAnimationValueAtTime(ODE_ComponentHandle
  * Outputs a list of all layers within a component and their metadata
  * @param layerList - output argument where the layer list is stored. Deallocate with ode_destroyLayerList
  */
-ODE_Result ODE_API ode_component_listLayers(ODE_ComponentHandle component, ODE_OUT ODE_LayerList *layerList);
+ODE_Result ODE_API ode_component_listLayers(ODE_ComponentHandle component, ODE_OUT_RETURN ODE_LayerList *layerList);
 
 /**
  * Finds the component's topmost layer at a given position
@@ -339,7 +339,7 @@ ODE_Result ODE_API ode_component_getLayerMetrics(ODE_ComponentHandle component, 
  * Outputs a list of fonts (post-script names) required by a design component which haven't been provided yet
  * @param fontList - the list is stored in this output argument. Deallocate with ode_destroyMissingFontList
  */
-ODE_Result ODE_API ode_component_listMissingFonts(ODE_ComponentHandle component, ODE_StringList *fontList);
+ODE_Result ODE_API ode_component_listMissingFonts(ODE_ComponentHandle component, ODE_OUT_RETURN ODE_StringList *fontList);
 
 /**
  * Outputs the Octopus string representing a given design component

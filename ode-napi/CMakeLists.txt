@@ -79,6 +79,12 @@ if(EMSCRIPTEN)
     copy_to_npm_package(ode.wasm)
     copy_to_npm_package(package.json)
     copy_to_npm_package(index.js)
+    file(GLOB TS_BINDINGS ${CMAKE_CURRENT_LIST_DIR}/typescript-bindings/*.d.ts)
+    foreach(file_abs IN LISTS TS_BINDINGS)
+        file(RELATIVE_PATH file "${CMAKE_CURRENT_LIST_DIR}" "${file_abs}")
+        file(RELATIVE_PATH file_name "${CMAKE_CURRENT_LIST_DIR}/typescript-bindings" "${file_abs}")
+        configure_file(${file} ${CMAKE_CURRENT_BINARY_DIR}/package/${file_name} COPYONLY)
+    endforeach()
 else()
     # Removes some warning
     set_target_properties(ode-napi PROPERTIES

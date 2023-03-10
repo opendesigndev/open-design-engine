@@ -105,7 +105,7 @@ ODE_Result ODE_API ode_pr1_drawComponent(ODE_RendererContextHandle rendererConte
  * @param animationRenderer - output argument for the new animation renderer handle
  * @param imageBase - image base of the component's parent design to be used to provide image assets
  */
-ODE_Result ODE_API ode_pr1_createAnimationRenderer(ODE_RendererContextHandle rendererContext, ODE_ComponentHandle component, ODE_PR1_AnimationRendererHandle *animationRenderer, ODE_DesignImageBaseHandle imageBase);
+ODE_Result ODE_API ode_pr1_createAnimationRenderer(ODE_RendererContextHandle rendererContext, ODE_ComponentHandle component, ODE_OUT_RETURN ODE_PR1_AnimationRendererHandle *animationRenderer, ODE_DesignImageBaseHandle imageBase);
 
 /// Destroys the animation renderer
 ODE_Result ODE_API ode_pr1_destroyAnimationRenderer(ODE_PR1_AnimationRendererHandle animationRenderer);
