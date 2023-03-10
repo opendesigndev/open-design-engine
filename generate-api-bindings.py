@@ -1000,10 +1000,15 @@ def generateTypescriptBindings(entities):
         # Function
         elif entity.category == 'function':
             returnType = tsType(entity.type)
+            if entity.type == "ODE_Result":
+                returnType = "void"
             fullDescription = entity.description
             for arg in entity.members:
-                if arg.description:
+                if arg.description and not arg.type.startswith("ODE_OUT_RETURN"):
                     fullDescription += '\n@param '+arg.name+' '+arg.description
+            for arg in entity.members:
+                if arg.description and arg.type.startswith("ODE_OUT_RETURN"):
+                    fullDescription += '\n@returns '+arg.name+' '+arg.description
             ts += tsDescription(fullDescription)
             ts += 'export function '+name+'(\n'
             for arg in entity.members:

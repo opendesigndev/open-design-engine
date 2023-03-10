@@ -100,7 +100,7 @@ export type StringList = {
 /** Destroys the ODE_String object, freeing its allocated memory */
 export function destroyString(
     string: ode.String,
-): ode.Result;
+): void;
 
 /**
  * Allocates a new memory buffer of a given size
@@ -110,7 +110,7 @@ export function destroyString(
 export function allocateMemoryBuffer(
     buffer: ode.MemoryBuffer,
     length: ode.Size_t,
-): ode.Result;
+): void;
 
 /**
  * Resizes an existing memory buffer to a given size, or allocates a new memory buffer if buffer's data and length are zero.
@@ -121,9 +121,9 @@ export function allocateMemoryBuffer(
 export function reallocateMemoryBuffer(
     buffer: ode.MemoryBuffer,
     length: ode.Size_t,
-): ode.Result;
+): void;
 
 /** Destroys the memory buffer, freeing its allocated memory */
 export function destroyMemoryBuffer(
     buffer: ode.MemoryBuffer,
-): ode.Result;
+): void;

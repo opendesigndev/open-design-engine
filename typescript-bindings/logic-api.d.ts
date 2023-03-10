@@ -181,12 +181,12 @@ export type ComponentHandle = {
 /** Destroys an ODE_LayerList object */
 export function destroyLayerList(
     layerList: ode.LayerList,
-): ode.Result;
+): void;
 
 /** Destroys an ODE_StringList constructed by ode_design_listMissingFonts or ode_component_listMissingFonts */
 export function destroyMissingFontList(
     fontList: ode.StringList,
-): ode.Result;
+): void;
 
 /** Fills the ODE_EngineAttributes structure with default values of attributes */
 export function initializeEngineAttributes(
@@ -200,12 +200,12 @@ export function createEngine(
 /** Destroys an instance of Open Design Engine */
 export function destroyEngine(
     engine: ode.EngineHandle,
-): ode.Result;
+): void;
 
 /**
  * Creates a new empty design - deallocate with ode_destroyDesign
  * @param engine instance of engine
- * @param design output argument for the new design handle
+ * @returns design output argument for the new design handle
  */
 export function createDesign(
     engine: ode.EngineHandle,
@@ -223,12 +223,12 @@ export function loadDesignFromManifestString(
     design: ode.DesignHandle,
     manifestString: ode.StringRef,
     parseError: ode.ParseError,
-): ode.Result;
+): void;
 
 /** Destroys a design and its components */
 export function destroyDesign(
     design: ode.DesignHandle,
-): ode.Result;
+): void;
 
 /**
  * Loads an Octopus Manifest from JSON string into an existing design. Caller must ensure no conflicts with preexisting content
@@ -240,7 +240,7 @@ export function design_loadManifestString(
     design: ode.DesignHandle,
     manifestString: ode.StringRef,
     parseError: ode.ParseError,
-): ode.Result;
+): void;
 
 /**
  * Loads a component from Octopus JSON string and adds the component to design
@@ -256,13 +256,13 @@ export function design_addComponentFromOctopusString(
     metadata: ode.ComponentMetadata,
     octopusString: ode.StringRef,
     parseError: ode.ParseError,
-): ode.Result;
+): void;
 
 /** Removes component from design. It is not necessary to call this before ode_destroyDesign */
 export function design_removeComponent(
     design: ode.DesignHandle,
     component: ode.ComponentHandle,
-): ode.Result;
+): void;
 
 /**
  * Outputs a list of fonts (post-script names) required by a design which haven't been provided yet
@@ -271,7 +271,7 @@ export function design_removeComponent(
 export function design_listMissingFonts(
     design: ode.DesignHandle,
     fontList: ode.StringList,
-): ode.Result;
+): void;
 
 /**
  * Loads a font for a design from bytes in memory
@@ -285,7 +285,7 @@ export function design_loadFontBytes(
     name: ode.StringRef,
     data: ode.MemoryBuffer,
     faceName: ode.StringRef,
-): ode.Result;
+): void;
 
 /**
  * Finds component within a design by ID and outputs its handle
@@ -296,7 +296,7 @@ export function design_getComponent(
     design: ode.DesignHandle,
     component: ode.ComponentHandle,
     componentId: ode.StringRef,
-): ode.Result;
+): void;
 
 /**
  * Adds a layer to component
@@ -312,7 +312,7 @@ export function component_addLayer(
     beforeLayerId: ode.StringRef,
     layerOctopusString: ode.StringRef,
     parseError: ode.ParseError,
-): ode.Result;
+): void;
 
 /**
  * Applies a set of permanent changes to a single layer within a component
@@ -328,7 +328,7 @@ export function component_modifyLayer(
     layerId: ode.StringRef,
     layerChangeOctopusString: ode.StringRef,
     parseError: ode.ParseError,
-): ode.Result;
+): void;
 
 /**
  * Permanently applies a transformation matrix to a single layer within a component
@@ -354,7 +354,7 @@ export function pr1_component_loadAnimation(
     component: ode.ComponentHandle,
     animationDefinition: ode.StringRef,
     parseError: ode.ParseError,
-): ode.Result;
+): void;
 
 /**
  * PROTOTYPE - Evaluates the value of a layer's animation at a specific point in time
@@ -371,7 +371,7 @@ export function pr1_component_getAnimationValueAtTime(
     index: ode.Int,
     time: ode.Scalar,
     value: ode.VarDataPtr,
-): ode.Result;
+): void;
 
 /**
  * Outputs a list of all layers within a component and their metadata
@@ -380,7 +380,7 @@ export function pr1_component_getAnimationValueAtTime(
 export function component_listLayers(
     component: ode.ComponentHandle,
     layerList: ode.LayerList,
-): ode.Result;
+): void;
 
 /**
  * Finds the component's topmost layer at a given position
@@ -393,7 +393,7 @@ export function component_identifyLayer(
     layerId: ode.String,
     position: ode.Vector2,
     radius: ode.Scalar,
-): ode.Result;
+): void;
 
 /**
  * Outputs layer metrics for a given layer of a component
@@ -405,7 +405,7 @@ export function component_getLayerMetrics(
     component: ode.ComponentHandle,
     layerId: ode.StringRef,
     layerMetrics: ode.LayerMetrics,
-): ode.Result;
+): void;
 
 /**
  * Outputs a list of fonts (post-script names) required by a design component which haven't been provided yet
@@ -414,7 +414,7 @@ export function component_getLayerMetrics(
 export function component_listMissingFonts(
     component: ode.ComponentHandle,
     fontList: ode.StringList,
-): ode.Result;
+): void;
 
 /**
  * Outputs the Octopus string representing a given design component
@@ -423,4 +423,4 @@ export function component_listMissingFonts(
 export function component_getOctopus(
     component: ode.ComponentHandle,
     octopusString: ode.String,
-): ode.Result;
+): void;

@@ -78,13 +78,13 @@ export type PR1_AnimationRendererHandle = {
 /** Deallocates the data held by an ODE_Bitmap */
 export function destroyBitmap(
     bitmap: ode.Bitmap,
-): ode.Result;
+): void;
 
 /**
  * Creates a new renderer context - destroy with ode_destroyRendererContext
  * @param engine existing engine handle
- * @param rendererContext output argument for the new renderer context handle
  * @param target identifies the target window or WebGL canvas (platform-specific)
+ * @returns rendererContext output argument for the new renderer context handle
  */
 export function createRendererContext(
     engine: ode.EngineHandle,
@@ -94,13 +94,13 @@ export function createRendererContext(
 /** Destroys the renderer context */
 export function destroyRendererContext(
     rendererContext: ode.RendererContextHandle,
-): ode.Result;
+): void;
 
 /**
  * Creates a new empty image base for a design - deallocate with ode_destroyDesignImageBase
  * @param rendererContext handle to parent rendererContext
  * @param design design whose image assets will be managed by the new image base
- * @param designImageBase output argument for the new image base handle
+ * @returns designImageBase output argument for the new image base handle
  */
 export function createDesignImageBase(
     rendererContext: ode.RendererContextHandle,
@@ -110,7 +110,7 @@ export function createDesignImageBase(
 /** Destroys a design image base and deallocates its image data */
 export function destroyDesignImageBase(
     designImageBase: ode.DesignImageBaseHandle,
-): ode.Result;
+): void;
 
 /**
  * Loads a design's image asset as pixels in physical memory
@@ -122,7 +122,7 @@ export function design_loadImagePixels(
     designImageBase: ode.DesignImageBaseHandle,
     key: ode.StringRef,
     bitmap: ode.BitmapRef,
-): ode.Result;
+): void;
 
 /**
  * PROTOTYPE - draws a component into a bitmap in physical memory
@@ -138,7 +138,7 @@ export function pr1_drawComponent(
     designImageBase: ode.DesignImageBaseHandle,
     outputBitmap: ode.Bitmap,
     frameView: ode.PR1_FrameView,
-): ode.Result;
+): void;
 
 /**
  * PROTOTYPE - creates a new animation renderer for a given component - destroy with ode_pr1_destroyAnimationRenderer
@@ -152,12 +152,12 @@ export function pr1_createAnimationRenderer(
     component: ode.ComponentHandle,
     animationRenderer: ode.PR1_AnimationRendererHandle,
     imageBase: ode.DesignImageBaseHandle,
-): ode.Result;
+): void;
 
 /** Destroys the animation renderer */
 export function pr1_destroyAnimationRenderer(
     animationRenderer: ode.PR1_AnimationRendererHandle,
-): ode.Result;
+): void;
 
 /**
  * Draw a frame of an animation into the renderer context framebuffer using an animation renderer
@@ -169,4 +169,4 @@ export function pr1_animation_drawFrame(
     renderer: ode.PR1_AnimationRendererHandle,
     frameView: ode.PR1_FrameView,
     time: ode.Scalar,
-): ode.Result;
+): void;
