@@ -21,7 +21,7 @@ ENV ODE_PREBUILT_THIRDPARTY /pre/third-party/wasm-cmake
 FROM builder
 
 COPY . /src
-RUN emcmake cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DNAPI_BINDINGS=ON -DODE_TEST_MODULES=OFF -DODE_USE_WEBGL2=ON -DEMSCRIPTEN=ON -DODE_NAPI=ON -B build/wasm-napi .
+RUN emcmake cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DODE_TEST_MODULES=OFF -DODE_USE_WEBGL2=ON -DEMSCRIPTEN=ON -B build/wasm-napi .
 RUN cmake --build build/wasm-napi
 
 # docker build . -f dockerfiles/wasm-build/Dockerfile

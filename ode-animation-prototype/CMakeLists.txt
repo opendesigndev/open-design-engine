@@ -24,43 +24,5 @@ if(NOT EMSCRIPTEN)
     target_link_libraries(ode-animation-prototype-window PRIVATE glfw liboctopus ode-essentials ode-logic ode-graphics ode-animation-prototype)
 
 else()
-
-    add_executable(ode-animation-prototype-module /dev/null) # TODO non-Unix compatibility
-
-    target_link_libraries(ode-animation-prototype-module PRIVATE ode-animation-prototype)
-    set_target_properties(ode-animation-prototype-module PROPERTIES OUTPUT_NAME ode)
-
-    target_link_options(ode-animation-prototype-module PRIVATE "SHELL:-s MODULARIZE=1")
-    target_link_options(ode-animation-prototype-module PRIVATE "SHELL:-s ALLOW_MEMORY_GROWTH=1")
-    target_link_options(ode-animation-prototype-module PRIVATE "SHELL:-s EXPORT_ES6=1")
-    target_link_options(ode-animation-prototype-module PRIVATE "SHELL:-s ALLOW_TABLE_GROWTH=1")
-    target_link_options(ode-animation-prototype-module PRIVATE "SHELL:-s ASSERTIONS=0")
-    target_link_options(ode-animation-prototype-module PRIVATE "SHELL:-s ENVIRONMENT=web")
-    target_link_options(ode-animation-prototype-module PRIVATE "SHELL:-s FILESYSTEM=0")
-    target_link_options(ode-animation-prototype-module PRIVATE "SHELL:-s USE_SDL=0")
-    target_link_options(ode-animation-prototype-module PRIVATE "SHELL:-s USE_ICU=1")
-    target_link_options(ode-animation-prototype-module PRIVATE "SHELL:-s USE_FREETYPE=1")
-    target_link_options(ode-animation-prototype-module PRIVATE "SHELL:-s LLD_REPORT_UNDEFINED")
-    target_link_options(ode-animation-prototype-module PRIVATE "SHELL:-s EXPORTED_RUNTIME_METHODS=malloc,free,UTF8ToString")
-    target_link_options(ode-animation-prototype-module PRIVATE "SHELL:--no-entry")
-    target_link_options(ode-animation-prototype-module PRIVATE "SHELL:--bind")
-    target_link_options(ode-animation-prototype-module PRIVATE "SHELL:-Wl,--whole-archive")
-    if(ODE_USE_WEBGL2)
-        target_link_options(ode-animation-prototype-module PRIVATE "SHELL:-s USE_WEBGL2=1")
-    endif()
-
-    function(copy_to_npm_package from to)
-        message("Copying ${from} to ${to}")
-        add_custom_command(TARGET ode-animation-prototype-module POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy ${from}
-            $<TARGET_FILE_DIR:ode-animation-prototype-module>/package/${to}
-            DEPENDS ${from}
-        )
-    endfunction()
-
-    copy_to_npm_package($<TARGET_FILE_DIR:ode-animation-prototype-module>/ode.js ode.js)
-    copy_to_npm_package($<TARGET_FILE_DIR:ode-animation-prototype-module>/ode.wasm ode.wasm)
-    copy_to_npm_package(${CMAKE_CURRENT_LIST_DIR}/npm/package.json package.json)
-    copy_to_npm_package(${CMAKE_CURRENT_LIST_DIR}/npm/example.html ../index.html)
-
+    message(WARN "Can't be used from the web. Use ode-napi instead")
 endif()

@@ -43,10 +43,10 @@
 
 #ifdef __cplusplus
 extern "C" {
-    #endif
+#endif
 
-    /// Handle object declaration
-    #define ODE_HANDLE_DECL(T) struct T; typedef struct { struct T *ptr; }
+/// Handle object declaration
+#define ODE_HANDLE_DECL(T) struct T; typedef struct { struct T *ptr; }
 
 /// Function call result type
 typedef enum {
@@ -82,93 +82,87 @@ typedef enum {
     ODE_RESULT_GRAPHICS_CONTEXT_ERROR = 128,
 } ODE_Result;
 
-    /// A real floating-point value
-    typedef double ODE_Scalar;
+/// A real floating-point value
+typedef double ODE_Scalar;
 
-    // Raw data pointer types
-    #if defined(__EMSCRIPTEN__) && !defined(NAPI_BINDINGS)
-    typedef uintptr_t ODE_VarDataPtr;
-    typedef uintptr_t ODE_ConstDataPtr;
-    typedef uintptr_t ODE_ConstCharPtr;
-    #else
-    typedef void *ODE_VarDataPtr;
-    typedef const void *ODE_ConstDataPtr;
-    typedef const char *ODE_ConstCharPtr;
-    #endif
+// Raw data pointer types
+typedef void *ODE_VarDataPtr;
+typedef const void *ODE_ConstDataPtr;
+typedef const char *ODE_ConstCharPtr;
 
-    /// A mathematical 2-dimensional vector
-    typedef struct {
-        ODE_TUPLE
-            ODE_Scalar x, y;
-    } ODE_Vector2;
+/// A mathematical 2-dimensional vector
+typedef struct {
+    ODE_TUPLE
+        ODE_Scalar x, y;
+} ODE_Vector2;
 
-    /// An axis-aligned rectangle specified by its two opposite corners
-    typedef struct {
-        ODE_TUPLE
-            ODE_Vector2 a, b;
-    } ODE_Rectangle;
+/// An axis-aligned rectangle specified by its two opposite corners
+typedef struct {
+    ODE_TUPLE
+        ODE_Vector2 a, b;
+} ODE_Rectangle;
 
-    /// A reference to an immutable null-terminated string in contiguous memory (does not hold or change ownership)
-    typedef struct {
-        /// Pointer to the beginning of UTF-8 encoded string
-        ODE_ConstCharPtr data;
-        /// Length of the string in bytes excluding the terminating null character
-        int length;
-    } ODE_StringRef;
+/// A reference to an immutable null-terminated string in contiguous memory (does not hold or change ownership)
+typedef struct {
+    /// Pointer to the beginning of UTF-8 encoded string
+    ODE_ConstCharPtr data;
+    /// Length of the string in bytes excluding the terminating null character
+    int length;
+} ODE_StringRef;
 
-    /// A standalone string in its own memory block (must be manually destroyed with ode_destroyString)
-    typedef struct {
-        ODE_BIND_CONSTRUCTOR((const std::string &str), static_cast<ODE_String(*)(const std::string &)>(&ode_makeString));
-        /// Pointer to the beginning of UTF-8 encoded string
-        char *data;
-        /// Length of the string in bytes excluding the terminating null character
-        int length;
-        /// Convert to ODE_StringRef
-        ODE_BIND_METHOD(ODE_StringRef(), ref, static_cast<ODE_StringRef(*)(const ODE_String &)>(&ode_stringRef));
-        /// Get pointer to the beginning of string
-        ODE_BIND_PTR_GETTER(getData, data);
-    } ODE_String;
+/// A standalone string in its own memory block (must be manually destroyed with ode_destroyString)
+typedef struct {
+    ODE_BIND_CONSTRUCTOR((const std::string &str), static_cast<ODE_String(*)(const std::string &)>(&ode_makeString));
+    /// Pointer to the beginning of UTF-8 encoded string
+    char *data;
+    /// Length of the string in bytes excluding the terminating null character
+    int length;
+    /// Convert to ODE_StringRef
+    ODE_BIND_METHOD(ODE_StringRef(), ref, static_cast<ODE_StringRef(*)(const ODE_String &)>(&ode_stringRef));
+    /// Get pointer to the beginning of string
+    ODE_BIND_PTR_GETTER(getData, data);
+} ODE_String;
 
-    /// A buffer of raw data bytes in physical memory - deallocate with ode_destroyMemoryBuffer
-    typedef struct {
-        /// Pointer to the beginning of the memory block
-        ODE_VarDataPtr data;
-        /// Length of the buffer in bytes
-        size_t length;
-    } ODE_MemoryBuffer;
+/// A buffer of raw data bytes in physical memory - deallocate with ode_destroyMemoryBuffer
+typedef struct {
+    /// Pointer to the beginning of the memory block
+    ODE_VarDataPtr data;
+    /// Length of the buffer in bytes
+    size_t length;
+} ODE_MemoryBuffer;
 
-    /// A list of immutable string references
-    typedef struct {
-        /// Array of strings
-        ODE_StringRef *entries;
-        /// Number of entries;
-        int n;
-        /// Get single entry
-        ODE_BIND_ARRAY_GETTER(getEntry, entries, n);
-    } ODE_StringList;
+/// A list of immutable string references
+typedef struct {
+    /// Array of strings
+    ODE_StringRef *entries;
+    /// Number of entries;
+    int n;
+    /// Get single entry
+    ODE_BIND_ARRAY_GETTER(getEntry, entries, n);
+} ODE_StringList;
 
-    /// Destroys the ODE_String object, freeing its allocated memory
-    ODE_Result ODE_API ode_destroyString(ODE_String string);
+/// Destroys the ODE_String object, freeing its allocated memory
+ODE_Result ODE_API ode_destroyString(ODE_String string);
 
-    /**
-     * Allocates a new memory buffer of a given size
-     * @param buffer - the resulting memory buffer will be stored in this output argument
-     * @param length - the desired length of the buffer in bytes
-     */
-    ODE_Result ODE_API ode_allocateMemoryBuffer(ODE_MemoryBuffer *buffer, size_t length);
+/**
+ * Allocates a new memory buffer of a given size
+ * @param buffer - the resulting memory buffer will be stored in this output argument
+ * @param length - the desired length of the buffer in bytes
+ */
+ODE_Result ODE_API ode_allocateMemoryBuffer(ODE_MemoryBuffer *buffer, size_t length);
 
-    /**
-     * Resizes an existing memory buffer to a given size, or allocates a new memory buffer if buffer's data and length are zero.
-     * Pre-existing data in the buffer (up to the new length) will be preserved
-     * @param buffer - the memory buffer to be resized
-     * @param length - the desired new length of the buffer in bytes
-     */
-    ODE_Result ODE_API ode_reallocateMemoryBuffer(ODE_MemoryBuffer *buffer, size_t length);
+/**
+ * Resizes an existing memory buffer to a given size, or allocates a new memory buffer if buffer's data and length are zero.
+ * Pre-existing data in the buffer (up to the new length) will be preserved
+ * @param buffer - the memory buffer to be resized
+ * @param length - the desired new length of the buffer in bytes
+ */
+ODE_Result ODE_API ode_reallocateMemoryBuffer(ODE_MemoryBuffer *buffer, size_t length);
 
-    /// Destroys the memory buffer, freeing its allocated memory
-    ODE_Result ODE_API ode_destroyMemoryBuffer(ODE_MemoryBuffer *buffer);
+/// Destroys the memory buffer, freeing its allocated memory
+ODE_Result ODE_API ode_destroyMemoryBuffer(ODE_MemoryBuffer *buffer);
 
-    #ifdef __cplusplus
+#ifdef __cplusplus
 }
 
 #ifndef ODE_MINIMAL_API

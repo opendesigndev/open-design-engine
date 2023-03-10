@@ -1,7 +1,0 @@
-/build
-/third-party/skia/out
-# This is a binary, so it would be for a wrong platform if we used host's version
-/third-party/skia/src/bin/gn
-/.git
-**/Dockerfile
-.dockerignore
