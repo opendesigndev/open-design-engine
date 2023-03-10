@@ -246,7 +246,7 @@ void node_napi_destroyString(const Napi::CallbackInfo& info) {
         return;
     }
     auto result = ode_destroyString(string);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
 void node_napi_allocateMemoryBuffer(const Napi::CallbackInfo& info) {
@@ -265,7 +265,7 @@ void node_napi_allocateMemoryBuffer(const Napi::CallbackInfo& info) {
     }
     auto result = ode_allocateMemoryBuffer(&buffer, length);
     Autobind<ODE_MemoryBuffer>::write_from(info[0], buffer);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
 void node_napi_reallocateMemoryBuffer(const Napi::CallbackInfo& info) {
@@ -284,7 +284,7 @@ void node_napi_reallocateMemoryBuffer(const Napi::CallbackInfo& info) {
     }
     auto result = ode_reallocateMemoryBuffer(&buffer, length);
     Autobind<ODE_MemoryBuffer>::write_from(info[0], buffer);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
 void node_napi_destroyMemoryBuffer(const Napi::CallbackInfo& info) {
@@ -297,6 +297,6 @@ void node_napi_destroyMemoryBuffer(const Napi::CallbackInfo& info) {
     }
     auto result = ode_destroyMemoryBuffer(&buffer);
     Autobind<ODE_MemoryBuffer>::write_from(info[0], buffer);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 

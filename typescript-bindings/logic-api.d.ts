@@ -190,14 +190,12 @@ export function destroyMissingFontList(
 
 /** Fills the ODE_EngineAttributes structure with default values of attributes */
 export function initializeEngineAttributes(
-    engineAttributes: ode.EngineAttributes,
-): ode.Result;
+): ode.EngineAttributes;
 
 /** Creates an instance of Open Design Engine with the given attributes and saves its handle to the engine argument. Use ode_destroyEngine to destroy it */
 export function createEngine(
-    engine: ode.EngineHandle,
     engineAttributes: ode.EngineAttributes,
-): ode.Result;
+): ode.EngineHandle;
 
 /** Destroys an instance of Open Design Engine */
 export function destroyEngine(
@@ -211,8 +209,7 @@ export function destroyEngine(
  */
 export function createDesign(
     engine: ode.EngineHandle,
-    design: ode.DesignHandle,
-): ode.Result;
+): ode.DesignHandle;
 
 /**
  * Loads a design from an Octopus Manifest string - deallocate with ode_destroyDesign

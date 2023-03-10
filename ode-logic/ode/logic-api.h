@@ -141,9 +141,9 @@ ODE_Result ODE_API ode_destroyMissingFontList(ODE_StringList fontList);
 // Engine
 
 /// Fills the ODE_EngineAttributes structure with default values of attributes
-ODE_Result ODE_API ode_initializeEngineAttributes(ODE_OUT ODE_EngineAttributes *engineAttributes);
+ODE_Result ODE_API ode_initializeEngineAttributes(ODE_OUT_RETURN ODE_EngineAttributes *engineAttributes);
 /// Creates an instance of Open Design Engine with the given attributes and saves its handle to the engine argument. Use ode_destroyEngine to destroy it
-ODE_Result ODE_API ode_createEngine(ODE_EngineHandle *engine, const ODE_EngineAttributes *engineAttributes);
+ODE_Result ODE_API ode_createEngine(ODE_OUT_RETURN ODE_EngineHandle *engine, const ODE_EngineAttributes *engineAttributes);
 /// Destroys an instance of Open Design Engine
 ODE_Result ODE_API ode_destroyEngine(ODE_EngineHandle engine);
 
@@ -154,7 +154,7 @@ ODE_Result ODE_API ode_destroyEngine(ODE_EngineHandle engine);
  * @param engine - instance of engine
  * @param design - output argument for the new design handle
  */
-ODE_Result ODE_API ode_createDesign(ODE_EngineHandle engine, ODE_DesignHandle *design);
+ODE_Result ODE_API ode_createDesign(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_DesignHandle *design);
 
 /**
  * Loads a design from a comprehensive binary file representation - deallocate with ode_destroyDesign

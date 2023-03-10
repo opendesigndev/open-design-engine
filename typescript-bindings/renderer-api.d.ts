@@ -88,9 +88,8 @@ export function destroyBitmap(
  */
 export function createRendererContext(
     engine: ode.EngineHandle,
-    rendererContext: ode.RendererContextHandle,
     target: ode.StringRef,
-): ode.Result;
+): ode.RendererContextHandle;
 
 /** Destroys the renderer context */
 export function destroyRendererContext(
@@ -106,8 +105,7 @@ export function destroyRendererContext(
 export function createDesignImageBase(
     rendererContext: ode.RendererContextHandle,
     design: ode.DesignHandle,
-    designImageBase: ode.DesignImageBaseHandle,
-): ode.Result;
+): ode.DesignImageBaseHandle;
 
 /** Destroys a design image base and deallocates its image data */
 export function destroyDesignImageBase(

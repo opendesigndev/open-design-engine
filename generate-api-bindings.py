@@ -54,7 +54,7 @@ reSkipB = re.compile(r"^\/\*.*?\*\/", re.DOTALL) # Multi-line comment
 reOddBackslashesNL = re.compile(r"([^\\](\\\\)*)\\\n") # An escaped newline
 reMultiLineComment = re.compile(r"\/\*.*?\*\/", re.DOTALL)
 reEnumValue = re.compile(r"(\w+)\s*(=\s*([\w\.\+\-]+))\s*$")
-reFunctionArg = re.compile(r"((?:ODE(?:_IN)?_OUT )?[\w\s\*]+[\s\*])(\w+)\s*$")
+reFunctionArg = re.compile(r"((?:(?:ODE_IN|ODE_OUT|ODE_IN_OUT|ODE_OUT_RETURN) )?[\w\s\*]+[\s\*])(\w+)\s*$")
 reMixedMember = re.compile(r"(^|[\w\s\*]*[\s\*])\s*(\w+)\s*$", re.DOTALL)
 reMemberVariable = re.compile(r"^(\w[\w\s\*]*\w|\w)([\s\*][\w\s\*,]*\w)\s*(\[[\w\s\[\]]*\])?\s*;")
 reMemberVariableName = re.compile(r"^(|.*[\s\*])(\w+)$")
@@ -602,6 +602,83 @@ def generateEmscriptenBindings(entities, apiPath):
 #   N-API BINDINGS        #
 ###########################
 
+def generateNapiFunctionBinding(entity, emName, fullName):
+    is_result = entity.type == 'ODE_Result'
+    return_type = 'void' if is_result else 'Napi::Value'
+    empty_return = 'return;' if is_result else 'return Napi::Value();'
+    signature = f'{return_type} node_napi_{emName}(const Napi::CallbackInfo& info)'
+    definition = ""
+
+    definition += (
+        f'    Napi::Env env = info.Env();\n'
+    )
+    call = ""
+    i = 0
+    outputs = ""
+    return_arg = ""
+    for mem in entity.members:
+        if mem.type.startswith("ODE_OUT_RETURN"):
+            if not is_result:
+                raise Exception("ODE_OUT_RETURN is only supported on functions returning ODE_Result")
+            signature = f'Napi::Value node_napi_{emName}(const Napi::CallbackInfo& info)'
+            return_arg = f'    return ode_napi_serialize(env, {mem.name});\n'
+            empty_return = 'return Napi::Value();'
+
+    for mem in entity.members:
+        i += 1
+        t = mem.type
+        if call != "":
+            call += ", "
+
+        inout_type = "IN"
+        if t.startswith("ODE_IN_OUT"): inout_type = "INOUT"
+        elif t.startswith("ODE_IN"): inout_type = "IN"
+        elif t.startswith("ODE_OUT_RETURN"): inout_type = "RETURN"
+        elif t.startswith("ODE_OUT"): inout_type = "OUT"
+        elif t.endswith("*") and t.startswith("const "): inout_type = "IN"
+        elif t.endswith("*"): inout_type = "INOUT"
+
+        if t.startswith("const") and t.endswith("*"):
+            t = t[6:-1].strip()
+            call += f"&{mem.name}"
+        elif t.endswith("*"):
+            t = t[:-1].strip()
+            call += f"&{mem.name}"
+        else:
+            call += mem.name
+        
+        definition += f'    {t} {mem.name};\n'
+        if inout_type == "INOUT" or inout_type == "IN":
+            definition += (
+                f'    if(!Autobind<{t}>::read_into(info[{i-1}], {mem.name})) {{\n'
+                f'        auto ex = env.GetAndClearPendingException();\n'
+                f'        Napi::Error::New(env, "Failed to parse argument {mem.name} ("+ ex.Message() +")").ThrowAsJavaScriptException();\n'
+                f'        {empty_return}\n'
+                f'    }}\n'
+            )
+        if inout_type == "INOUT" or inout_type == "OUT":
+            outputs += f'    Autobind<{t}>::write_from(info[{i-1}], {mem.name});\n'
+        if inout_type == "RETURN":
+            i -= 1
+
+    if is_result:
+        definition += (
+            f'    auto result = {fullName}({call});\n'
+            f'{outputs}'
+            f'    if(!check_result(env,result)) {empty_return}\n'
+            f'{return_arg}'
+        )
+    else:
+        definition += (
+            f'    auto result = {fullName}({call});\n'
+            f'{outputs}'
+            f'    return ode_napi_serialize(env, result);\n'
+        )
+    return [
+        signature + ';\n',
+        f'{signature} {{\n{definition}}}\n\n'
+    ]
+
 def generateNapiBindings(entities, apiPath):
     name = os.path.basename(apiPath)
     header = (
@@ -690,68 +767,9 @@ def generateNapiBindings(entities, apiPath):
         
         # Function
         elif entity.category == 'function':
-            is_result = entity.type == 'ODE_Result'
-            return_type = 'void' if is_result else 'Napi::Value'
-            empty_return = 'return;' if is_result else 'return Napi::Value();'
-            signature = f'{return_type} node_napi_{emName}(const Napi::CallbackInfo& info)'
-            src_head += signature + ';\n'
-
-            src_tail += (
-                f'{signature} {{\n'
-                f'    Napi::Env env = info.Env();\n'
-            )
-            call = ""
-            i = 0
-            outputs = ""
-            for mem in entity.members:
-                i += 1
-                t = mem.type
-                if call != "":
-                    call += ", "
-
-                inout_type = "IN"
-                if t.startswith("ODE_IN_OUT"): inout_type = "INOUT"
-                elif t.startswith("ODE_IN"): inout_type = "IN"
-                elif t.startswith("ODE_OUT"): inout_type = "OUT"
-                elif t.endswith("*") and t.startswith("const "): inout_type = "IN"
-                elif t.endswith("*"): inout_type = "INOUT"
-
-                if t.startswith("const") and t.endswith("*"):
-                    t = t[6:-1].strip()
-                    call += f"&{mem.name}"
-                elif t.endswith("*"):
-                    t = t[:-1].strip()
-                    call += f"&{mem.name}"
-                else:
-                    call += mem.name
-                
-                src_tail += f'    {t} {mem.name};\n'
-                if inout_type == "INOUT" or inout_type == "IN":
-                    src_tail += (
-                        f'    if(!Autobind<{t}>::read_into(info[{i-1}], {mem.name})) {{\n'
-                        f'        auto ex = env.GetAndClearPendingException();\n'
-                        f'        Napi::Error::New(env, "Failed to parse argument {mem.name} ("+ ex.Message() +")").ThrowAsJavaScriptException();\n'
-                        f'        {empty_return}\n'
-                        f'    }}\n'
-                    )
-                if inout_type == "INOUT" or inout_type == "OUT":
-                    outputs += f'    Autobind<{t}>::write_from(info[{i-1}], {mem.name});\n'
-            if is_result:
-                src_tail += (
-                    f'    auto result = {fullName}({call});\n'
-                    f'{outputs}'
-                    f'    check_result(env, result);\n'
-                    f'}}\n'
-                    '\n'
-                )
-            else:
-                src_tail += (
-                    f'    auto result = {fullName}({call});\n'
-                    f'{outputs}'
-                    f'    return ode_napi_serialize(env, result);\n'
-                    f'}}\n'
-                    '\n'
-                )
+            [declaration,definition] = generateNapiFunctionBinding(entity, emName, fullName)
+            src_tail += definition
+            src_head += declaration
             src_body += f'    exports.Set("{emName}", Napi::Function::New<node_napi_{emName}>(env, "{emName}"));'
         elif entity.category == 'array_instance':
             src_body += f"    // TODO: {entity.category} {emName}\n"
@@ -842,6 +860,7 @@ def tsType(type):
     if type.startswith("ODE_IN "): type = type[7:]
     if type.startswith("ODE_OUT "): type = type[8:]
     if type.startswith("ODE_IN_OUT "): type = type[11:]
+    if type.startswith("ODE_OUT_RETURN "): type = type[15:]
     if type:
         type = (' '+type+' ').replace('*', ' ').replace(' const ', '').strip()
         if (jsType := jsTypeName(type)):
@@ -980,6 +999,7 @@ def generateTypescriptBindings(entities):
 
         # Function
         elif entity.category == 'function':
+            returnType = tsType(entity.type)
             fullDescription = entity.description
             for arg in entity.members:
                 if arg.description:
@@ -987,8 +1007,11 @@ def generateTypescriptBindings(entities):
             ts += tsDescription(fullDescription)
             ts += 'export function '+name+'(\n'
             for arg in entity.members:
-                ts += padding+arg.name+': '+tsType(arg.type)+',\n'
-            ts += '): '+tsType(entity.type)+';\n\n'
+                if arg.type.startswith("ODE_OUT_RETURN"):
+                    returnType = tsType(arg.type)
+                else:
+                    ts += padding+arg.name+': '+tsType(arg.type)+',\n'
+            ts += '): '+returnType+';\n\n'
 
         prevCategory = entity.category
 

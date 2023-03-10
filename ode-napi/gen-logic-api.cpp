@@ -8,10 +8,10 @@
 Napi::Value node_napi_LayerList_getEntry(const Napi::CallbackInfo& info);
 void node_napi_destroyLayerList(const Napi::CallbackInfo& info);
 void node_napi_destroyMissingFontList(const Napi::CallbackInfo& info);
-void node_napi_initializeEngineAttributes(const Napi::CallbackInfo& info);
-void node_napi_createEngine(const Napi::CallbackInfo& info);
+Napi::Value node_napi_initializeEngineAttributes(const Napi::CallbackInfo& info);
+Napi::Value node_napi_createEngine(const Napi::CallbackInfo& info);
 void node_napi_destroyEngine(const Napi::CallbackInfo& info);
-void node_napi_createDesign(const Napi::CallbackInfo& info);
+Napi::Value node_napi_createDesign(const Napi::CallbackInfo& info);
 void node_napi_loadDesignFromManifestString(const Napi::CallbackInfo& info);
 void node_napi_destroyDesign(const Napi::CallbackInfo& info);
 void node_napi_design_loadManifestString(const Napi::CallbackInfo& info);
@@ -413,7 +413,7 @@ void node_napi_destroyLayerList(const Napi::CallbackInfo& info) {
         return;
     }
     auto result = ode_destroyLayerList(layerList);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
 void node_napi_destroyMissingFontList(const Napi::CallbackInfo& info) {
@@ -425,34 +425,29 @@ void node_napi_destroyMissingFontList(const Napi::CallbackInfo& info) {
         return;
     }
     auto result = ode_destroyMissingFontList(fontList);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
-void node_napi_initializeEngineAttributes(const Napi::CallbackInfo& info) {
+Napi::Value node_napi_initializeEngineAttributes(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
-    ODE_OUT ODE_EngineAttributes engineAttributes;
+    ODE_OUT_RETURN ODE_EngineAttributes engineAttributes;
     auto result = ode_initializeEngineAttributes(&engineAttributes);
-    Autobind<ODE_OUT ODE_EngineAttributes>::write_from(info[0], engineAttributes);
-    check_result(env, result);
+    if(!check_result(env,result)) return Napi::Value();
+    return ode_napi_serialize(env, engineAttributes);
 }
 
-void node_napi_createEngine(const Napi::CallbackInfo& info) {
+Napi::Value node_napi_createEngine(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
-    ODE_EngineHandle engine;
-    if(!Autobind<ODE_EngineHandle>::read_into(info[0], engine)) {
-        auto ex = env.GetAndClearPendingException();
-        Napi::Error::New(env, "Failed to parse argument engine ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return;
-    }
+    ODE_OUT_RETURN ODE_EngineHandle engine;
     ODE_EngineAttributes engineAttributes;
-    if(!Autobind<ODE_EngineAttributes>::read_into(info[1], engineAttributes)) {
+    if(!Autobind<ODE_EngineAttributes>::read_into(info[0], engineAttributes)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument engineAttributes ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return;
+        return Napi::Value();
     }
     auto result = ode_createEngine(&engine, &engineAttributes);
-    Autobind<ODE_EngineHandle>::write_from(info[0], engine);
-    check_result(env, result);
+    if(!check_result(env,result)) return Napi::Value();
+    return ode_napi_serialize(env, engine);
 }
 
 void node_napi_destroyEngine(const Napi::CallbackInfo& info) {
@@ -464,26 +459,21 @@ void node_napi_destroyEngine(const Napi::CallbackInfo& info) {
         return;
     }
     auto result = ode_destroyEngine(engine);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
-void node_napi_createDesign(const Napi::CallbackInfo& info) {
+Napi::Value node_napi_createDesign(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     ODE_EngineHandle engine;
     if(!Autobind<ODE_EngineHandle>::read_into(info[0], engine)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument engine ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return;
+        return Napi::Value();
     }
-    ODE_DesignHandle design;
-    if(!Autobind<ODE_DesignHandle>::read_into(info[1], design)) {
-        auto ex = env.GetAndClearPendingException();
-        Napi::Error::New(env, "Failed to parse argument design ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return;
-    }
+    ODE_OUT_RETURN ODE_DesignHandle design;
     auto result = ode_createDesign(engine, &design);
-    Autobind<ODE_DesignHandle>::write_from(info[1], design);
-    check_result(env, result);
+    if(!check_result(env,result)) return Napi::Value();
+    return ode_napi_serialize(env, design);
 }
 
 void node_napi_loadDesignFromManifestString(const Napi::CallbackInfo& info) {
@@ -510,7 +500,7 @@ void node_napi_loadDesignFromManifestString(const Napi::CallbackInfo& info) {
     auto result = ode_loadDesignFromManifestString(engine, &design, manifestString, &parseError);
     Autobind<ODE_DesignHandle>::write_from(info[1], design);
     Autobind<ODE_OUT ODE_ParseError>::write_from(info[3], parseError);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
 void node_napi_destroyDesign(const Napi::CallbackInfo& info) {
@@ -522,7 +512,7 @@ void node_napi_destroyDesign(const Napi::CallbackInfo& info) {
         return;
     }
     auto result = ode_destroyDesign(design);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
 void node_napi_design_loadManifestString(const Napi::CallbackInfo& info) {
@@ -542,7 +532,7 @@ void node_napi_design_loadManifestString(const Napi::CallbackInfo& info) {
     ODE_OUT ODE_ParseError parseError;
     auto result = ode_design_loadManifestString(design, manifestString, &parseError);
     Autobind<ODE_OUT ODE_ParseError>::write_from(info[2], parseError);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
 void node_napi_design_addComponentFromOctopusString(const Napi::CallbackInfo& info) {
@@ -575,7 +565,7 @@ void node_napi_design_addComponentFromOctopusString(const Napi::CallbackInfo& in
     auto result = ode_design_addComponentFromOctopusString(design, &component, metadata, octopusString, &parseError);
     Autobind<ODE_ComponentHandle>::write_from(info[1], component);
     Autobind<ODE_OUT ODE_ParseError>::write_from(info[4], parseError);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
 void node_napi_design_removeComponent(const Napi::CallbackInfo& info) {
@@ -593,7 +583,7 @@ void node_napi_design_removeComponent(const Napi::CallbackInfo& info) {
         return;
     }
     auto result = ode_design_removeComponent(design, component);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
 void node_napi_design_listMissingFonts(const Napi::CallbackInfo& info) {
@@ -607,7 +597,7 @@ void node_napi_design_listMissingFonts(const Napi::CallbackInfo& info) {
     ODE_OUT ODE_StringList fontList;
     auto result = ode_design_listMissingFonts(design, &fontList);
     Autobind<ODE_OUT ODE_StringList>::write_from(info[1], fontList);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
 void node_napi_design_loadFontBytes(const Napi::CallbackInfo& info) {
@@ -638,7 +628,7 @@ void node_napi_design_loadFontBytes(const Napi::CallbackInfo& info) {
     }
     auto result = ode_design_loadFontBytes(design, name, &data, faceName);
     Autobind<ODE_MemoryBuffer>::write_from(info[2], data);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
 void node_napi_design_getComponent(const Napi::CallbackInfo& info) {
@@ -663,7 +653,7 @@ void node_napi_design_getComponent(const Napi::CallbackInfo& info) {
     }
     auto result = ode_design_getComponent(design, &component, componentId);
     Autobind<ODE_ComponentHandle>::write_from(info[1], component);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
 void node_napi_component_addLayer(const Napi::CallbackInfo& info) {
@@ -695,7 +685,7 @@ void node_napi_component_addLayer(const Napi::CallbackInfo& info) {
     ODE_OUT ODE_ParseError parseError;
     auto result = ode_component_addLayer(component, parentLayerId, beforeLayerId, layerOctopusString, &parseError);
     Autobind<ODE_OUT ODE_ParseError>::write_from(info[4], parseError);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
 void node_napi_component_modifyLayer(const Napi::CallbackInfo& info) {
@@ -721,7 +711,7 @@ void node_napi_component_modifyLayer(const Napi::CallbackInfo& info) {
     ODE_OUT ODE_ParseError parseError;
     auto result = ode_component_modifyLayer(component, layerId, layerChangeOctopusString, &parseError);
     Autobind<ODE_OUT ODE_ParseError>::write_from(info[3], parseError);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
 void node_napi_pr1_component_loadAnimation(const Napi::CallbackInfo& info) {
@@ -741,7 +731,7 @@ void node_napi_pr1_component_loadAnimation(const Napi::CallbackInfo& info) {
     ODE_OUT ODE_ParseError parseError;
     auto result = ode_pr1_component_loadAnimation(component, animationDefinition, &parseError);
     Autobind<ODE_OUT ODE_ParseError>::write_from(info[2], parseError);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
 void node_napi_pr1_component_getAnimationValueAtTime(const Napi::CallbackInfo& info) {
@@ -771,7 +761,7 @@ void node_napi_pr1_component_getAnimationValueAtTime(const Napi::CallbackInfo& i
         return;
     }
     auto result = ode_pr1_component_getAnimationValueAtTime(component, index, time, value);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
 void node_napi_component_listLayers(const Napi::CallbackInfo& info) {
@@ -785,7 +775,7 @@ void node_napi_component_listLayers(const Napi::CallbackInfo& info) {
     ODE_OUT ODE_LayerList layerList;
     auto result = ode_component_listLayers(component, &layerList);
     Autobind<ODE_OUT ODE_LayerList>::write_from(info[1], layerList);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
 void node_napi_component_identifyLayer(const Napi::CallbackInfo& info) {
@@ -811,7 +801,7 @@ void node_napi_component_identifyLayer(const Napi::CallbackInfo& info) {
     }
     auto result = ode_component_identifyLayer(component, &layerId, position, radius);
     Autobind<ODE_OUT ODE_String>::write_from(info[1], layerId);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
 void node_napi_component_getLayerMetrics(const Napi::CallbackInfo& info) {
@@ -836,7 +826,7 @@ void node_napi_component_getLayerMetrics(const Napi::CallbackInfo& info) {
     }
     auto result = ode_component_getLayerMetrics(component, layerId, &layerMetrics);
     Autobind<ODE_LayerMetrics>::write_from(info[2], layerMetrics);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
 void node_napi_component_listMissingFonts(const Napi::CallbackInfo& info) {
@@ -855,7 +845,7 @@ void node_napi_component_listMissingFonts(const Napi::CallbackInfo& info) {
     }
     auto result = ode_component_listMissingFonts(component, &fontList);
     Autobind<ODE_StringList>::write_from(info[1], fontList);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
 void node_napi_component_getOctopus(const Napi::CallbackInfo& info) {
@@ -874,6 +864,6 @@ void node_napi_component_getOctopus(const Napi::CallbackInfo& info) {
     }
     auto result = ode_component_getOctopus(component, &octopusString);
     Autobind<ODE_String>::write_from(info[1], octopusString);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 

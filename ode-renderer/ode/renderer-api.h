@@ -65,7 +65,7 @@ ODE_Result ODE_API ode_destroyBitmap(ODE_Bitmap bitmap);
  * @param rendererContext - output argument for the new renderer context handle
  * @param target - identifies the target window or WebGL canvas (platform-specific)
  */
-ODE_Result ODE_API ode_createRendererContext(ODE_EngineHandle engine, ODE_RendererContextHandle *rendererContext, ODE_StringRef target);
+ODE_Result ODE_API ode_createRendererContext(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_RendererContextHandle *rendererContext, ODE_StringRef target);
 /// Destroys the renderer context
 ODE_Result ODE_API ode_destroyRendererContext(ODE_RendererContextHandle rendererContext);
 
@@ -75,7 +75,7 @@ ODE_Result ODE_API ode_destroyRendererContext(ODE_RendererContextHandle renderer
  * @param design - design whose image assets will be managed by the new image base
  * @param designImageBase - output argument for the new image base handle
  */
-ODE_Result ODE_API ode_createDesignImageBase(ODE_RendererContextHandle rendererContext, ODE_DesignHandle design, ODE_DesignImageBaseHandle *designImageBase);
+ODE_Result ODE_API ode_createDesignImageBase(ODE_RendererContextHandle rendererContext, ODE_DesignHandle design, ODE_OUT_RETURN ODE_DesignImageBaseHandle *designImageBase);
 
 /// Destroys a design image base and deallocates its image data
 ODE_Result ODE_API ode_destroyDesignImageBase(ODE_DesignImageBaseHandle designImageBase);

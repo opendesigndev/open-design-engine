@@ -6,9 +6,9 @@
 #include "gen.h"
 
 void node_napi_destroyBitmap(const Napi::CallbackInfo& info);
-void node_napi_createRendererContext(const Napi::CallbackInfo& info);
+Napi::Value node_napi_createRendererContext(const Napi::CallbackInfo& info);
 void node_napi_destroyRendererContext(const Napi::CallbackInfo& info);
-void node_napi_createDesignImageBase(const Napi::CallbackInfo& info);
+Napi::Value node_napi_createDesignImageBase(const Napi::CallbackInfo& info);
 void node_napi_destroyDesignImageBase(const Napi::CallbackInfo& info);
 void node_napi_design_loadImagePixels(const Napi::CallbackInfo& info);
 void node_napi_pr1_drawComponent(const Napi::CallbackInfo& info);
@@ -220,32 +220,27 @@ void node_napi_destroyBitmap(const Napi::CallbackInfo& info) {
         return;
     }
     auto result = ode_destroyBitmap(bitmap);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
-void node_napi_createRendererContext(const Napi::CallbackInfo& info) {
+Napi::Value node_napi_createRendererContext(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     ODE_EngineHandle engine;
     if(!Autobind<ODE_EngineHandle>::read_into(info[0], engine)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument engine ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return;
+        return Napi::Value();
     }
-    ODE_RendererContextHandle rendererContext;
-    if(!Autobind<ODE_RendererContextHandle>::read_into(info[1], rendererContext)) {
-        auto ex = env.GetAndClearPendingException();
-        Napi::Error::New(env, "Failed to parse argument rendererContext ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return;
-    }
+    ODE_OUT_RETURN ODE_RendererContextHandle rendererContext;
     ODE_StringRef target;
-    if(!Autobind<ODE_StringRef>::read_into(info[2], target)) {
+    if(!Autobind<ODE_StringRef>::read_into(info[1], target)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument target ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return;
+        return Napi::Value();
     }
     auto result = ode_createRendererContext(engine, &rendererContext, target);
-    Autobind<ODE_RendererContextHandle>::write_from(info[1], rendererContext);
-    check_result(env, result);
+    if(!check_result(env,result)) return Napi::Value();
+    return ode_napi_serialize(env, rendererContext);
 }
 
 void node_napi_destroyRendererContext(const Napi::CallbackInfo& info) {
@@ -257,32 +252,27 @@ void node_napi_destroyRendererContext(const Napi::CallbackInfo& info) {
         return;
     }
     auto result = ode_destroyRendererContext(rendererContext);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
-void node_napi_createDesignImageBase(const Napi::CallbackInfo& info) {
+Napi::Value node_napi_createDesignImageBase(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     ODE_RendererContextHandle rendererContext;
     if(!Autobind<ODE_RendererContextHandle>::read_into(info[0], rendererContext)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument rendererContext ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return;
+        return Napi::Value();
     }
     ODE_DesignHandle design;
     if(!Autobind<ODE_DesignHandle>::read_into(info[1], design)) {
         auto ex = env.GetAndClearPendingException();
         Napi::Error::New(env, "Failed to parse argument design ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return;
+        return Napi::Value();
     }
-    ODE_DesignImageBaseHandle designImageBase;
-    if(!Autobind<ODE_DesignImageBaseHandle>::read_into(info[2], designImageBase)) {
-        auto ex = env.GetAndClearPendingException();
-        Napi::Error::New(env, "Failed to parse argument designImageBase ("+ ex.Message() +")").ThrowAsJavaScriptException();
-        return;
-    }
+    ODE_OUT_RETURN ODE_DesignImageBaseHandle designImageBase;
     auto result = ode_createDesignImageBase(rendererContext, design, &designImageBase);
-    Autobind<ODE_DesignImageBaseHandle>::write_from(info[2], designImageBase);
-    check_result(env, result);
+    if(!check_result(env,result)) return Napi::Value();
+    return ode_napi_serialize(env, designImageBase);
 }
 
 void node_napi_destroyDesignImageBase(const Napi::CallbackInfo& info) {
@@ -294,7 +284,7 @@ void node_napi_destroyDesignImageBase(const Napi::CallbackInfo& info) {
         return;
     }
     auto result = ode_destroyDesignImageBase(designImageBase);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
 void node_napi_design_loadImagePixels(const Napi::CallbackInfo& info) {
@@ -318,7 +308,7 @@ void node_napi_design_loadImagePixels(const Napi::CallbackInfo& info) {
         return;
     }
     auto result = ode_design_loadImagePixels(designImageBase, key, bitmap);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
 void node_napi_pr1_drawComponent(const Napi::CallbackInfo& info) {
@@ -355,7 +345,7 @@ void node_napi_pr1_drawComponent(const Napi::CallbackInfo& info) {
     }
     auto result = ode_pr1_drawComponent(rendererContext, component, designImageBase, &outputBitmap, &frameView);
     Autobind<ODE_Bitmap>::write_from(info[3], outputBitmap);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
 void node_napi_pr1_createAnimationRenderer(const Napi::CallbackInfo& info) {
@@ -386,7 +376,7 @@ void node_napi_pr1_createAnimationRenderer(const Napi::CallbackInfo& info) {
     }
     auto result = ode_pr1_createAnimationRenderer(rendererContext, component, &animationRenderer, imageBase);
     Autobind<ODE_PR1_AnimationRendererHandle>::write_from(info[2], animationRenderer);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
 void node_napi_pr1_destroyAnimationRenderer(const Napi::CallbackInfo& info) {
@@ -398,7 +388,7 @@ void node_napi_pr1_destroyAnimationRenderer(const Napi::CallbackInfo& info) {
         return;
     }
     auto result = ode_pr1_destroyAnimationRenderer(animationRenderer);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 
 void node_napi_pr1_animation_drawFrame(const Napi::CallbackInfo& info) {
@@ -422,6 +412,6 @@ void node_napi_pr1_animation_drawFrame(const Napi::CallbackInfo& info) {
         return;
     }
     auto result = ode_pr1_animation_drawFrame(renderer, &frameView, time);
-    check_result(env, result);
+    if(!check_result(env,result)) return;
 }
 

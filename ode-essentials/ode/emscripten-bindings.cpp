@@ -66,9 +66,9 @@ EMSCRIPTEN_BINDINGS(ode) {
         .field("data", &ODE_StringRef::data)
         .field("length", &ODE_StringRef::length);
 
-    class_<ODE_String>("String").constructor<>(static_cast<ODE_String (*)(const std::string &)>(&ode_makeString))
+    class_<ODE_String>("String").constructor<>(static_cast<ODE_String(*)(const std::string &)>(&ode_makeString))
         .property("length", &ODE_String::length)
-        .function("ref", static_cast<ODE_StringRef (*)(const ODE_String &)>(&ode_stringRef))
+        .function("ref", static_cast<ODE_StringRef(*)(const ODE_String &)>(&ode_stringRef))
         .function("getData", &ode_string_getData);
 
     class_<ODE_MemoryBuffer>("MemoryBuffer").constructor<>()
