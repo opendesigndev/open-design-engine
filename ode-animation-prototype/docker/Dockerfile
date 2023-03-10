@@ -1,4 +1,4 @@
-FROM emscripten/emsdk:3.1.33@sha256:aa50e3dfb1cfe0d31091708d5ce1dd02d4827c4124a98eb4f22d665b0db084b6
+FROM emscripten/emsdk:3.1.32@sha256:d0c17c0843510f3e306e607603f72af17834795c44b73b0c7ebc0302d6f028ee
 RUN apt-get update && apt-get install -y \
     ninja-build \
     pkg-config \
