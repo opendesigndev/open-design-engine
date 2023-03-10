@@ -3,8 +3,8 @@
 #include <string>
 #include "addon.h"
 #include "napi-wrap.h"
-#include "gen-api-base.h"
-#include "gen-logic-api.h"
+#include "gen.h"
+
 Napi::Value bind_ode_LayerList_getEntry(const Napi::CallbackInfo& info);
 Napi::Value bind_ode_destroyLayerList(const Napi::CallbackInfo& info);
 Napi::Value bind_ode_destroyMissingFontList(const Napi::CallbackInfo& info);

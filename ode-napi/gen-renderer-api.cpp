@@ -3,8 +3,8 @@
 #include <string>
 #include "addon.h"
 #include "napi-wrap.h"
-#include "gen-api-base.h"
-#include "gen-renderer-api.h"
+#include "gen.h"
+
 Napi::Value bind_ode_destroyBitmap(const Napi::CallbackInfo& info);
 Napi::Value bind_ode_createRendererContext(const Napi::CallbackInfo& info);
 Napi::Value bind_ode_destroyRendererContext(const Napi::CallbackInfo& info);

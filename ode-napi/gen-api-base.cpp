@@ -3,8 +3,8 @@
 #include <string>
 #include "addon.h"
 #include "napi-wrap.h"
-#include "gen-api-base.h"
-#include "gen-api-base.h"
+#include "gen.h"
+
 Napi::Value bind_ode_StringList_getEntry(const Napi::CallbackInfo& info);
 Napi::Value bind_ode_destroyString(const Napi::CallbackInfo& info);
 Napi::Value bind_ode_allocateMemoryBuffer(const Napi::CallbackInfo& info);

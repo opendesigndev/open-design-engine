@@ -614,8 +614,8 @@ def generateNapiBindings(entities, apiPath):
         '#include <string>\n'
         '#include "addon.h"\n'
         '#include "napi-wrap.h"\n'
-        f'#include "gen-api-base.h"\n'
-        f'#include "gen-{name}"\n'
+        '#include "gen.h"\n'
+        '\n'
     )
     name = os.path.splitext(name)[0].replace("-", "_")
     src_tail = ""
@@ -1009,8 +1009,8 @@ def relPath(path):
 
 def generateBindings(headerPath):
     emscriptenBindingsPath = os.path.join(os.path.dirname(headerPath), "emscripten-bindings.cpp")
-    napiBindingsPath = os.path.join(relPath("ode-napi/gen-"+os.path.splitext(os.path.basename(headerPath))[0]))
-    typescriptBindingsPath = os.path.join(relPath("typescript-bindings/"+os.path.splitext(os.path.basename(headerPath))[0]+".d.ts"))
+    napiBindingsPath = os.path.join(relPath("ode-napi"), "gen-"+os.path.splitext(os.path.basename(headerPath))[0])
+    typescriptBindingsPath = os.path.join(relPath("typescript-bindings"), os.path.splitext(os.path.basename(headerPath))[0]+".d.ts")
     with open(headerPath, "r") as f:
         header = f.read()
     entities = parseHeader(header)
@@ -1026,13 +1026,20 @@ def generateBindings(headerPath):
     with open(typescriptBindingsPath, "w") as f:
         f.write(preamble+typescriptBindings)
 
-def generateTopLevelBindings():
+def generateTopLevelBindings(paths):
     typescriptBindingsPath = os.path.join(relPath("typescript-bindings/ode.d.ts"))
     typescriptBindings = generateTopLevelTypescriptBindings()
     with open(typescriptBindingsPath, "w") as f:
         f.write(preamble+typescriptBindings)
+    
+    includes = ""
+    for path in paths:
+        basename = os.path.basename(path)
+        includes += f'#include "gen-{basename}"\n'
+    with open(os.path.join(relPath("ode-napi"), "gen.h"), "w") as f:
+        f.write("#pragma once\n"+preamble+includes)
 
-generateBindings(relPath("ode-essentials/ode/api-base.h"))
-generateBindings(relPath("ode-logic/ode/logic-api.h"))
-generateBindings(relPath("ode-renderer/ode/renderer-api.h"))
-generateTopLevelBindings()
+paths = ["ode-essentials/ode/api-base.h","ode-logic/ode/logic-api.h","ode-renderer/ode/renderer-api.h"]
+for path in paths:
+    generateBindings(relPath(path))
+generateTopLevelBindings(paths)
