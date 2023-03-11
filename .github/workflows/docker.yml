@@ -23,7 +23,7 @@ jobs:
       - name: Configure AWS credentials for ECR access
         uses: "aws-actions/configure-aws-credentials@v1"
         with:
-          # Reusing the CiLambdaWorkersDeployment IAM user for now
+          # GithubCIUser
           aws-access-key-id: "${{ vars.AWS_ACCESS_KEY_ID }}"
           aws-region: us-east-1
           aws-secret-access-key: "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
