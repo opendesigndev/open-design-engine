@@ -2,7 +2,7 @@
     "name": "@opendesign/engine-source",
     "private": "true",
     "version": "0.2.2",
-    "main": "./ode-napi/typescript-bindings/ode.js",
+    "main": "./build/npm/ode-napi/package/index.js",
     "scripts": {
         "install": "cmake-js compile -O build/npm --CDODE_TEST_MODULES=OFF --CDODE_SKIA_GPU=OFF"
     },

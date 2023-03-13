@@ -48,10 +48,13 @@
       "binaryDir": "${sourceDir}/build/win32"
     }, {
       "name": "osx-rel",
-      "displayName": "Mac OS default release configuration",
+      "displayName": "Mac OS arm64 release configuration",
       "binaryDir": "${sourceDir}/build/osx-rel",
+      "generator": "Ninja",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
+        "CMAKE_BUILD_TYPE": "Release",
+        "VCPKG_TARGET_TRIPLET": "arm64-osx",
+        "CMAKE_OSX_ARCHITECTURES": "arm64"
       },
       "condition": {
         "type": "equals",
@@ -60,9 +63,26 @@
       }
     }, {
       "name": "osx-dbg",
-      "displayName": "Mac OS default debug configuration",
+      "displayName": "Mac OS arm64 debug configuration",
       "inherits": "osx-rel",
       "binaryDir": "${sourceDir}/build/osx-dbg",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    }, {
+      "name": "osx-x64-rel",
+      "displayName": "Mac OS x64 release configuration",
+      "inherits": "osx-rel",
+      "binaryDir": "${sourceDir}/build/osx-x64-rel",
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x64-osx",
+        "CMAKE_OSX_ARCHITECTURES": "x86_64"
+      }
+    }, {
+      "name": "osx-x64-dbg",
+      "displayName": "Mac OS x64 debug configuration",
+      "inherits": "osx-x64-rel",
+      "binaryDir": "${sourceDir}/build/osx-x64-dbg",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       }
@@ -123,6 +143,32 @@
         "VCPKG_HOST_TRIPLET": "x64-windows-static-release",
         "TEXT_RENDERER_TEST_MODULES": "OFF"
       }
+    }, {
+      "name": "wasm-rel",
+      "displayName": "WASM build using Emscripten - Release",
+      "binaryDir": "build/wasm-rel",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ODE_TEST_MODULES": "OFF",
+        "ODE_USE_WEBGL2": "ON",
+        "EMSCRIPTEN": "ON",
+        "CMAKE_TOOLCHAIN_FILE": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+        "CMAKE_CROSSCOMPILING_EMULATOR": "$env{EMSDK_NODE}"
+      },
+      "condition": {
+        "lhs": "$env{EMSDK}",
+        "type": "notEquals",
+        "rhs": ""
+      }
+    }, {
+      "name": "wasm-dbg",
+      "displayName": "WASM build using Emscripten - Debug",
+      "binaryDir": "build/wasm-dbg",
+      "inherits": "wasm-rel",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
     }
   ],
   "buildPresets": [
@@ -148,6 +194,9 @@
     }, {
       "name": "osx-dbg",
       "configurePreset": "osx-dbg"
+    }, {
+      "name": "osx-x64-rel",
+      "configurePreset": "osx-x64-rel"
     }, {
       "name": "linux-rel",
       "configurePreset": "linux-rel"
@@ -196,6 +245,12 @@
       "name": "win64-github-actions",
       "configurePreset": "win64-github-actions",
       "configuration": "Release"
+    }, {
+      "name": "wasm-rel",
+      "configurePreset": "wasm-rel"
+    }, {
+      "name": "wasm-dbg",
+      "configurePreset": "wasm-dbg"
     }
   ]
 }

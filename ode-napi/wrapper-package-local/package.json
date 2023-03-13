@@ -1,0 +1,11 @@
+{
+    "name": "@opendesign/engine",
+    "version": "0.0.0",
+    "private": true,
+    "description": "Purpose of this package is to be used in local development with portal: protocol. See wraper-package for actually release package.",
+    "optionalDependencies": {
+        "@opendesign/engine-darwin-arm64": "portal:../../build/osx-rel/ode-napi/package",
+        "@opendesign/engine-darwin-x64": "portal:../../build/osx-x64-rel/ode-napi/package",
+        "@opendesign/engine-wasm": "portal:../../build/wasm-rel/ode-napi/package"
+    }
+}

@@ -41,8 +41,6 @@ SET(ODE_NAPI_CODEGEN_INPUT
 add_custom_command(
         OUTPUT
             ${CMAKE_CURRENT_BINARY_DIR}/package/api-base.d.ts
-            ${CMAKE_CURRENT_BINARY_DIR}/package/common.d.ts
-            ${CMAKE_CURRENT_BINARY_DIR}/package/exports.d.ts
             ${CMAKE_CURRENT_BINARY_DIR}/package/index.d.ts
             ${CMAKE_CURRENT_BINARY_DIR}/package/logic-api.d.ts
             ${CMAKE_CURRENT_BINARY_DIR}/src/gen-api-base.cpp
@@ -56,6 +54,14 @@ add_custom_command(
         COMMAND python3 "${CMAKE_CURRENT_LIST_DIR}/generate-api-bindings.py" "${CMAKE_CURRENT_BINARY_DIR}" ${ODE_NAPI_CODEGEN_INPUT}
         VERBATIM
 )
+
+function(copy_to_npm_package file)
+add_custom_command(TARGET ode-napi POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE_DIR:ode-napi>/${file}
+    $<TARGET_FILE_DIR:ode-napi>/package/${file}
+    DEPENDS $<TARGET_FILE_DIR:ode-napi>/${file}
+)
+endfunction()
 
 if(EMSCRIPTEN)
     # Enable emnapi
@@ -94,21 +100,10 @@ if(EMSCRIPTEN)
         target_link_options(ode-napi PRIVATE "SHELL:-s USE_WEBGL2=1")
     endif()
 
-    function(copy_to_npm_package file)
-        add_custom_command(TARGET ode-napi POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE_DIR:ode-napi>/${file}
-            $<TARGET_FILE_DIR:ode-napi>/package/${file}
-            DEPENDS $<TARGET_FILE_DIR:ode-napi>/${file}
-        )
-    endfunction()
-
-    configure_file(wasm-package/package.json package.json)
-    configure_file(wasm-package/index.js index.js)
+    configure_file(wasm-package/package.json package/package.json)
+    configure_file(wasm-package/index.js package/index.js)
     copy_to_npm_package(ode.js)
     copy_to_npm_package(ode.wasm)
-    copy_to_npm_package(package.json)
-    copy_to_npm_package(index.js)
-    configure_file(typescript-bindings/internal.d.ts ${CMAKE_CURRENT_BINARY_DIR}/package/internal.d.ts COPYONLY)
 else()
     # Removes some warning
     set_target_properties(ode-napi PROPERTIES
@@ -125,4 +120,30 @@ else()
         # Generate node.lib
         execute_process(COMMAND ${CMAKE_AR} /def:${CMAKE_JS_NODELIB_DEF} /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS})
     endif()
+    if(CMAKE_JS_VERSION)
+        # We ARE in @opendesign/engine-source package
+        set(ODE_NATIVE_MODULE_PATH "../ode-napi.node")
+    else()
+        # We are NOT in @opendesign/engine-source package, populate the package folder.
+        set(ODE_NATIVE_MODULE_PATH "./ode-napi.node")
+        if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+            set(ODE_PLATFORM_OS "darwin")
+            if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm64")
+                set(ODE_PLATFORM_CPU "arm64")
+            elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES "x86_64")
+                set(ODE_PLATFORM_CPU "x64")
+            endif()
+        endif()
+    endif()
+    if(DEFINED ODE_PLATFORM_OS AND DEFINED ODE_PLATFORM_CPU)
+        configure_file(native-package/package.json package/package.json)
+        configure_file(native-package/index.js package/index.js)
+        copy_to_npm_package(ode-napi.node)
+    endif()
+
+    configure_file(native-package/index.js package/index.js)
 endif()
+
+configure_file(typescript-bindings/internal.d.ts ${CMAKE_CURRENT_BINARY_DIR}/package/internal.d.ts COPYONLY)
+configure_file(typescript-bindings/exports.d.ts ${CMAKE_CURRENT_BINARY_DIR}/package/exports.d.ts COPYONLY)
+configure_file(typescript-bindings/common.d.ts ${CMAKE_CURRENT_BINARY_DIR}/package/common.d.ts COPYONLY)

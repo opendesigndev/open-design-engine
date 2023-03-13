@@ -1,0 +1,7 @@
+{
+    "name": "@opendesign/engine",
+    "version": "${ODE_VERSION_NPM}",
+    "optionalDependencies": {
+        "@opendesign/engine-wasm": "${ODE_VERSION_NPM}"
+    }
+}

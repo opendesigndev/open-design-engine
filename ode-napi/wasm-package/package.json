@@ -1,5 +1,5 @@
 {
-    "name": "@opendesign/engine",
+    "name": "@opendesign/engine-wasm",
     "description": "The Open Design Engine renders designs and provides interface to edit them and query specific information about them and their components.",
     "type": "module",
     "version": "${ODE_VERSION_NPM}",
