@@ -4,7 +4,7 @@
     "version": "0.2.2",
     "main": "./build/npm/ode-napi/package/index.js",
     "scripts": {
-        "install": "cmake-js compile -O build/npm --CDODE_TEST_MODULES=OFF --CDODE_SKIA_GPU=OFF"
+        "install": "node ode-napi/try-importing-prebuilt.mjs || cmake-js compile -O build/npm --CDODE_TEST_MODULES=OFF --CDODE_SKIA_GPU=OFF"
     },
     "dependencies": {
         "cmake-js": "^7.2.1"

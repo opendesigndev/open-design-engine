@@ -43,6 +43,7 @@ add_custom_command(
             ${CMAKE_CURRENT_BINARY_DIR}/package/api-base.d.ts
             ${CMAKE_CURRENT_BINARY_DIR}/package/index.d.ts
             ${CMAKE_CURRENT_BINARY_DIR}/package/logic-api.d.ts
+            ${CMAKE_CURRENT_BINARY_DIR}/package/renderer-api.d.ts
             ${CMAKE_CURRENT_BINARY_DIR}/src/gen-api-base.cpp
             ${CMAKE_CURRENT_BINARY_DIR}/src/gen-logic-api.cpp
             ${CMAKE_CURRENT_BINARY_DIR}/src/gen-renderer-api.cpp
@@ -55,12 +56,16 @@ add_custom_command(
         VERBATIM
 )
 
-function(copy_to_npm_package file)
-add_custom_command(TARGET ode-napi POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE_DIR:ode-napi>/${file}
-    $<TARGET_FILE_DIR:ode-napi>/package/${file}
-    DEPENDS $<TARGET_FILE_DIR:ode-napi>/${file}
-)
+function(copy_to_npm_package file package)
+    set(target ${ARGV2})
+    if(NOT target)
+        get_filename_component(target ${file} NAME)
+    endif()
+    add_custom_command(TARGET ode-napi POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE_DIR:ode-napi>/${file}
+        $<TARGET_FILE_DIR:ode-napi>/${package}/${target}
+        DEPENDS $<TARGET_FILE_DIR:ode-napi>/${file}
+    )
 endfunction()
 
 if(EMSCRIPTEN)
@@ -102,8 +107,17 @@ if(EMSCRIPTEN)
 
     configure_file(wasm-package/package.json package/package.json)
     configure_file(wasm-package/index.js package/index.js)
-    copy_to_npm_package(ode.js)
-    copy_to_npm_package(ode.wasm)
+    copy_to_npm_package(ode.js package)
+    copy_to_npm_package(ode.wasm package)
+
+    configure_file(wrapper-package/package.json wrapper/package.json)
+    configure_file(wrapper-package/wasm.js wrapper/wasm.js COPYONLY)
+    configure_file(wrapper-package/node.js wrapper/node.js)
+    copy_to_npm_package(package/api-base.d.ts wrapper)
+    copy_to_npm_package(package/index.d.ts wrapper node.d.ts)
+    copy_to_npm_package(package/index.d.ts wrapper wasm.d.ts)
+    copy_to_npm_package(package/logic-api.d.ts wrapper)
+    copy_to_npm_package(package/renderer-api.d.ts wrapper)
 else()
     # Removes some warning
     set_target_properties(ode-napi PROPERTIES
@@ -138,12 +152,24 @@ else()
     if(DEFINED ODE_PLATFORM_OS AND DEFINED ODE_PLATFORM_CPU)
         configure_file(native-package/package.json package/package.json)
         configure_file(native-package/index.js package/index.js)
-        copy_to_npm_package(ode-napi.node)
+        copy_to_npm_package(ode-napi.node package)
     endif()
 
     configure_file(native-package/index.js package/index.js)
+
+    configure_file(wrapper-package-test/package.json wrapper/package.json)
+    configure_file(wrapper-package-test/wasm.js wrapper/wasm.js COPYONLY)
+    configure_file(wrapper-package-test/node.js wrapper/node.js)
+    copy_to_npm_package(package/api-base.d.ts wrapper)
+    copy_to_npm_package(package/index.d.ts wrapper node.d.ts)
+    copy_to_npm_package(package/index.d.ts wrapper wasm.d.ts)
+    copy_to_npm_package(package/logic-api.d.ts wrapper)
+    copy_to_npm_package(package/renderer-api.d.ts wrapper)
 endif()
 
-configure_file(typescript-bindings/internal.d.ts ${CMAKE_CURRENT_BINARY_DIR}/package/internal.d.ts COPYONLY)
-configure_file(typescript-bindings/exports.d.ts ${CMAKE_CURRENT_BINARY_DIR}/package/exports.d.ts COPYONLY)
-configure_file(typescript-bindings/common.d.ts ${CMAKE_CURRENT_BINARY_DIR}/package/common.d.ts COPYONLY)
+configure_file(every-package/internal.d.ts ${CMAKE_CURRENT_BINARY_DIR}/package/internal.d.ts COPYONLY)
+configure_file(every-package/exports.d.ts ${CMAKE_CURRENT_BINARY_DIR}/package/exports.d.ts COPYONLY)
+configure_file(every-package/common.d.ts ${CMAKE_CURRENT_BINARY_DIR}/package/common.d.ts COPYONLY)
+configure_file(every-package/internal.d.ts ${CMAKE_CURRENT_BINARY_DIR}/wrapper/internal.d.ts COPYONLY)
+configure_file(every-package/exports.d.ts ${CMAKE_CURRENT_BINARY_DIR}/wrapper/exports.d.ts COPYONLY)
+configure_file(every-package/common.d.ts ${CMAKE_CURRENT_BINARY_DIR}/wrapper/common.d.ts COPYONLY)

@@ -1,7 +1,18 @@
 {
     "name": "@opendesign/engine",
     "version": "${ODE_VERSION_NPM}",
-    "optionalDependencies": {
+    "dependencies": {
         "@opendesign/engine-wasm": "${ODE_VERSION_NPM}"
-    }
+    },
+    "optionalDependencies": {
+        "@opendesign/engine-darwin-arm64": "${ODE_VERSION_NPM}",
+        "@opendesign/engine-darwin-x64": "${ODE_VERSION_NPM}",
+        "@opendesign/engine-source": "${ODE_VERSION_NPM}"
+    },
+    "type": "module",
+    "exports": {
+        "node": "./index.js",
+        "default": "./wasm.js"
+    },
+    "publishConfig": { "access": "public" }
 }
