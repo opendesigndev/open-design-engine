@@ -331,6 +331,14 @@ void DesignEditorWindow::drawControlsWidget() {
         ImGuiFileDialog::Instance()->OpenDialog("ChooseOctopusFileDlgKey", "Choose Octopus *.json File", filters, data->fileDialogContext.filePath, data->fileDialogContext.fileName);
     }
 
+    if (data->loadedOctopus.isLoaded()) {
+        // Open "Save Graphiz File" file dialog on button press
+        if (ImGui::Button("Save Octopus File")) {
+            const char* filters = ".json";
+            ImGuiFileDialog::Instance()->OpenDialog("SaveOctopusFileDlgKey", "Save as *.json", filters, data->fileDialogContext.filePath, data->fileDialogContext.fileName);
+        }
+    }
+
     // Display "Open Octopus File" file dialog
     if (ImGuiFileDialog::Instance()->Display("ChooseOctopusFileDlgKey")) {
         data->fileDialogContext.filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
@@ -347,6 +355,25 @@ void DesignEditorWindow::drawControlsWidget() {
         }
 
         ImGuiFileDialog::Instance()->Close();
+    }
+
+    if (data->loadedOctopus.isLoaded()) {
+        // Display "Save Octopus File" file dialog
+        if (ImGuiFileDialog::Instance()->Display("SaveOctopusFileDlgKey")) {
+            data->fileDialogContext.filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+            data->fileDialogContext.fileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
+
+            if (ImGuiFileDialog::Instance()->IsOk()) {
+                const std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
+
+                const bool isSaved = writeFile(filePathName, data->loadedOctopus.octopusJson);
+                if (!isSaved) {
+                    fprintf(stderr, "Internal error (saving Octopus json to filesystem)\n");
+                }
+            }
+
+            ImGuiFileDialog::Instance()->Close();
+        }
     }
 
     ImGui::NextColumn();
