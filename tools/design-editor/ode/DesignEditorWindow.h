@@ -23,7 +23,9 @@ public:
 
     /// Display the window - initialize and run its main loop
     int display();
-    /// Read the specified octopus file
+    /// Read the specified octopus manifest file - multiple components
+    bool readManifestFile(const FilePath &manifestPath);
+    /// Read the specified octopus file - single component
     bool readOctopusFile(const FilePath &octopusPath);
 
     void setImageDirectory(const FilePath &imageDirectory_);

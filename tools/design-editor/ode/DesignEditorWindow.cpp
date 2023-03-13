@@ -122,7 +122,6 @@ struct DesignEditorWindow::Internal {
     int initialize() {
         CHECK(ode_initializeEngineAttributes(&context.engineAttribs));
         CHECK(ode_createEngine(&context.engine, &context.engineAttribs));
-        CHECK(ode_createDesign(context.engine, &context.design));
         // TODO: This context is in conflict with the ImGui context.
 //        CHECK(ode_createRendererContext(context.engine, &context.rc, stringRef("Design Editor")));
 //        CHECK(ode_createDesignImageBase(context.rc, context.design, &context.imageBase));
@@ -130,6 +129,11 @@ struct DesignEditorWindow::Internal {
     }
 
     int loadOctopus(const std::string &octopusJson) {
+        if (context.design.ptr) {
+            CHECK(ode_destroyDesign(context.design));
+        }
+
+        CHECK(ode_createDesign(context.engine, &context.design));
         CHECK(ode_design_addComponentFromOctopusString(context.design, &context.component, context.metadata, stringRef(octopusJson), nullptr));
 
         CHECK(ode_component_listLayers(context.component, &loadedOctopus.layerList));
@@ -138,6 +142,20 @@ struct DesignEditorWindow::Internal {
 //        ODE_PR1_FrameView frameView;
 //        CHECK(ode_pr1_drawComponent(context.rc, context.component, context.imageBase, &bitmap, &frameView));
 
+        return 0;
+    }
+
+    int loadManifest(const std::string &manifestPath) {
+        if (context.design.ptr) {
+            CHECK(ode_destroyDesign(context.design));
+        }
+
+        CHECK(ode_createDesign(context.engine, &context.design));
+
+        const ODE_String manifestPathStr = ode_makeString(manifestPath);
+        ODE_ParseError parseError;
+
+        CHECK(ode_design_loadManifestFile(context.design, ode_stringRef(manifestPathStr), &parseError));
         return 0;
     }
 
@@ -267,6 +285,11 @@ int DesignEditorWindow::display() {
     return 0;
 }
 
+bool DesignEditorWindow::readManifestFile(const FilePath &manifestPath) {
+    const int loadError = data->loadManifest((std::string)manifestPath);
+    return loadError == 0;
+}
+
 bool DesignEditorWindow::readOctopusFile(const FilePath &octopusPath) {
     data->octopusFileReloaded = true;
     data->loadedOctopus.clear();
@@ -356,27 +379,52 @@ void DesignEditorWindow::drawToolbarWidget() {
     ImGui::End();
 }
 
+void drawLayerListRecursiveStep(const ODE_LayerList &layerList, int idx) {
+    if (idx >= layerList.n) {
+        return;
+    }
+
+    const auto areEq = [](const ODE_StringRef &a, const ODE_StringRef &b)->bool {
+        return a.length == b.length && strcmp(a.data, b.data) == 0;
+    };
+
+    const ODE_LayerList::Entry &rootLayer = layerList.entries[idx];
+    const bool hasAnyChildren = (idx+1 < layerList.n) && areEq(layerList.entries[idx+1].parentId, rootLayer.id);
+
+    const std::string layerTypeStr = [](ODE_LayerType layerType) {
+        switch (layerType) {
+            case ODE_LAYER_TYPE_UNSPECIFIED: return "-";
+            case ODE_LAYER_TYPE_SHAPE: return "S";
+            case ODE_LAYER_TYPE_TEXT: return "T";
+            case ODE_LAYER_TYPE_GROUP: return "G";
+            case ODE_LAYER_TYPE_MASK_GROUP: return "M";
+            case ODE_LAYER_TYPE_COMPONENT_REFERENCE: return "CR";
+            case ODE_LAYER_TYPE_COMPONENT_INSTANCE: return "CI";
+        }
+        return "-";
+    } (rootLayer.type);
+    const std::string layerLabel = "["+layerTypeStr+"] "+std::string(rootLayer.name.data);
+
+    if (hasAnyChildren) {
+        if (ImGui::TreeNode(layerLabel.c_str())) {
+            for (int i = idx+1; i < layerList.n; i++) {
+                const ODE_LayerList::Entry &entry = layerList.entries[i];
+                if (areEq(entry.parentId, rootLayer.id)) {
+                    drawLayerListRecursiveStep(layerList, i);
+                }
+            }
+            ImGui::TreePop();
+        }
+    } else {
+        ImGui::BulletText("%s", layerLabel.c_str());
+    }
+}
+
 void DesignEditorWindow::drawLayerListWidget() {
     ImGui::Begin("Layer List");
 
     if (data->loadedOctopus.isLoaded()) {
-        for (int i = 0; i < data->loadedOctopus.layerList.n; i++) {
-            const ODE_LayerList::Entry &layer = data->loadedOctopus.layerList.entries[i];
-            const std::string layerTypeStr = [](ODE_LayerType layerType) {
-                switch (layerType) {
-                    case ODE_LAYER_TYPE_UNSPECIFIED: return "-";
-                    case ODE_LAYER_TYPE_SHAPE: return "S";
-                    case ODE_LAYER_TYPE_TEXT: return "T";
-                    case ODE_LAYER_TYPE_GROUP: return "G";
-                    case ODE_LAYER_TYPE_MASK_GROUP: return "M";
-                    case ODE_LAYER_TYPE_COMPONENT_REFERENCE: return "CR";
-                    case ODE_LAYER_TYPE_COMPONENT_INSTANCE: return "CI";
-                }
-                return "-";
-            } (layer.type);
-            const std::string layerNameStr("["+layerTypeStr+"] "+std::string(data->loadedOctopus.layerList.entries[i].name.data));
-            ImGui::Selectable(layerNameStr.c_str());
-        }
+        drawLayerListRecursiveStep(data->loadedOctopus.layerList, 0);
     } else {
         ImGui::Text("---");
     }
