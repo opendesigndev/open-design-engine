@@ -37,6 +37,7 @@ public:
         DesignError addLayer(const std::string &parent, const std::string &before, const octopus::Layer &layer);
         DesignError removeLayer(const std::string &id);
         DesignError modifyLayer(const std::string &id, const octopus::LayerChange &layerChange);
+        DesignError transformLayer(const std::string &id, octopus::Fill::Positioning::Origin basis, const TransformationMatrix &transformation);
 
         DesignError setAnimation(const DocumentAnimation &animation);
 

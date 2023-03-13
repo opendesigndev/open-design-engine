@@ -77,6 +77,8 @@ public:
     DesignError removeLayer(const std::string &id);
     /// Permanently modifies a layer with the specified layerChange
     DesignError modifyLayer(const std::string &id, const octopus::LayerChange &layerChange);
+    /// Applies transformation matrix to layer (does not overwrite original transformation but adds to it)
+    DesignError transformLayer(const std::string &id, octopus::Fill::Positioning::Origin basis, const TransformationMatrix &transformation);
     /// Informs component reference that the master component or one of its layers has changed
     DesignError notifyReference(const std::string &referencelayerId, const std::string &masterLayerId, const octopus::LayerChange *layerChange);
 

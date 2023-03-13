@@ -4,6 +4,7 @@
 #include <cstring>
 #include <algorithm> // TODO move along with circle polygon intersection
 #include <octopus/parser.h>
+#include "../core/octopus-type-conversions.h"
 #include "../render-assembly/assembly.h"
 #include "../render-assembly/graph-transform.h"
 #include "../animation/animate.h"
@@ -229,6 +230,8 @@ DesignError Component::modifyLayer(const std::string &id, const octopus::LayerCh
                         )
                             return DesignError::WRONG_LAYER_TYPE;
                         if (layerChange.values.transform.has_value()) {
+                            if (layerChange.values.transform.value()[0]*layerChange.values.transform.value()[3] == layerChange.values.transform.value()[1]*layerChange.values.transform.value()[2])
+                                return DesignError::SINGULAR_TRANSFORMATION;
                             memcpy(layer.transform, layerChange.values.transform->data(), sizeof(layer.transform));
                             changeLevel = BOUNDS_CHANGE;
                         }
@@ -262,6 +265,39 @@ DesignError Component::modifyLayer(const std::string &id, const octopus::LayerCh
             case LOGICAL_CHANGE:
             case NO_CHANGE:;
         }
+        return DesignError::OK;
+    }
+    return DesignError::LAYER_NOT_FOUND;
+}
+
+DesignError Component::transformLayer(const std::string &id, octopus::Fill::Positioning::Origin basis, const TransformationMatrix &transformation) {
+    if (!transformation.invertible())
+        return DesignError::SINGULAR_TRANSFORMATION;
+    if (DesignError error = requireBuild())
+        return error;
+    if (LayerInstance *instance = findInstance(id)) {
+        octopus::Layer &layer = *(octopus::Layer *) *instance;
+        TransformationMatrix layerTranformation = fromOctopusTransform(layer.transform);
+        switch (basis) {
+            case octopus::Fill::Positioning::Origin::LAYER:
+                layerTranformation = layerTranformation*transformation;
+                break;
+            case octopus::Fill::Positioning::Origin::PARENT:
+                layerTranformation = transformation*layerTranformation;
+                break;
+            case octopus::Fill::Positioning::Origin::ARTBOARD:
+                ODE_ASSERT(!"TODO");
+                // fallthrough
+            case octopus::Fill::Positioning::Origin::COMPONENT:
+                {
+                    TransformationMatrix ancestorTransform = ((LayerInstanceSpecifier) *instance).parentTransform;
+                    if (!ancestorTransform.invertible())
+                        return DesignError::SINGULAR_TRANSFORMATION;
+                    layerTranformation = inverse(ancestorTransform)*transformation*ancestorTransform*layerTranformation;
+                }
+                break;
+        }
+        toOctopusTransform(layer.transform, layerTranformation);
         return DesignError::OK;
     }
     return DesignError::LAYER_NOT_FOUND;

@@ -34,6 +34,18 @@ DesignError Design::ComponentAccessor::modifyLayer(const std::string &id, const 
     return error;
 }
 
+DesignError Design::ComponentAccessor::transformLayer(const std::string &id, octopus::Fill::Positioning::Origin basis, const TransformationMatrix &transformation) {
+    DesignError error = component->transformLayer(id, basis, transformation);
+    if (!error) {
+        octopus::LayerChange layerChange;
+        layerChange.subject = octopus::LayerChange::Subject::LAYER;
+        layerChange.op = octopus::LayerChange::Op::PROPERTY_CHANGE;
+        //layerChange.values.transform = ... if needed
+        notifyReferences(component, id, &layerChange);
+    }
+    return error;
+}
+
 DesignError Design::ComponentAccessor::setAnimation(const DocumentAnimation &animation) {
     return component->setAnimation(animation);
 }

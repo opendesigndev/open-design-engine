@@ -20,6 +20,7 @@ export {
     type MemoryBuffer,
     type StringList,
     type LayerType,
+    type TransformationBasis,
     type Scalar_array_6,
     type Transformation,
     type EngineAttributes,
