@@ -18,10 +18,4 @@ COPY third-party /pre/third-party
 RUN /pre/third-party/skia/build.sh
 ENV ODE_PREBUILT_THIRDPARTY /pre/third-party/wasm-cmake
 
-FROM builder
-
-COPY . /src
-RUN cmake --preset wasm-rel
-RUN cmake --build --preset wasm-rel
-
 # docker build . -f dockerfiles/wasm-build/Dockerfile

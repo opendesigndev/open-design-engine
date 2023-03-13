@@ -61,7 +61,7 @@ jobs:
         with:
           push: true
           context: .
-          file: ode-animation-prototype/docker/Dockerfile
+          file: dockerfiles/wasm-build/Dockerfile
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: |
@@ -83,13 +83,13 @@ jobs:
         run: |
           echo "Main docker image: ${{ fromJSON(steps.meta.outputs.json).tags[1] }}" >> $GITHUB_STEP_SUMMARY
       - name: Build WASM and publish
-        run: docker run -v $(pwd):/src -e NPM_TOKEN=$NPM_TOKEN $BASE_IMAGE_TAG bash ode-animation-prototype/wasm-build.sh --publish
+        run: docker run -v $(pwd):/src -e NPM_TOKEN=$NPM_TOKEN $BASE_IMAGE_TAG bash dockerfiles/wasm-build/build.sh --publish
         if: github.ref == 'refs/heads/main'
         env:
           NPM_TOKEN: ${{secrets.NPM_TOKEN}}
           BASE_IMAGE_TAG: "${{ fromJSON(steps.meta.outputs.json).tags[1] }}"
       - name: Build WASM
-        run: docker run -v $(pwd):/src -e NPM_TOKEN=$NPM_TOKEN $BASE_IMAGE_TAG bash ode-animation-prototype/wasm-build.sh
+        run: docker run -v $(pwd):/src $BASE_IMAGE_TAG bash dockerfiles/wasm-build/build.sh
         if: github.ref != 'refs/heads/main'
         env:
           BASE_IMAGE_TAG: "${{ fromJSON(steps.meta.outputs.json).tags[1] }}"
@@ -98,4 +98,4 @@ jobs:
         with:
           name: wasm-build
           path: |
-            build/wasm-release/ode-animation-prototype
+            build/wasm-rel/ode-napi
