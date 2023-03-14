@@ -592,6 +592,17 @@ def generateNapiBindings(entities, apiPath):
             src_body += "    }\n"
             header += f'std::string ode_napi_enum_to_string({fullName} value);\n'
             src_tail += (
+                f'template<>\n'
+                f'bool Autobind<{fullName}>::read_into(const Napi::Value& value, {fullName}& parsed) {{\n'
+                f'    std::string text = value.As<Napi::String>();\n'
+            )
+            for value in entity.members:
+                k = value.name[commonPrefixLen:]
+                full = namespacedName(entity.namespace, value.name)
+                src_tail += f'    if (text == "{k}") {{ parsed = {full}; return true; }}'
+            src_tail += (
+                f'    return false;\n'
+                f'}}\n'
                 f"std::string ode_napi_enum_to_string({fullName} value) {{\n"
                 "    switch(value) {\n"
             )

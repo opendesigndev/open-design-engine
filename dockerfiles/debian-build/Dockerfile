@@ -23,12 +23,15 @@ FROM ode-debian-build-config-from-${VCPKG_COMMIT_SOURCE} AS ode-debian-build-bas
 ENV VCPKG_DEFAULT_TRIPLET x64-linux-release
 ENV VCPKG_DEFAULT_HOST_TRIPLET x64-linux-release
 
-RUN apt update -qq && apt install -qqy curl zip unzip tar clang make cmake wget git python3 bison automake autoconf autoconf-archive libosmesa6-dev pkg-config python3-distutils patchelf node
+RUN apt-get update \
+    && apt-get install -y curl zip unzip tar clang make cmake wget git python3 bison automake autoconf autoconf-archive libosmesa6-dev pkg-config python3-distutils patchelf nodejs ninja-build \
+    && rm -rf /var/lib/apt/lists/*
 
+# Vckpg
 RUN git clone https://github.com/microsoft/vcpkg /opt/vcpkg && cd /opt/vcpkg && git checkout `cat /home/vcpkg-commit`
 RUN /opt/vcpkg/bootstrap-vcpkg.sh -disableMetrics && ln -s /opt/vcpkg/vcpkg /usr/bin/vcpkg
-
 RUN vcpkg --triplet x64-linux-release --host-triplet x64-linux-release install freetype harfbuzz[icu] icu libpng libjpeg-turbo tiff giflib libwebp skia[core,freetype]
+ENV VCPKG_ROOT=/opt/vcpkg
 
 # Build GLFW with OSMesa support
 RUN wget -c https://github.com/glfw/glfw/archive/refs/tags/3.3.7.tar.gz -O - | tar -xz --directory /home
@@ -40,7 +43,6 @@ RUN wget -c https://github.com/nigels-com/glew/releases/download/glew-2.2.0/glew
 RUN make install SYSTEM=linux-osmesa -C /home/glew-2.2.0
 
 # Build image
-
 FROM ode-debian-build-base AS ode-debian-build
 
 ARG ODE_BUILD_COMMIT
@@ -65,12 +67,11 @@ RUN cmake \
     -DODE_SKIA_GPU=OFF \
     -DCMAKE_CXX_STANDARD_LIBRARIES=-lOSMesa \
     -DODE_BUILD_COMMIT=$ODE_BUILD_COMMIT \
-    -DODE_BUILD_COMMIT=$ODE_THIS_COMMIT \
+    -DODE_THIS_COMMIT=$ODE_THIS_COMMIT \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER=clang \
     -DCMAKE_CXX_COMPILER=clang++ \
-    -DVCPKG_TARGET_TRIPLET=x64-linux-release \
-    -DCMAKE_TOOLCHAIN_FILE=/opt/vcpkg/scripts/buildsystems/vcpkg.cmake
+    -DVCPKG_TARGET_TRIPLET=x64-linux-release
 RUN cmake --build /home/ode/build --target ode-renderer-cli --config Release
 
 RUN mkdir -p /opt/ode-renderer/bin /opt/ode-renderer/lib
@@ -88,3 +89,6 @@ RUN patchelf --set-interpreter /opt/ode-renderer/lib/ld-linux-x86-64.so.2 bin/* 
 FROM scratch
 ENV PATH="${PATH}:/opt/ode-renderer/bin"
 COPY --from=ode-debian-build /opt/ode-renderer /opt/ode-renderer
+
+# Build locally using:
+# bash -c 'docker build . -f dockerfiles/debian-build/Dockerfile --build-arg ODE_BUILD_COMMIT=`git rev-parse HEAD` --build-arg ODE_THIS_COMMIT=`git log -n 1 "--pretty=format:%h_%cs"` --tag ode --platform linux/amd64'

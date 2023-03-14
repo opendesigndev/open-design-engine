@@ -16,7 +16,6 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
     exports = init_gen_logic_api(env, exports);
     exports = init_gen_renderer_api(env, exports);
     exports = init_api_base(env, exports);
-    exports = init_logic_api(env, exports);
     return exports;
 }
 

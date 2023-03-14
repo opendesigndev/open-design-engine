@@ -7,7 +7,6 @@ set(ODE_NAPI_SOURCES
     ${CMAKE_CURRENT_BINARY_DIR}/src/gen-logic-api.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/src/gen-renderer-api.cpp
     "manual-api-base.cpp"
-    "manual-logic-api.cpp"
 )
 
 # LIBRARY / EXECUTABLE
@@ -29,6 +28,7 @@ target_include_directories(ode-napi INTERFACE
 )
 target_include_directories(ode-napi PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    ${CMAKE_CURRENT_BINARY_DIR}/src/
 )
 
 SET(ODE_NAPI_CODEGEN_INPUT

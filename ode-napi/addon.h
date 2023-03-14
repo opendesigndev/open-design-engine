@@ -14,8 +14,6 @@ Napi::Object init_gen_api_base(Napi::Env env, Napi::Object exports);
 Napi::Object init_gen_logic_api(Napi::Env env, Napi::Object exports);
 Napi::Object init_gen_renderer_api(Napi::Env env, Napi::Object exports);
 
-Napi::Object init_logic_api(Napi::Env env, Napi::Object exports);
-
 // To be used in functions which return void/constructors
 #define THROW_ON_ERROR(pred) if(check_result(env, pred)) return
 // To be used in functions which return Napi::Value
