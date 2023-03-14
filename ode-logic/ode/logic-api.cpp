@@ -151,31 +151,41 @@ static void gatherLayerList(std::vector<ODE_LayerList::Entry> &list, const octop
     }
 }
 
-static ODE_Result makeFontList(ODE_StringList *fontList, const std::set<std::string> &fontSet) {
-    ODE_ASSERT(fontList);
-    fontList->entries = nullptr;
-    fontList->n = 0;
-    if (!fontSet.empty()) {
-        if (!(fontList->entries = reinterpret_cast<ODE_StringRef *>(malloc(sizeof(ODE_StringRef)*fontSet.size()))))
+static ODE_Result makeContiguousStringList(ODE_StringList *dstList, const std::set<std::string> &srcSet) {
+    ODE_ASSERT(dstList);
+    dstList->entries = nullptr;
+    dstList->n = 0;
+    if (!srcSet.empty()) {
+        if (!(dstList->entries = reinterpret_cast<ODE_StringRef *>(malloc(sizeof(ODE_StringRef)*srcSet.size()))))
             return ODE_RESULT_MEMORY_ALLOCATION_ERROR;
         size_t totalStrLen = 0;
-        for (const std::string &font : fontSet)
+        for (const std::string &font : srcSet)
             totalStrLen += font.size()+1;
         char *cur = nullptr;
         if (!(cur = reinterpret_cast<char *>(malloc(totalStrLen)))) {
-            free(fontList->entries);
-            fontList->entries = nullptr;
+            free(dstList->entries);
+            dstList->entries = nullptr;
             return ODE_RESULT_MEMORY_ALLOCATION_ERROR;
         }
-        for (const std::string &font : fontSet) {
-            fontList->entries[fontList->n].data = reinterpret_cast<ODE_ConstCharPtr>(cur);
+        for (const std::string &font : srcSet) {
+            dstList->entries[dstList->n].data = reinterpret_cast<ODE_ConstCharPtr>(cur);
             memcpy(cur, font.c_str(), font.size()+1);
-            fontList->entries[fontList->n].length = int(font.size());
+            dstList->entries[dstList->n].length = int(font.size());
             cur += font.size()+1;
-            ++fontList->n;
+            ++dstList->n;
         }
-        ODE_ASSERT(fontList->n == fontSet.size());
-        ODE_ASSERT(cur == fontList->entries->data+totalStrLen);
+        ODE_ASSERT(dstList->n == srcSet.size());
+        ODE_ASSERT(cur == dstList->entries->data+totalStrLen);
+    }
+    return ODE_RESULT_OK;
+}
+
+static ODE_Result destroyContiguousStringList(const ODE_StringList &list) {
+    if (list.n) {
+        ODE_ASSERT(list.entries);
+        // All strings in the list are in a single memory block that starts at the first string
+        free(const_cast<char *>(reinterpret_cast<const char *>(list.entries->data)));
+        free(list.entries);
     }
     return ODE_RESULT_OK;
 }
@@ -187,14 +197,12 @@ ODE_Result ODE_API ode_destroyLayerList(ODE_LayerList layerList) {
     return ODE_RESULT_OK;
 }
 
+ODE_Result ODE_API ode_destroyComponentList(ODE_StringList componentList) {
+    return destroyContiguousStringList(componentList);
+}
+
 ODE_Result ODE_API ode_destroyMissingFontList(ODE_StringList fontList) {
-    if (fontList.n) {
-        ODE_ASSERT(fontList.entries);
-        // Listing functions guarantee that all strings in the list are in a single memory block that starts at the first string
-        free(const_cast<char *>(reinterpret_cast<const char *>(fontList.entries->data)));
-        free(fontList.entries);
-    }
-    return ODE_RESULT_OK;
+    return destroyContiguousStringList(fontList);
 }
 
 // Engine
@@ -328,12 +336,20 @@ ODE_Result ODE_API ode_design_removeComponent(ODE_DesignHandle design, ODE_Compo
     return ode_result(design.ptr->design.removeComponent(component.ptr->accessor).type());
 }
 
+ODE_Result ODE_API ode_design_listComponents(ODE_DesignHandle design, ODE_StringList *componentList) {
+    if (!design.ptr)
+        return ODE_RESULT_INVALID_DESIGN;
+    std::set<std::string> componentIds;
+    design.ptr->design.listComponents(componentIds);
+    return makeContiguousStringList(componentList, componentIds);
+}
+
 ODE_Result ODE_API ode_design_listMissingFonts(ODE_DesignHandle design, ODE_StringList *fontList) {
     if (!design.ptr)
         return ODE_RESULT_INVALID_DESIGN;
     std::set<std::string> missingFonts;
     design.ptr->design.listMissingFonts(missingFonts);
-    return makeFontList(fontList, missingFonts);
+    return makeContiguousStringList(fontList, missingFonts);
 }
 
 ODE_Result ODE_NATIVE_API ode_design_loadFontFile(ODE_DesignHandle design, ODE_StringRef name, ODE_StringRef path, ODE_StringRef faceName) {
@@ -539,7 +555,7 @@ ODE_Result ODE_API ode_component_listMissingFonts(ODE_ComponentHandle component,
         return ODE_RESULT_INVALID_COMPONENT;
     std::set<std::string> missingFonts;
     component.ptr->accessor.listMissingFonts(missingFonts);
-    return makeFontList(fontList, missingFonts);
+    return makeContiguousStringList(fontList, missingFonts);
 }
 
 ODE_Result ODE_API ode_component_getOctopus(ODE_ComponentHandle component, ODE_String *octopusString) {

@@ -90,6 +90,7 @@ public:
 
     ComponentAccessor getComponent(const std::string &id);
 
+    void listComponents(std::set<std::string> &ids) const;
     void listMissingFonts(std::set<std::string> &names) const;
 
 private:
