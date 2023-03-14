@@ -44,8 +44,12 @@ add_custom_command(
             ${CMAKE_CURRENT_BINARY_DIR}/package/logic-api.d.ts
             ${CMAKE_CURRENT_BINARY_DIR}/package/renderer-api.d.ts
             ${CMAKE_CURRENT_BINARY_DIR}/src/gen-api-base.cpp
+            ${CMAKE_CURRENT_BINARY_DIR}/src/gen-api-base.h
             ${CMAKE_CURRENT_BINARY_DIR}/src/gen-logic-api.cpp
+            ${CMAKE_CURRENT_BINARY_DIR}/src/gen-logic-api.h
             ${CMAKE_CURRENT_BINARY_DIR}/src/gen-renderer-api.cpp
+            ${CMAKE_CURRENT_BINARY_DIR}/src/gen-renderer-api.h
+            ${CMAKE_CURRENT_BINARY_DIR}/src/gen.h
         MAIN_DEPENDENCY
             generate-api-bindings.py
         DEPENDS

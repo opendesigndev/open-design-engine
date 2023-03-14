@@ -23,7 +23,7 @@ FROM ode-debian-build-config-from-${VCPKG_COMMIT_SOURCE} AS ode-debian-build-bas
 ENV VCPKG_DEFAULT_TRIPLET x64-linux-release
 ENV VCPKG_DEFAULT_HOST_TRIPLET x64-linux-release
 
-RUN apt update -qq && apt install -qqy curl zip unzip tar clang make cmake wget git python3 bison automake autoconf autoconf-archive libosmesa6-dev pkg-config python3-distutils patchelf
+RUN apt update -qq && apt install -qqy curl zip unzip tar clang make cmake wget git python3 bison automake autoconf autoconf-archive libosmesa6-dev pkg-config python3-distutils patchelf node
 
 RUN git clone https://github.com/microsoft/vcpkg /opt/vcpkg && cd /opt/vcpkg && git checkout `cat /home/vcpkg-commit`
 RUN /opt/vcpkg/bootstrap-vcpkg.sh -disableMetrics && ln -s /opt/vcpkg/vcpkg /usr/bin/vcpkg
