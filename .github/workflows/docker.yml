@@ -112,7 +112,7 @@ jobs:
       - name: Copy artifacts
         run: |
           mkdir build-artifacts
-          docker create --name ode-build-inst ${{ fromJSON(steps.meta.outputs.json).tags[1] }} ode-renderer /opt/ode-renderer/bin/ode-renderer --version
+          docker create --name ode-build-inst ${{ fromJSON(steps.meta.outputs.json).tags[1] }} ode-renderer
           docker cp ode-build-inst:/opt/ode-renderer build-artifacts/
           docker rm -v ode-build-inst
       - name: Build artifacts
