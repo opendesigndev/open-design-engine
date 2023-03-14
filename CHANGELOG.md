@@ -1,4 +1,8 @@
 
+## Version 0.2.3 (2023-03-13)
+
+- "Textify" submodule replaced by overhauled Open Design Text Renderer
+
 ## Version 0.2.2 (2023-03-07)
 
 - Octopus 3.0.2 compatibility (glows not removed yet)

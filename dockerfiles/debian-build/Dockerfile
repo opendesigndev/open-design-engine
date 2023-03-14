@@ -1,7 +1,24 @@
 
 # Cachables
 
-FROM debian:11-slim@sha256:9b42b2e7eddd84eaddb67b45567cdc0e03ec826bf252352f300147cfb8ce5a6d AS ode-debian-build-base
+ARG VCPKG_COMMIT_SOURCE=manifest
+
+FROM public.ecr.aws/debian/debian:11.6-slim AS ode-debian-build-config-from-arg
+
+# When setting VCPKG_COMMIT, also set VCPKG_COMMIT_SOURCE=arg
+ARG VCPKG_COMMIT=
+RUN echo $VCPKG_COMMIT > /home/vcpkg-commit
+
+# Optional intermediate target that can be skipped when vcpkg commit is explicitly specified
+# If the vcpkg commit is not set, it will be deduced from vcpkg.json
+# The reason this can be skipped is so that other changes in vcpkg.json (e.g. ODE version) don't invalidate the ode-debian-build-base target
+FROM ode-debian-build-config-from-arg AS ode-debian-build-config-from-manifest
+
+ONBUILD COPY vcpkg.json /tmp/vcpkg.json
+ONBUILD RUN apt update -qq && apt install -qqy jq
+ONBUILD RUN jq -r '."builtin-baseline"' /tmp/vcpkg.json > /home/vcpkg-commit
+
+FROM ode-debian-build-config-from-${VCPKG_COMMIT_SOURCE} AS ode-debian-build-base
 
 ARG VCPKG_COMMIT
 
@@ -10,7 +27,7 @@ ENV VCPKG_DEFAULT_HOST_TRIPLET x64-linux-release
 
 RUN apt update -qq && apt install -qqy curl zip unzip tar clang make cmake wget git python3 bison automake autoconf autoconf-archive libosmesa6-dev pkg-config python3-distutils patchelf
 
-RUN git clone https://github.com/microsoft/vcpkg /opt/vcpkg && cd /opt/vcpkg && git checkout $VCPKG_COMMIT
+RUN git clone https://github.com/microsoft/vcpkg /opt/vcpkg && cd /opt/vcpkg && git checkout `cat /home/vcpkg-commit`
 RUN /opt/vcpkg/bootstrap-vcpkg.sh -disableMetrics && ln -s /opt/vcpkg/vcpkg /usr/bin/vcpkg
 
 RUN vcpkg --triplet x64-linux-release --host-triplet x64-linux-release install freetype harfbuzz[icu] icu libpng libjpeg-turbo tiff giflib libwebp skia[core,freetype]

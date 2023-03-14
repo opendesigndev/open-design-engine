@@ -75,6 +75,8 @@ ODE_Result ode_result(DesignError::Error error) {
             return ODE_RESULT_TEXT_LAYER_ERROR;
         case DesignError::WRONG_LAYER_TYPE:
             return ODE_RESULT_WRONG_LAYER_TYPE;
+        case DesignError::SINGULAR_TRANSFORMATION:
+            return ODE_RESULT_SINGULAR_TRANSFORMATION;
         case DesignError::INVALID_DESIGN:
             return ODE_RESULT_INVALID_DESIGN;
         case DesignError::INVALID_COMPONENT:
@@ -403,6 +405,27 @@ ODE_Result ODE_API ode_component_modifyLayer(ODE_ComponentHandle component, ODE_
         return ODE_RESULT_OCTOPUS_PARSE_ERROR;
     }
     return ode_result(component.ptr->accessor.modifyLayer(ode_stringDeref(layerId), change).type());
+}
+
+ODE_Result ODE_API ode_component_transformLayer(ODE_ComponentHandle component, ODE_StringRef layerId, ODE_TransformationBasis basis, ODE_Transformation transformation) {
+    ODE_ASSERT(layerId.data);
+    if (!component.ptr)
+        return ODE_RESULT_INVALID_COMPONENT;
+    octopus::Fill::Positioning::Origin origin;
+    switch (basis) {
+        case ODE_TRANSFORMATION_BASIS_LAYER:
+            origin = octopus::Fill::Positioning::Origin::LAYER;
+            break;
+        case ODE_TRANSFORMATION_BASIS_PARENT_LAYER:
+            origin = octopus::Fill::Positioning::Origin::PARENT;
+            break;
+        case ODE_TRANSFORMATION_BASIS_PARENT_COMPONENT:
+            origin = octopus::Fill::Positioning::Origin::COMPONENT;
+            break;
+        default:
+            return ODE_RESULT_INVALID_ENUM_VALUE;
+    }
+    return ode_result(component.ptr->accessor.transformLayer(ode_stringDeref(layerId), origin, TransformationMatrix(transformation.matrix)).type());
 }
 
 ODE_Result ODE_API ode_pr1_component_loadAnimation(ODE_ComponentHandle component, ODE_StringRef animationDefinition, ODE_ParseError *parseError) {

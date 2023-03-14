@@ -23,6 +23,16 @@ export type LayerType_Map = {
     COMPONENT_INSTANCE: 6;
 };
 
+/** The coordinate space a transformation matrix is defined in */
+export const TransformationBasis: Enum<TransformationBasis_Map>;
+export type TransformationBasis = EnumValue<TransformationBasis_Index>;
+export type TransformationBasis_Index = TransformationBasis_Map[keyof TransformationBasis_Map];
+export type TransformationBasis_Map = {
+    LAYER: 0;
+    PARENT_LAYER: 1;
+    PARENT_COMPONENT: 2;
+};
+
 /** An array of 6 ODE_Scalars */
 export type Scalar_array_6 = readonly [
     ode.Scalar,
@@ -321,6 +331,20 @@ export function component_modifyLayer(
     layerId: ode.StringRef,
     layerChangeOctopusString: ode.StringRef,
     parseError: ode.ParseError,
+): ode.Result;
+
+/**
+ * Permanently applies a transformation matrix to a single layer within a component
+ * @param component target component
+ * @param layerId ID of layer to be transformed
+ * @param basis specifies the coordinate space of the transformation matrix
+ * @param transformation the transformation matrix
+ */
+export function component_transformLayer(
+    component: ode.ComponentHandle,
+    layerId: ode.StringRef,
+    basis: ode.TransformationBasis,
+    transformation: ode.Transformation,
 ): ode.Result;
 
 /**

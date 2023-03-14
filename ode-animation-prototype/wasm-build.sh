@@ -7,7 +7,6 @@ DOCKER_BUILD=false
 CMAKE_BUILD_TYPE=Release
 BUILD_DIRECTORY=build/wasm-release
 DOCKER_BUILD_ARGS=
-DOCKER_RUN_ARGS=
 NPM_RELEASE=false
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -24,7 +23,6 @@ while [[ $# -gt 0 ]]; do
       ;;
     publish|-publish|--publish)
       NPM_RELEASE=true
-      DOCKER_RUN_ARGS="-v $HOME/.npmrc:/host_npmrc:ro"
       DOCKER_BUILD_ARGS=--publish
       shift
       ;;
@@ -40,14 +38,12 @@ done
 # 2. run self in docker
 if [ $DOCKER_BUILD = true ]; then
     DOCKER_TAG=ode-animation-wasm-builder
-    docker build docker -t $DOCKER_TAG
     cd .. # project root
+    docker build . -f ode-animation-prototype/docker/Dockerfile -t $DOCKER_TAG
     docker run \
         --rm \
         -v $(pwd):/src \
         -e NPM_TOKEN=$NPM_TOKEN \
-        $DOCKER_RUN_ARGS \
-        -u $(id -u):$(id -g) \
         $DOCKER_TAG \
         bash ode-animation-prototype/wasm-build.sh $DOCKER_BUILD_ARGS
     exit 0
@@ -59,14 +55,9 @@ cd .. # project root
 if [ $NPM_RELEASE = true ]; then
   if [ -n "${NPM_TOKEN}" ]; then
     echo "Using NPM_TOKEN environment variable"
-  elif [ -f /host_npmrc ]; then
-    echo "Using host_npmrc environment variable"
-    export NPM_TOKEN=`cat /host_npmrc | grep '//registry.npmjs.org/:_authToken' | cut -d = -f 2`
   fi
   npm whoami
 fi
-
-./third-party/skia/build.sh
 
 # Make sure that local changes in package directory do not make it to npm
 PACKAGE_DIRECTORY="${BUILD_DIRECTORY}/ode-animation-prototype/package"

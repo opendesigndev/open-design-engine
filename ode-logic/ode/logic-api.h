@@ -27,6 +27,13 @@ typedef enum {
     ODE_LAYER_TYPE_COMPONENT_INSTANCE = 6,
 } ODE_LayerType;
 
+/// The coordinate space a transformation matrix is defined in
+typedef enum {
+    ODE_TRANSFORMATION_BASIS_LAYER = 0,
+    ODE_TRANSFORMATION_BASIS_PARENT_LAYER = 1,
+    ODE_TRANSFORMATION_BASIS_PARENT_COMPONENT = 2,
+} ODE_TransformationBasis;
+
 // Data structures
 
 /// A 3x2 affine transformation matrix in column-major order
@@ -276,6 +283,15 @@ ODE_Result ODE_FUTURE_API ode_component_removeLayer(ODE_ComponentHandle componen
  * @param parseError - output argument to store details of parse error if ODE_RESULT_OCTOPUS_PARSE_ERROR is returned. Can be null if this information is not needed.
  */
 ODE_Result ODE_API ode_component_modifyLayer(ODE_ComponentHandle component, ODE_StringRef layerId, ODE_StringRef layerChangeOctopusString, ODE_ParseError *parseError);
+
+/**
+ * Permanently applies a transformation matrix to a single layer within a component
+ * @param component - target component
+ * @param layerId - ID of layer to be transformed
+ * @param basis - specifies the coordinate space of the transformation matrix
+ * @param transformation - the transformation matrix
+ */
+ODE_Result ODE_API ode_component_transformLayer(ODE_ComponentHandle component, ODE_StringRef layerId, ODE_TransformationBasis basis, ODE_Transformation transformation);
 
 /**
  * PROTOTYPE - Loads specification of animations for a given component

@@ -29,6 +29,11 @@ EMSCRIPTEN_BINDINGS(ode) {
         .value("COMPONENT_REFERENCE", ODE_LAYER_TYPE_COMPONENT_REFERENCE)
         .value("COMPONENT_INSTANCE", ODE_LAYER_TYPE_COMPONENT_INSTANCE);
 
+    enum_<ODE_TransformationBasis>("TransformationBasis")
+        .value("LAYER", ODE_TRANSFORMATION_BASIS_LAYER)
+        .value("PARENT_LAYER", ODE_TRANSFORMATION_BASIS_PARENT_LAYER)
+        .value("PARENT_COMPONENT", ODE_TRANSFORMATION_BASIS_PARENT_COMPONENT);
+
     value_array<std::array<ODE_Scalar, 6> >("Scalar_array_6")
         .element(emscripten::index<0>())
         .element(emscripten::index<1>())
@@ -101,6 +106,7 @@ EMSCRIPTEN_BINDINGS(ode) {
     function("design_getComponent", &ode_design_getComponent, allow_raw_pointers());
     function("component_addLayer", &ode_component_addLayer, allow_raw_pointers());
     function("component_modifyLayer", &ode_component_modifyLayer, allow_raw_pointers());
+    function("component_transformLayer", &ode_component_transformLayer, allow_raw_pointers());
     function("pr1_component_loadAnimation", &ode_pr1_component_loadAnimation, allow_raw_pointers());
     function("pr1_component_getAnimationValueAtTime", &ode_pr1_component_getAnimationValueAtTime, allow_raw_pointers());
     function("component_listLayers", &ode_component_listLayers, allow_raw_pointers());
