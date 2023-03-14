@@ -96,13 +96,13 @@ struct DesignEditorWindow::Internal {
     } context;
 
     struct ZoomContext {
-        float resultImageZoom = 1.0f;
+        float designImageZoom = 1.0f;
 
         const float minZoom = 1.0f;
         const float maxZoom = 10.0f;
 
         void operator+=(float v) {
-            resultImageZoom = std::clamp(resultImageZoom + v, minZoom, maxZoom);
+            designImageZoom = std::clamp(designImageZoom + v, minZoom, maxZoom);
         }
         void operator-=(float v) {
             *this += -v;
@@ -117,6 +117,28 @@ struct DesignEditorWindow::Internal {
         std::string filePath = ".";
         std::string fileName;
     } fileDialogContext;
+
+    struct Icons {
+        TexturePtr cursorTexture = nullptr;
+        TexturePtr addRectangleTexture = nullptr;
+        TexturePtr addEllipseTexture = nullptr;
+        TexturePtr addTextTexture = nullptr;
+    } icons;
+
+    enum class Mode {
+        SELECT,
+        ADD_RECTANGLE,
+        ADD_ELLIPSE,
+        ADD_TEXT,
+    } mode = Mode::SELECT;
+
+    struct LayerPropertiesContext {
+        Vector2f translation;
+        Vector2f scale;
+        float rotation;
+        std::string strokeFillText;
+        std::vector<std::string> effects;
+    } layerPropertiesContext;
 
 
     int initialize() {
@@ -462,11 +484,52 @@ void DesignEditorWindow::drawLayerListWidget() {
 void DesignEditorWindow::drawDesignViewWidget() {
     ImGui::Begin("Interactive Design View");
 
+    drawImGuiWidgetTexture(data->icons.cursorTexture->getInternalGLHandle(),
+                           data->icons.cursorTexture->dimensions().x,
+                           data->icons.cursorTexture->dimensions().y,
+                           data->zoomContext.designImageZoom);
+
     ImGui::End();
 }
 
 void DesignEditorWindow::drawLayerPropertiesWidget() {
     ImGui::Begin("Layer Properties");
+
+    ImGui::Text("Translation:");
+    ImGui::SameLine(100);
+    ImGui::DragFloat2("##translation", &data->layerPropertiesContext.translation.x);
+
+    ImGui::Text("Scale:");
+    ImGui::SameLine(100);
+    ImGui::DragFloat2("##scale", &data->layerPropertiesContext.scale.x);
+
+    ImGui::Text("Rotation:");
+    ImGui::SameLine(100);
+    ImGui::DragFloat("##rot", &data->layerPropertiesContext.rotation);
+
+    ImGui::Text("Fill & stroke / text:");
+    ImGui::Dummy(ImVec2(20.0f, 0.0f));
+    ImGui::SameLine(50);
+    ImGui::InputText("##fill", data->layerPropertiesContext.strokeFillText.data(), 50);
+
+    ImGui::Text("Effects:");
+    ImGui::SameLine(380);
+    if (ImGui::SmallButton("+")) {
+        data->layerPropertiesContext.effects.emplace_back();
+    }
+    int effectToRemove = -1;
+    for (size_t ei = 0; ei < data->layerPropertiesContext.effects.size(); ++ei) {
+        ImGui::Dummy(ImVec2(20.0f, 0.0f));
+        ImGui::SameLine(50);
+        ImGui::InputText((std::string("##effect")+std::to_string(ei)).c_str(), data->layerPropertiesContext.effects[ei].data(), 50);
+        ImGui::SameLine();
+        if (ImGui::SmallButton((std::string("-##remove")+std::to_string(ei)).c_str())) {
+            effectToRemove = static_cast<int>(ei);
+        }
+    }
+    if (effectToRemove >= 0 && effectToRemove < static_cast<int>(data->layerPropertiesContext.effects.size())) {
+        data->layerPropertiesContext.effects.erase(data->layerPropertiesContext.effects.begin()+effectToRemove);
+    }
 
     ImGui::End();
 }
