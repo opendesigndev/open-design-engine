@@ -44,6 +44,7 @@ RUN make install SYSTEM=linux-osmesa -C /home/glew-2.2.0
 FROM ode-debian-build-base AS ode-debian-build
 
 ARG ODE_BUILD_COMMIT
+ARG ODE_THIS_COMMIT
 
 RUN mkdir -p /home/ode
 COPY . /home/ode
@@ -64,6 +65,7 @@ RUN cmake \
     -DODE_SKIA_GPU=OFF \
     -DCMAKE_CXX_STANDARD_LIBRARIES=-lOSMesa \
     -DODE_BUILD_COMMIT=$ODE_BUILD_COMMIT \
+    -DODE_BUILD_COMMIT=$ODE_THIS_COMMIT \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER=clang \
     -DCMAKE_CXX_COMPILER=clang++ \

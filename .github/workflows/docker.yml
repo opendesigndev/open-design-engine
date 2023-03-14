@@ -45,6 +45,7 @@ jobs:
             echo "ON_TAG=true" >> $GITHUB_ENV;
           fi
           { echo -n "VCPKG_COMMIT="; jq -r '."builtin-baseline"' vcpkg.json; } >> $GITHUB_ENV
+          { echo -n "ODE_THIS_COMMIT="; git log -n 1 "--pretty=format:%h_%cs"; echo; } >> $GITHUB_ENV
           { echo -n "GITLAB_BASE_CACHE=${{ env.GITLAB_BASE_CACHE_IMAGE }}:cache-"; {
             jq -r '."builtin-baseline"' vcpkg.json;
             # Portion of Dockerfile before "FROM ode-debian-build-base "
@@ -105,6 +106,7 @@ jobs:
             VCPKG_COMMIT_SOURCE=arg
             VCPKG_COMMIT=${{ env.VCPKG_COMMIT }}
             ODE_BUILD_COMMIT="${{ github.sha }}"
+            ODE_THIS_COMMIT=${{ env.ODE_THIS_COMMIT }}
           cache-from: type=registry,ref=${{ env.GITLAB_BASE_CACHE }}
       - name: Adding output tags to summary
         run: |
