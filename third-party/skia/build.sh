@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 if [ -d "${0%/*}" ]; then cd "${0%/*}" ; fi # go to directory containing this script
 
