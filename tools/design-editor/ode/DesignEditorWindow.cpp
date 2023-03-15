@@ -17,10 +17,12 @@
 #include "DesignEditorWidgetsContext.h"
 #include "DesignEditorLoadedOctopus.h"
 #include "DesignEditorImageVisualizationParams.h"
+#include "DesignEditorRenderer.h"
 
 namespace {
 
 #define CHECK(x) do { if ((x)) return -1; } while (false)
+#define CHECK_IMEND(x) do { if ((x)) { ImGui::End(); return; } } while (false)
 
 // TODO move to common API utils
 static ODE_StringRef stringRef(const std::string &str) {
@@ -57,6 +59,99 @@ void fileDropCallback(GLFWwindow* window, int count, const char** paths) {
     }
 }
 
+std::string layerTypeToShortString(ODE_LayerType layerType) {
+    switch (layerType) {
+        case ODE_LAYER_TYPE_UNSPECIFIED: return "-";
+        case ODE_LAYER_TYPE_SHAPE: return "S";
+        case ODE_LAYER_TYPE_TEXT: return "T";
+        case ODE_LAYER_TYPE_GROUP: return "G";
+        case ODE_LAYER_TYPE_MASK_GROUP: return "M";
+        case ODE_LAYER_TYPE_COMPONENT_REFERENCE: return "CR";
+        case ODE_LAYER_TYPE_COMPONENT_INSTANCE: return "CI";
+    }
+    return "-";
+}
+
+std::string layerTypeToString(ODE_LayerType layerType) {
+    switch (layerType) {
+        case ODE_LAYER_TYPE_UNSPECIFIED: return "-";
+        case ODE_LAYER_TYPE_SHAPE: return "Shape";
+        case ODE_LAYER_TYPE_TEXT: return "Text";
+        case ODE_LAYER_TYPE_GROUP: return "Group";
+        case ODE_LAYER_TYPE_MASK_GROUP: return "Mask Group";
+        case ODE_LAYER_TYPE_COMPONENT_REFERENCE: return "Component Reference";
+        case ODE_LAYER_TYPE_COMPONENT_INSTANCE: return "Component Instance";
+    }
+    return "-";
+}
+
+
+void drawLayerListRecursiveStep(const ODE_LayerList &layerList, int idx, int &idxClicked) {
+    if (idx >= layerList.n) {
+        return;
+    }
+
+    const auto areEq = [](const ODE_StringRef &a, const ODE_StringRef &b)->bool {
+        return a.length == b.length && strcmp(a.data, b.data) == 0;
+    };
+
+    const ODE_LayerList::Entry &rootLayer = layerList.entries[idx];
+    const bool hasAnyChildren = (idx+1 < layerList.n) && areEq(layerList.entries[idx+1].parentId, rootLayer.id);
+    const std::string layerLabel = "["+layerTypeToShortString(rootLayer.type)+"] "+std::string(rootLayer.name.data);
+
+    if (hasAnyChildren) {
+        // TODO: Improve these open flags
+        if (ImGui::TreeNodeEx((layerLabel+std::string("##")+std::string(rootLayer.id.data)).c_str(), ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick)) {
+            if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
+                idxClicked = idx;
+            }
+            for (int i = idx+1; i < layerList.n; i++) {
+                const ODE_LayerList::Entry &entry = layerList.entries[i];
+                if (areEq(entry.parentId, rootLayer.id)) {
+                    drawLayerListRecursiveStep(layerList, i, idxClicked);
+                }
+            }
+            ImGui::TreePop();
+        }
+    } else {
+        ImGui::BulletText("%s", layerLabel.c_str());
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
+            idxClicked = idx;
+        }
+    }
+}
+
+// TODO: Cleanup:
+const char *blendModes[] = {
+    "NORMAL",
+    "PASS_THROUGH",
+    "COLOR",
+    "COLOR_BURN",
+    "COLOR_DODGE",
+    "DARKEN",
+    "DARKER_COLOR",
+    "DIFFERENCE",
+    "DIVIDE",
+    "EXCLUSION",
+    "HARD_LIGHT",
+    "HARD_MIX",
+    "HUE",
+    "LIGHTEN",
+    "LIGHTER_COLOR",
+    "LINEAR_BURN",
+    "LINEAR_DODGE",
+    "LINEAR_LIGHT",
+    "LUMINOSITY",
+    "MULTIPLY",
+    "OVERLAY",
+    "PIN_LIGHT",
+    "SATURATION",
+    "SCREEN",
+    "SOFT_LIGHT",
+    "SUBTRACT",
+    "VIVID_LIGHT",
+};
+
 }
 
 struct DesignEditorWindow::Internal {
@@ -74,6 +169,10 @@ struct DesignEditorWindow::Internal {
     DesignEditorLoadedOctopus loadedOctopus;
     /// A flag that is true just after a new Octopus file is loaded
     bool octopusFileReloaded = false;
+
+    int selectedLayerId = -1;
+
+    DesignEditorRenderer renderer;
 
     /// Current and previous context of the ImGui widgets displayed
     DesignEditorWidgetsContext widgetsContext;
@@ -93,6 +192,8 @@ struct DesignEditorWindow::Internal {
         ODE_PR1_AnimationRendererHandle renderer;
         // Loaded component
         ODE_ComponentHandle component;
+        ODE_Bitmap bitmap;
+        ODE_PR1_FrameView frameView;
     } context;
 
     struct ZoomContext {
@@ -117,6 +218,10 @@ struct DesignEditorWindow::Internal {
         std::string filePath = ".";
         std::string fileName;
     } fileDialogContext;
+
+    struct TexturesContext {
+        TexturePtr designImageTexture = nullptr;
+    } texturesContext;
 
     struct Icons {
         TexturePtr cursorTexture = nullptr;
@@ -145,24 +250,41 @@ struct DesignEditorWindow::Internal {
         CHECK(ode_initializeEngineAttributes(&context.engineAttribs));
         CHECK(ode_createEngine(&context.engine, &context.engineAttribs));
         // TODO: This context is in conflict with the ImGui context.
-//        CHECK(ode_createRendererContext(context.engine, &context.rc, stringRef("Design Editor")));
-//        CHECK(ode_createDesignImageBase(context.rc, context.design, &context.imageBase));
+        CHECK(ode_createRendererContext(context.engine, &context.rc, stringRef("Design Editor"), gc));
         return 0;
     }
 
-    int loadOctopus(const std::string &octopusJson) {
+    int loadOctopus(const std::string &octopusJson, const FilePath &octopusPath, const FilePath &fontDir) {
         if (context.design.ptr) {
             CHECK(ode_destroyDesign(context.design));
         }
 
         CHECK(ode_createDesign(context.engine, &context.design));
+
+        // TODO: Image base:
+        CHECK(ode_createDesignImageBase(context.rc, context.design, &context.imageBase));
+        reinterpret_cast<ImageBase *>(context.imageBase.ptr)->setImageDirectory(octopusPath.parent());
+
         CHECK(ode_design_addComponentFromOctopusString(context.design, &context.component, context.metadata, stringRef(octopusJson), nullptr));
+
+        ODE_StringList missingFonts;
+        CHECK(ode_design_listMissingFonts(context.design, &missingFonts));
+
+        for (int i = 0; i < missingFonts.n; ++i) {
+            if (missingFonts.entries[i].length <= 0) {
+                continue;
+            }
+            const std::string pathStr = (std::string)fontDir+std::string("/")+std::string(missingFonts.entries[i].data)+std::string(".ttf");
+            const ODE_StringRef path { pathStr.c_str(), static_cast<int>(strlen(path.data)) };
+            ode_design_loadFontFile(context.design, missingFonts.entries[i], path, ODE_StringRef());
+        }
 
         CHECK(ode_component_listLayers(context.component, &loadedOctopus.layerList));
 
-//        ODE_Bitmap bitmap;
-//        ODE_PR1_FrameView frameView;
-//        CHECK(ode_pr1_drawComponent(context.rc, context.component, context.imageBase, &bitmap, &frameView));
+        GLFWwindow *window = gc.getNativeHandle<GLFWwindow *>();
+        glfwGetFramebufferSize(window, &context.frameView.width, &context.frameView.height);
+        context.frameView.scale = 1;
+        CHECK(ode_pr1_drawComponent(context.rc, context.component, context.imageBase, &context.bitmap, &context.frameView));
 
         return 0;
     }
@@ -323,7 +445,7 @@ bool DesignEditorWindow::readOctopusFile(const FilePath &octopusPath) {
         return false;
     }
 
-    const int loadError = data->loadOctopus(data->loadedOctopus.octopusJson);
+    const int loadError = data->loadOctopus(data->loadedOctopus.octopusJson, octopusPath, fontDirectory);
     return loadError == 0;
 }
 
@@ -428,52 +550,15 @@ void DesignEditorWindow::drawToolbarWidget() {
     ImGui::End();
 }
 
-void drawLayerListRecursiveStep(const ODE_LayerList &layerList, int idx) {
-    if (idx >= layerList.n) {
-        return;
-    }
-
-    const auto areEq = [](const ODE_StringRef &a, const ODE_StringRef &b)->bool {
-        return a.length == b.length && strcmp(a.data, b.data) == 0;
-    };
-
-    const ODE_LayerList::Entry &rootLayer = layerList.entries[idx];
-    const bool hasAnyChildren = (idx+1 < layerList.n) && areEq(layerList.entries[idx+1].parentId, rootLayer.id);
-
-    const std::string layerTypeStr = [](ODE_LayerType layerType) {
-        switch (layerType) {
-            case ODE_LAYER_TYPE_UNSPECIFIED: return "-";
-            case ODE_LAYER_TYPE_SHAPE: return "S";
-            case ODE_LAYER_TYPE_TEXT: return "T";
-            case ODE_LAYER_TYPE_GROUP: return "G";
-            case ODE_LAYER_TYPE_MASK_GROUP: return "M";
-            case ODE_LAYER_TYPE_COMPONENT_REFERENCE: return "CR";
-            case ODE_LAYER_TYPE_COMPONENT_INSTANCE: return "CI";
-        }
-        return "-";
-    } (rootLayer.type);
-    const std::string layerLabel = "["+layerTypeStr+"] "+std::string(rootLayer.name.data);
-
-    if (hasAnyChildren) {
-        if (ImGui::TreeNode(layerLabel.c_str())) {
-            for (int i = idx+1; i < layerList.n; i++) {
-                const ODE_LayerList::Entry &entry = layerList.entries[i];
-                if (areEq(entry.parentId, rootLayer.id)) {
-                    drawLayerListRecursiveStep(layerList, i);
-                }
-            }
-            ImGui::TreePop();
-        }
-    } else {
-        ImGui::BulletText("%s", layerLabel.c_str());
-    }
-}
-
 void DesignEditorWindow::drawLayerListWidget() {
     ImGui::Begin("Layer List");
 
     if (data->loadedOctopus.isLoaded()) {
-        drawLayerListRecursiveStep(data->loadedOctopus.layerList, 0);
+        int idxClicked = -1;
+        drawLayerListRecursiveStep(data->loadedOctopus.layerList, 0, idxClicked);
+        if (idxClicked >= 0) {
+            data->selectedLayerId = idxClicked;
+        }
     } else {
         ImGui::Text("---");
     }
@@ -484,51 +569,165 @@ void DesignEditorWindow::drawLayerListWidget() {
 void DesignEditorWindow::drawDesignViewWidget() {
     ImGui::Begin("Interactive Design View");
 
-    drawImGuiWidgetTexture(data->icons.cursorTexture->getInternalGLHandle(),
-                           data->icons.cursorTexture->dimensions().x,
-                           data->icons.cursorTexture->dimensions().y,
-                           data->zoomContext.designImageZoom);
+    const ODE_Bitmap &bmp = data->context.bitmap;
+    if (bmp.width > 0 && bmp.height > 0) {
+        ode::Bitmap bitmap(PixelFormat::PREMULTIPLIED_RGBA, reinterpret_cast<const void*>(bmp.pixels), bmp.width, bmp.height);
+
+        const ScaledBounds placement {0,0,static_cast<double>(bitmap.width()),static_cast<double>(bitmap.height())};
+        data->texturesContext.designImageTexture = data->renderer.blendImageToTexture(std::move(bitmap), placement, 2);
+
+        drawImGuiWidgetTexture(data->texturesContext.designImageTexture->getInternalGLHandle(),
+                               data->texturesContext.designImageTexture->dimensions().x,
+                               data->texturesContext.designImageTexture->dimensions().y,
+                               data->zoomContext.designImageZoom);
+    }
 
     ImGui::End();
 }
 
 void DesignEditorWindow::drawLayerPropertiesWidget() {
-    ImGui::Begin("Layer Properties");
+    ImGui::Begin("Selected Layer Properties");
 
-    ImGui::Text("Translation:");
-    ImGui::SameLine(100);
-    ImGui::DragFloat2("##translation", &data->layerPropertiesContext.translation.x);
+    if (data->selectedLayerId >= 0 && data->selectedLayerId < data->loadedOctopus.layerList.n) {
+        const ODE_LayerList::Entry &selectedLayer = data->loadedOctopus.layerList.entries[data->selectedLayerId];
 
-    ImGui::Text("Scale:");
-    ImGui::SameLine(100);
-    ImGui::DragFloat2("##scale", &data->layerPropertiesContext.scale.x);
+        bool layerVisible = true; // TODO: Get layer visibility
+        float layerOpacity = 1.0f; // TODO: Get layer opacity
+        const char *blendModeStr = "NORMAL"; // TODO: Get layer blend mode as string
 
-    ImGui::Text("Rotation:");
-    ImGui::SameLine(100);
-    ImGui::DragFloat("##rot", &data->layerPropertiesContext.rotation);
+        ODE_LayerMetrics layerMetrics;
+        CHECK_IMEND(ode_component_getLayerMetrics(data->context.component, selectedLayer.id, &layerMetrics));
 
-    ImGui::Text("Fill & stroke / text:");
-    ImGui::Dummy(ImVec2(20.0f, 0.0f));
-    ImGui::SameLine(50);
-    ImGui::InputText("##fill", data->layerPropertiesContext.strokeFillText.data(), 50);
+        const float a = static_cast<float>(layerMetrics.transformation.matrix[0]);
+        const float b = static_cast<float>(layerMetrics.transformation.matrix[2]);
+        const float c = static_cast<float>(layerMetrics.transformation.matrix[1]);
+        const float d = static_cast<float>(layerMetrics.transformation.matrix[3]);
+        const float trX = static_cast<float>(layerMetrics.transformation.matrix[4]);
+        const float trY = static_cast<float>(layerMetrics.transformation.matrix[5]);
 
-    ImGui::Text("Effects:");
-    ImGui::SameLine(380);
-    if (ImGui::SmallButton("+")) {
-        data->layerPropertiesContext.effects.emplace_back();
-    }
-    int effectToRemove = -1;
-    for (size_t ei = 0; ei < data->layerPropertiesContext.effects.size(); ++ei) {
+        Vector2f translation {
+            trX,
+            trY,
+        };
+        Vector2f scale {
+            sqrt(a*a+b*b),
+            sqrt(c*c+d*d),
+        };
+        float rotation = atan(c/d) * (180.0f/M_PI);
+
+        const Vector2f origTranslation = translation;
+        const Vector2f origScale = scale;
+        const float origRotation = rotation;
+
+        ImGui::Text("%s", "ID:");
+        ImGui::SameLine(100);
+        ImGui::Text("%s", selectedLayer.id.data);
+
+        ImGui::Text("%s", "Name:");
+        ImGui::SameLine(100);
+        ImGui::Text("%s", selectedLayer.name.data);
+
+        ImGui::Text("%s", "Type:");
+        ImGui::SameLine(100);
+        ImGui::Text("%s", layerTypeToString(selectedLayer.type).c_str());
+
+        ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
+
+        ImGui::Text("Visible:");
+        ImGui::SameLine(100);
+        if (ImGui::Checkbox("##layer-visibility", &layerVisible)) {
+            // TODO: Update layer visiblity
+            CHECK_IMEND(ode_pr1_drawComponent(data->context.rc, data->context.component, data->context.imageBase, &data->context.bitmap, &data->context.frameView));
+        }
+
+        ImGui::Text("Opacity:");
+        ImGui::SameLine(100);
+        if (ImGui::DragFloat("##layer-opacity", &layerOpacity)) {
+            // TODO: Update layer opacity
+            CHECK_IMEND(ode_pr1_drawComponent(data->context.rc, data->context.component, data->context.imageBase, &data->context.bitmap, &data->context.frameView));
+        }
+
+        ImGui::Text("Bend mode:");
+        ImGui::SameLine(100);
+        if (ImGui::BeginCombo("##layer-blend-mode", blendModeStr)) {
+            for (int n = 0; n < IM_ARRAYSIZE(blendModes); n++) {
+                bool isSelected = (blendModeStr == blendModes[n]);
+                if (ImGui::Selectable(blendModes[n], isSelected)) {
+                    // TODO: Update layer blend mode
+                    blendModeStr = blendModes[n];
+                }
+                if (isSelected) {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+        }
+
+        ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
+
+        ImGui::Text("Translation:");
+        ImGui::SameLine(100);
+        if (ImGui::DragFloat2("##layer-translation", &translation.x, 1.0f)) {
+            const ODE_Transformation newTransformation { 1,0,0,1,translation.x-origTranslation.x,translation.y-origTranslation.y };
+            CHECK_IMEND(ode_component_transformLayer(data->context.component, selectedLayer.id, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation));
+            CHECK_IMEND(ode_pr1_drawComponent(data->context.rc, data->context.component, data->context.imageBase, &data->context.bitmap, &data->context.frameView));
+        }
+
+        ImGui::Text("Scale:");
+        ImGui::SameLine(100);
+        if (ImGui::DragFloat2("##layer-scale", &scale.x, 0.05f, 0.0f, 100.0f)) {
+            const ODE_Transformation newTransformation { scale.x/origScale.x,0,0,scale.y/origScale.y,0,0 };
+            CHECK_IMEND(ode_component_transformLayer(data->context.component, selectedLayer.id, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation));
+            CHECK_IMEND(ode_pr1_drawComponent(data->context.rc, data->context.component, data->context.imageBase, &data->context.bitmap, &data->context.frameView));
+        }
+
+        ImGui::Text("Rotation:");
+        ImGui::SameLine(100);
+        if (ImGui::DragFloat("##layer-rotation", &rotation)) {
+            const float rotationChangeRad = (rotation-origRotation)*M_PI/180.0f;
+            const ODE_Transformation newTransformation { cos(rotationChangeRad),-sin(rotationChangeRad),sin(rotationChangeRad),cos(rotationChangeRad),0,0 };
+            CHECK_IMEND(ode_component_transformLayer(data->context.component, selectedLayer.id, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation));
+            CHECK_IMEND(ode_pr1_drawComponent(data->context.rc, data->context.component, data->context.imageBase, &data->context.bitmap, &data->context.frameView));
+        }
+
+        ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
+
+        ImGui::Text("Fill & stroke / text:");
         ImGui::Dummy(ImVec2(20.0f, 0.0f));
         ImGui::SameLine(50);
-        ImGui::InputText((std::string("##effect")+std::to_string(ei)).c_str(), data->layerPropertiesContext.effects[ei].data(), 50);
-        ImGui::SameLine();
-        if (ImGui::SmallButton((std::string("-##remove")+std::to_string(ei)).c_str())) {
-            effectToRemove = static_cast<int>(ei);
+        ImGui::InputText("##layer-fill", data->layerPropertiesContext.strokeFillText.data(), 50);
+
+        ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
+
+        ImGui::Text("Effects:");
+        ImGui::SameLine(415);
+        if (ImGui::SmallButton("+##layer-effect-add")) {
+            data->layerPropertiesContext.effects.emplace_back();
         }
-    }
-    if (effectToRemove >= 0 && effectToRemove < static_cast<int>(data->layerPropertiesContext.effects.size())) {
-        data->layerPropertiesContext.effects.erase(data->layerPropertiesContext.effects.begin()+effectToRemove);
+        int effectToRemove = -1;
+        for (size_t ei = 0; ei < data->layerPropertiesContext.effects.size(); ++ei) {
+            ImGui::Dummy(ImVec2(20.0f, 0.0f));
+            ImGui::SameLine(50);
+            ImGui::InputText((std::string("##layer-effect-")+std::to_string(ei)).c_str(), data->layerPropertiesContext.effects[ei].data(), 50);
+            ImGui::SameLine(415);
+            if (ImGui::SmallButton((std::string("-##layer-effect-remove")+std::to_string(ei)).c_str())) {
+                effectToRemove = static_cast<int>(ei);
+            }
+        }
+        if (effectToRemove >= 0 && effectToRemove < static_cast<int>(data->layerPropertiesContext.effects.size())) {
+            data->layerPropertiesContext.effects.erase(data->layerPropertiesContext.effects.begin()+effectToRemove);
+        }
+
+        ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
+
+        ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetColorU32(ImVec4 { 0.6f, 0.0f, 0.0f, 1.0f }));
+        ImGui::SameLine(100);
+        if (ImGui::Button("Delete Layer [FUTURE_API]##layer-delete", ImVec2 { 250, 20 })) {
+            // TODO: Remove layer when API available
+            // CHECK_IMEND(ode_component_removeLayer(data->context.component, selectedLayer.id));
+            CHECK_IMEND(ode_pr1_drawComponent(data->context.rc, data->context.component, data->context.imageBase, &data->context.bitmap, &data->context.frameView));
+        }
+        ImGui::PopStyleColor(1);
     }
 
     ImGui::End();
