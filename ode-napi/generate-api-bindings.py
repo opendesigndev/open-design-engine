@@ -515,14 +515,14 @@ def generateNapiFunctionBinding(entity, emName, fullName):
         definition += f'    {t} {mem.name};\n'
         if inout_type == "INOUT" or inout_type == "IN":
             definition += (
-                f'    if(!Autobind<{t}>::read_into(info[{i-1}], {mem.name})) {{\n'
+                f'    if (!ode_napi_read_into(info[{i-1}], {mem.name})) {{\n'
                 f'        auto ex = env.GetAndClearPendingException();\n'
                 f'        Napi::Error::New(env, "Failed to parse argument {mem.name} ("+ ex.Message() +")").ThrowAsJavaScriptException();\n'
                 f'        {empty_return}\n'
                 f'    }}\n'
             )
         if inout_type == "INOUT" or inout_type == "OUT":
-            outputs += f'    Autobind<{t}>::write_from(info[{i-1}], {mem.name});\n'
+            outputs += f'    ode_napi_write_from(info[{i-1}], {mem.name});\n'
         if inout_type == "RETURN":
             i -= 1
 
@@ -530,7 +530,7 @@ def generateNapiFunctionBinding(entity, emName, fullName):
         definition += (
             f'    auto result = {fullName}({call});\n'
             f'{outputs}'
-            f'    if(!check_result(env,result)) {empty_return}\n'
+            f'    if (!check_result(env,result)) {empty_return}\n'
             f'{return_arg}'
         )
     else:
@@ -590,10 +590,12 @@ def generateNapiBindings(entities, apiPath):
                 src_body += f"        {emName}.Set(\"{k}\", uint32_t({v}));\n"
             src_body += f"        exports.Set(\"{emName}\", {emName});\n"
             src_body += "    }\n"
-            header += f'std::string ode_napi_enum_to_string({fullName} value);\n'
+            header += (
+                f'std::string ode_napi_enum_to_string({fullName} value);\n'
+                f'bool ode_napi_read_into(const Napi::Value& value, {fullName}& parsed);\n'
+            )
             src_tail += (
-                f'template<>\n'
-                f'bool Autobind<{fullName}>::read_into(const Napi::Value& value, {fullName}& parsed) {{\n'
+                f'bool ode_napi_read_into(const Napi::Value& value, {fullName}& parsed) {{\n'
                 f'    std::string text = value.As<Napi::String>();\n'
             )
             for value in entity.members:
@@ -624,14 +626,14 @@ def generateNapiBindings(entities, apiPath):
         # Handle
         elif entity.category == 'handle':
             serialize_signature = f'Napi::Value ode_napi_serialize(Napi::Env env, const {fullName}& source)'
-            header += f'{serialize_signature};\n'
+            read_into_signature = f'bool ode_napi_read_into(const Napi::Value& value, {fullName}& target)'
+            header += f'{serialize_signature};\n{read_into_signature};\n'
             src_tail += (
                 f"template<>\n"
                 f'const char* Handle<{fullName}>::name = "{emName}";\n'
-                f'template<>\n'
-                f'bool Autobind<{fullName}>::read_into(const Napi::Value& value, {fullName}& target) {{\n'
+                f'{read_into_signature} {{\n'
                 f'    auto optional = Handle<{fullName}>::Read(value);\n'
-                '    if(optional) { target = *optional; return true; }\n'
+                '    if (optional) { target = *optional; return true; }\n'
                 '    return false;\n'
                 '}\n'
                 f'{serialize_signature} {{\n'
@@ -651,10 +653,10 @@ def generateNapiBindings(entities, apiPath):
             src_body += f"    // TODO: {entity.category} {emName}\n"
         elif entity.category == 'struct':
             serialize_signature = f'Napi::Value ode_napi_serialize(Napi::Env env, const {fullName}& source)'
-            header += f'{serialize_signature};\n'
+            read_into_signature = f'bool ode_napi_read_into(const Napi::Value& value, {fullName}& parsed)'
+            header += f'{serialize_signature};\n{read_into_signature};\n'
             read_into = (
-                f'template<>\n'
-                f'bool Autobind<{fullName}>::read_into(const Napi::Value& value, {fullName}& parsed){{\n'
+                f'{read_into_signature} {{\n'
                 f'    Napi::Env env = value.Env();\n'
                 f'    Napi::Object obj = value.As<Napi::Object>();\n'
             )
@@ -666,18 +668,18 @@ def generateNapiBindings(entities, apiPath):
                 if member.category == 'member_variable' and (member.type.endswith("*") or member.type.endswith("Ptr")):
                     read_into += (
                         f'    uintptr_t ptr_{member.name};\n'
-                        f'    if(Autobind<uintptr_t>::read_into(obj.Get("{member.name}"), ptr_{member.name})) {{\n'
+                        f'    if (ode_napi_read_into(obj.Get("{member.name}"), ptr_{member.name})) {{\n'
                         f'        parsed.{member.name} = reinterpret_cast<{member.type}>(ptr_{member.name});\n'
                         f'    }} else {{\n'
-                        f'        env.GetAndClearPendingException();\n'
-                        f'        Napi::Error::New(env, "Invalid value for field {member.name}").ThrowAsJavaScriptException();\n'
+                        f'        auto ex = env.GetAndClearPendingException();\n'
+                        f'        Napi::Error::New(env, "Invalid value for field {member.name} ("+ex.Message()+")").ThrowAsJavaScriptException();\n'
                         f'        return false;\n'
                         f'    }}\n'
                     )
                     serialize += f'    Napi::Value {member.name} = ode_napi_serialize(env, (uintptr_t)source.{member.name});\n'
                 elif member.category == 'member_variable':
                     read_into += (
-                        f'    if(!Autobind<{member.type}>::read_into(obj.Get("{member.name}"), parsed.{member.name})) {{\n'
+                        f'    if (!ode_napi_read_into(obj.Get("{member.name}"), parsed.{member.name})) {{\n'
                         f'        env.GetAndClearPendingException();\n'
                         f'        Napi::Error::New(env, "Invalid value for field {member.name}").ThrowAsJavaScriptException();\n'
                         f'        return false;\n'
@@ -691,11 +693,12 @@ def generateNapiBindings(entities, apiPath):
                     src_head += f'{signature};\n'
                     src_tail += (
                         f'{signature} {{\n'
-                        f'    //{fullName} self;\n'
-                        f'    //if(!Autobind<{fullName}>::read_into(info[0], self)) {{ return Napi::Value(); }};\n'
-                        f'    //int i = info[1].As<Napi::Number>().Uint32Value();\n'
-                        f'    //ODE_ASSERT(i >= 0 && i < self.{n});\n'
-                        f'    //return ode_napi_serialize(info.Env(), self.{entries}[idx]);\n'
+                        f'    // {fullName} self;\n'
+                        f'    // Napi::Env env = info.Env();\n'
+                        f'    // if (!ode_napi_read_into(info[0], self)) {{ return Napi::Value(); }};\n'
+                        f'    // int i = info[1].As<Napi::Number>().Uint32Value();\n'
+                        f'    // if (i < 0 || i >= self.{n}) {{ Napi::Error::New(env, "Index out of range").ThrowAsJavaScriptException(); return Napi::Value(); }}\n'
+                        f'    // return ode_napi_serialize(info.Env(), self.{entries}[i]);\n'
                         f'    return Napi::String::New(info.Env(), "TODO");\n'
                         f'}}\n'
                     )
@@ -705,7 +708,7 @@ def generateNapiBindings(entities, apiPath):
                 
                 if member.category == 'member_variable':
                     serialize += (
-                        f'    if({member.name}.IsEmpty()) return Napi::Value();\n'
+                        f'    if ({member.name}.IsEmpty()) return Napi::Value();\n'
                         f'    obj.Set("{member.name}", {member.name});\n'
                     )
             read_into += (

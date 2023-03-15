@@ -11,7 +11,7 @@
     },
     "type": "module",
     "exports": {
-        "node": "./index.js",
+        "node": "./node.js",
         "default": "./wasm.js"
     },
     "publishConfig": { "access": "public" }

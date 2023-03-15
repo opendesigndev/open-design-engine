@@ -29,18 +29,16 @@ public:
     static Addon &from_env(const Napi::Env &);
 };
 
+using ODE_Scalar_array_6 = ODE_Scalar[6];
+
+template<typename T>
+inline bool ode_napi_read_into(const Napi::Maybe<Napi::Value> &value, T &target) {
+    if (value.IsNothing()) return false;
+    return ode_napi_read_into(value.Unwrap(), target);
+}
+
 bool copy_values(Napi::Value from, Napi::Value to);
 template<typename T>
-class Autobind {
-public:
-    static bool read_into(const Napi::Value &value, T &target);
-    static bool read_into(const Napi::Maybe<Napi::Value> &value, T &target) {
-        if (value.IsNothing()) return false;
-        return Autobind<T>::read_into(value.Unwrap(), target);
-    }
-    static bool write_from(Napi::Value src, const T &target) {
-        return copy_values(ode_napi_serialize(src.Env(), target), src);
-    }
-};
-
-using ODE_Scalar_array_6 = ODE_Scalar[6];
+inline bool ode_napi_write_from(Napi::Value target, const T &src) {
+    return copy_values(ode_napi_serialize(target.Env(), src), target);
+}
