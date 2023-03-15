@@ -74,6 +74,7 @@ jobs:
         if: ${{ github.ref_name == 'main' }}
         with:
           context: .
+          file: ode-animation-prototype/docker/Dockerfile
           cache-from: |
             ${{ env.DOCKER_CACHE }},name=${{ github.ref_name }}
           cache-to: |
