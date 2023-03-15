@@ -7,7 +7,6 @@
 
 namespace ode {
 
-// TEMPORARY / LEGACY - TODO DELETE THIS
 class TransformShader {
 
 public:

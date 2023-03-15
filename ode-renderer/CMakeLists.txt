@@ -18,7 +18,7 @@ target_include_directories(ode-renderer INTERFACE
 )
 
 # Module dependencies
-target_link_libraries(ode-renderer PUBLIC liboctopus ode-essentials ode-rasterizer ode-logic ode-graphics)
+target_link_libraries(ode-renderer PUBLIC liboctopus open-design-text-renderer ode-essentials ode-rasterizer ode-logic ode-graphics)
 if(NOT EMSCRIPTEN)
     target_link_libraries(ode-renderer PUBLIC ode-media)
 endif()
