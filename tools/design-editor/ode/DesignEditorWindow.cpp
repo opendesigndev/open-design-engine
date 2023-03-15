@@ -24,6 +24,10 @@ namespace {
 #define CHECK(x) do { if ((x)) return -1; } while (false)
 #define CHECK_IMEND(x) do { if ((x)) { ImGui::End(); return; } } while (false)
 
+const ImU32 IM_COLOR_WHITE = 4294967295;
+const ImU32 IM_COLOR_DARK_RED = 4278190233;
+const ImU32 IM_COLOR_LIGHT_BLUE = 4294941081;
+
 // TODO move to common API utils
 static ODE_StringRef stringRef(const std::string &str) {
     ODE_StringRef ref;
@@ -86,7 +90,7 @@ std::string layerTypeToString(ODE_LayerType layerType) {
 }
 
 
-void drawLayerListRecursiveStep(const ODE_LayerList &layerList, int idx, int &idxClicked) {
+void drawLayerListRecursiveStep(const ODE_LayerList &layerList, int idx, int &idxClicked, int selectedLayerIdx) {
     if (idx >= layerList.n) {
         return;
     }
@@ -100,21 +104,27 @@ void drawLayerListRecursiveStep(const ODE_LayerList &layerList, int idx, int &id
     const std::string layerLabel = "["+layerTypeToShortString(rootLayer.type)+"] "+std::string(rootLayer.name.data);
 
     if (hasAnyChildren) {
-        // TODO: Improve these open flags
-        if (ImGui::TreeNodeEx((layerLabel+std::string("##")+std::string(rootLayer.id.data)).c_str(), ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick)) {
-            if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
-                idxClicked = idx;
-            }
+        ImGui::PushStyleColor(ImGuiCol_Text, selectedLayerIdx == idx ? IM_COLOR_LIGHT_BLUE : IM_COLOR_WHITE);
+        const bool isOpened = ImGui::TreeNodeEx((layerLabel+std::string("##")+std::string(rootLayer.id.data)).c_str(), ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick);
+        ImGui::PopStyleColor(1);
+
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
+            idxClicked = idx;
+        }
+        if (isOpened) {
             for (int i = idx+1; i < layerList.n; i++) {
                 const ODE_LayerList::Entry &entry = layerList.entries[i];
                 if (areEq(entry.parentId, rootLayer.id)) {
-                    drawLayerListRecursiveStep(layerList, i, idxClicked);
+                    drawLayerListRecursiveStep(layerList, i, idxClicked, selectedLayerIdx);
                 }
             }
             ImGui::TreePop();
         }
     } else {
+        ImGui::PushStyleColor(ImGuiCol_Text, selectedLayerIdx == idx ? IM_COLOR_LIGHT_BLUE : IM_COLOR_WHITE);
         ImGui::BulletText("%s", layerLabel.c_str());
+        ImGui::PopStyleColor(1);
+
         if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
             idxClicked = idx;
         }
@@ -166,7 +176,7 @@ struct DesignEditorWindow::Internal {
     /// A flag that is true just after a new Octopus file is loaded
     bool octopusFileReloaded = false;
 
-    int selectedLayerId = -1;
+    int selectedLayerIdx = -1;
 
     /// Renderer
     std::unique_ptr<DesignEditorRenderer> renderer;
@@ -556,9 +566,9 @@ void DesignEditorWindow::drawLayerListWidget() {
 
     if (data->loadedOctopus.isLoaded()) {
         int idxClicked = -1;
-        drawLayerListRecursiveStep(data->loadedOctopus.layerList, 0, idxClicked);
+        drawLayerListRecursiveStep(data->loadedOctopus.layerList, 0, idxClicked, data->selectedLayerIdx);
         if (idxClicked >= 0) {
-            data->selectedLayerId = idxClicked;
+            data->selectedLayerIdx = idxClicked;
         }
     } else {
         ImGui::Text("---");
@@ -589,8 +599,8 @@ void DesignEditorWindow::drawDesignViewWidget() {
 void DesignEditorWindow::drawLayerPropertiesWidget() {
     ImGui::Begin("Selected Layer Properties");
 
-    if (data->selectedLayerId >= 0 && data->selectedLayerId < data->loadedOctopus.layerList.n) {
-        const ODE_LayerList::Entry &selectedLayer = data->loadedOctopus.layerList.entries[data->selectedLayerId];
+    if (data->selectedLayerIdx >= 0 && data->selectedLayerIdx < data->loadedOctopus.layerList.n) {
+        const ODE_LayerList::Entry &selectedLayer = data->loadedOctopus.layerList.entries[data->selectedLayerIdx];
 
         bool layerVisible = true; // TODO: Get layer visibility
         float layerOpacity = 1.0f; // TODO: Get layer opacity
@@ -721,7 +731,7 @@ void DesignEditorWindow::drawLayerPropertiesWidget() {
 
         ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
 
-        ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetColorU32(ImVec4 { 0.6f, 0.0f, 0.0f, 1.0f }));
+        ImGui::PushStyleColor(ImGuiCol_Button, IM_COLOR_DARK_RED);
         ImGui::SameLine(100);
         if (ImGui::Button("Delete Layer [FUTURE_API]##layer-delete", ImVec2 { 250, 20 })) {
             // TODO: Remove layer when API available
