@@ -59,9 +59,6 @@ reMemberVariable = re.compile(r"^(\w[\w\s\*]*\w|\w)([\s\*][\w\s\*,]*\w)\s*(\[[\w
 reMemberVariableName = re.compile(r"^(|.*[\s\*])(\w+)$")
 reTupleMarker = re.compile(r"^ODE_TUPLE[\s\n]")
 reManualMarker = re.compile(r"^ODE_MANUAL[\s\n]")
-reBindConstructor = re.compile(r"^ODE_BIND_CONSTRUCTOR\s*\(\s*\(\s*([\w\s\:\*&\,]*)\s*\)\s*,\s*("+nestedBrackets('(', ')', 6)+r")\s*\)\s*;")
-reBindMethod = re.compile(r"^ODE_BIND_METHOD\s*\(\s*([\w\s\:\*&]+)\s*\(\s*([\w\s\:\*&\,]*)\s*\)\s*,\s*(\w+)\s*,\s*("+nestedBrackets('(', ')', 6)+r")\s*\)\s*;")
-reBindPtrGetter = re.compile(r"^ODE_BIND_PTR_GETTER\s*\(\s*(\w+)\s*,\s*(\w+)\s*\)\s*;")
 reBindArrayGetter = re.compile(r"^ODE_BIND_ARRAY_GETTER\s*\(\s*(\w+)\s*,\s*(\w+)\s*,\s*(\w+)\s*\)\s*;")
 rePtrType = re.compile(r"([A-Za-z]\w*)(\s+const)?\s*\*")
 reParamDesc = re.compile(r"^param\s*(\w+)\s*\-?\s*")
@@ -225,26 +222,6 @@ def parseStruct(entities, groups, desc, namespace = []):
         # ODE_MANUAL marker
         elif (match := reManualMarker.search(body)):
             category = "manual"
-            memberDesc = None
-            body = body[match.end():]
-
-        # ODE_BIND_CONSTRUCTOR
-        elif (match := reBindConstructor.search(body)):
-            api = '('+','.join([x.strip() for x in match.group(1).split(',')])+')'
-            members.append(Member("constructor_bind", api, match.group(2).strip(), None, memberDesc))
-            memberDesc = None
-            body = body[match.end():]
-
-        # ODE_BIND_METHOD
-        elif (match := reBindMethod.search(body)):
-            api = match.group(1).strip()+'('+','.join([x.strip() for x in match.group(2).split(',')])+')'
-            members.append(Member("method_bind", api, match.group(3).strip(), match.group(4).strip(), memberDesc))
-            memberDesc = None
-            body = body[match.end():]
-
-        # ODE_BIND_PTR_GETTER
-        elif (match := reBindPtrGetter.search(body)):
-            members.append(Member("ptr_getter_bind", None, match.group(1).strip(), match.group(2).strip(), memberDesc))
             memberDesc = None
             body = body[match.end():]
 
@@ -518,13 +495,13 @@ def generateNapiFunctionBinding(entity, emName, fullName):
             call += f"&{mem.name}"
         else:
             call += mem.name
-        
+
         definition += f'    {t} {mem.name};\n'
         if inout_type == "INOUT" or inout_type == "IN":
             definition += (
                 f'    if (!ode_napi_read_into(info[{i-1}], {mem.name})) {{\n'
                 f'        auto ex = env.GetAndClearPendingException();\n'
-                f'        Napi::Error::New(env, "Failed to parse argument {mem.name} ("+ ex.Message() +")").ThrowAsJavaScriptException();\n'
+                f'        Napi::Error::New(env, "Failed to parse argument{i} {mem.name} in {emName} ("+ ex.Message() +")").ThrowAsJavaScriptException();\n'
                 f'        {empty_return}\n'
                 f'    }}\n'
             )
@@ -636,19 +613,14 @@ def generateNapiBindings(entities, apiPath):
             read_into_signature = f'bool ode_napi_read_into(const Napi::Value& value, {fullName}& target)'
             header += f'{serialize_signature};\n{read_into_signature};\n'
             src_tail += (
-                f"template<>\n"
-                f'const char* Handle<{fullName}>::name = "{emName}";\n'
                 f'{read_into_signature} {{\n'
-                f'    auto optional = Handle<{fullName}>::Read(value);\n'
-                '    if (optional) { target = *optional; return true; }\n'
-                '    return false;\n'
+                f'    return ode_napi_handle_read_into(value, "{emName}", target);\n'
                 '}\n'
                 f'{serialize_signature} {{\n'
-                f'    return Handle<{fullName}>::serialize(env, source);\n'
+                f'    return ode_napi_handle_serialize(env, "{emName}", source);\n'
                 '}\n'
                 "\n"
             )
-            src_body += f"    Handle<{fullName}>::Export(exports);"
         
         # Function
         elif entity.category == 'function':
@@ -813,7 +785,6 @@ def tsTranslateArgs(api):
 def generateTypescriptBindings(entities):
 
     ts = '\n'
-    ts += 'import { EngineSymbol } from "./internal.js";\n'
     ts += 'import * as ode from "./exports.js";\n'
     ts += '\n'
     prevCategory = None
@@ -854,7 +825,7 @@ def generateTypescriptBindings(entities):
             tsTypes.append(name)
             ts += tsDescription(entity.description)
             ts += 'export type '+name+' = {\n'
-            ts += f'     {name}: number;'
+            ts += f'    {name}: number;\n'
             ts += '};\n\n'
 
         # Value object struct
@@ -872,36 +843,20 @@ def generateTypescriptBindings(entities):
         elif entity.category == 'struct':
             tsTypes.append(name)
             ts += tsDescription(entity.description)
-            ts += 'export const '+name+': { new ('
-            for member in entity.members:
-                if member.category == 'constructor_bind':
-                    ts += tsTranslateArgs(member.type)
-                    break
-            ts += '): ode.'+name+' };\n'
             ts += 'export type '+name+' = {\n'
-            ts += padding+'[EngineSymbol]: "'+name+'";\n'
             for member in entity.members:
-                if member.category == 'constructor_bind':
-                    ts += padding+'constructor();\n'
-                elif member.category == 'member_variable':
+                if member.category == 'member_variable':
                     if not '*' in member.type:
                         ts += tsDescription(member.description, padding)
                         ts += padding+member.name+': '+tsType(member.type)+';\n'
-                elif member.category == 'method_bind':
-                    returnType = member.type.split('(')[0]
-                    ts += tsDescription(member.description, padding)
-                    ts += padding+member.name+'('+tsTranslateArgs(member.type)+'): '+tsType(returnType)+';\n'
-                elif member.category == 'ptr_getter_bind':
-                    ptrType = 'ODE_ConstDataPtr' if findMemberType(entity.members, member.value).startswith('const ') else 'ODE_VarDataPtr'
-                    ts += tsDescription(member.description, padding)
-                    ts += padding+member.name+'(): '+tsType(ptrType)+';\n'
-                elif member.category == 'array_getter_bind':
+            ts += '};\n\n'
+            for member in entity.members:
+                if member.category == 'array_getter_bind':
                     arrayMember, lengthMember = member.value.split(',', 1)
                     arrayElementType = findMemberType(entity.members, arrayMember).strip()[:-1].strip()
-                    ts += tsDescription(member.description, padding)
-                    ts += padding+member.name+'(i: ode.Int): '+tsType(arrayElementType)+';\n'
-            ts += padding+'delete(): void;\n'
-            ts += '};\n\n'
+                    ts += tsDescription(member.description, '')
+                    ts += f'export function {name}_{member.name}(self: {name}, i: ode.Int): {tsType(arrayElementType)};\n'
+            ts += '\n'
 
         # Tuple struct
         elif entity.category == 'tuple':
@@ -945,6 +900,7 @@ export type ODE = typeof ODE;
 
 export type LoadODEOptions = {
     locateFile?: () => string;
+    instantiateWasm?: (importObject: any, receiveInstance: (instance: any) => void) => void;
 };
 
 export default function loadODE(options?: LoadODEOptions): Promise<ODE>;

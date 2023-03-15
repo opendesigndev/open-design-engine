@@ -344,7 +344,7 @@ ODE_Result ODE_API ode_component_listMissingFonts(ODE_ComponentHandle component,
  * Outputs the Octopus string representing a given design component
  * @param octopusString - output argument where the Octopus JSON will be stored. Deallocate with ode_destroyString
  */
-ODE_Result ODE_API ode_component_getOctopus(ODE_ComponentHandle component, ODE_String *octopusString);
+ODE_Result ODE_API ode_component_getOctopus(ODE_ComponentHandle component, ODE_OUT_RETURN ODE_String *octopusString);
 
 ODE_Result ODE_FUTURE_API ode_component_getInstancedOctopus(ODE_ComponentHandle component, ODE_String *octopusString);
 ODE_Result ODE_FUTURE_API ode_component_getLayerOctopus(ODE_ComponentHandle *component, ODE_String *octopusString, ODE_StringRef layerId);

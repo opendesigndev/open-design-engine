@@ -36,15 +36,6 @@
 /// treated as ODE_IN.
 #define ODE_IN
 
-#ifndef ODE_BIND_CONSTRUCTOR
-#define ODE_BIND_CONSTRUCTOR(api, fnPtr)
-#endif
-#ifndef ODE_BIND_METHOD
-#define ODE_BIND_METHOD(api, methodName, fnPtr)
-#endif
-#ifndef ODE_BIND_PTR_GETTER
-#define ODE_BIND_PTR_GETTER(methodName, memberPtr)
-#endif
 #ifndef ODE_BIND_ARRAY_GETTER
 #define ODE_BIND_ARRAY_GETTER(methodName, memberArray, memberCount)
 #endif
@@ -119,23 +110,19 @@ typedef struct {
 
 /// A standalone string in its own memory block (must be manually destroyed with ode_destroyString)
 typedef struct {
-    ODE_BIND_CONSTRUCTOR((const std::string &str), static_cast<ODE_String(*)(const std::string &)>(&ode_makeString));
+    ODE_MANUAL
     /// Pointer to the beginning of UTF-8 encoded string
-    char *data;
-    /// Length of the string in bytes excluding the terminating null character
+        char *data;
+        /// Length of the string in bytes excluding the terminating null character
     int length;
-    /// Convert to ODE_StringRef
-    ODE_BIND_METHOD(ODE_StringRef(), ref, static_cast<ODE_StringRef(*)(const ODE_String &)>(&ode_stringRef));
-    /// Get pointer to the beginning of string
-    ODE_BIND_PTR_GETTER(getData, data);
 } ODE_String;
 
 /// A buffer of raw data bytes in physical memory - deallocate with ode_destroyMemoryBuffer
 typedef struct {
     ODE_MANUAL
     /// Pointer to the beginning of the memory block
-    ODE_VarDataPtr data;
-    /// Length of the buffer in bytes
+        ODE_VarDataPtr data;
+        /// Length of the buffer in bytes
     size_t length;
 } ODE_MemoryBuffer;
 
@@ -150,7 +137,7 @@ typedef struct {
 } ODE_StringList;
 
 /// Destroys the ODE_String object, freeing its allocated memory
-ODE_Result ODE_API ode_destroyString(ODE_String string);
+ODE_Result ode_destroyString(ODE_String string);
 
 /**
  * Allocates a new memory buffer of a given size

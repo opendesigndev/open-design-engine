@@ -58,7 +58,9 @@ Napi::Value ode_napi_serialize(Napi::Env env, const ODE_Scalar &parsed) {
 
 Napi::Value node_napi_makeString(const Napi::CallbackInfo &info) {
     auto env = info.Env();
-    auto string = ode_makeString(info[0].As<Napi::String>());
+    auto napiString = info[0].As<Napi::String>();
+    if (env.IsExceptionPending()) return Napi::Value();
+    auto string = ode_makeString(napiString);
     auto obj = Napi::Object::New(env);
     obj.Set("data", Napi::Number::New(env, (uintptr_t) string.data));
     obj.Set("length", Napi::Number::New(env, string.length));
@@ -79,7 +81,8 @@ Napi::Value node_napi_readString(const Napi::CallbackInfo &info) {
 
 
 Napi::Value ode_napi_serialize(Napi::Env env, const ODE_MemoryBuffer &value) {
-    return Napi::String::New(env, "TODO");
+    Napi::TypeError::New(env, "Not implemented yet").ThrowAsJavaScriptException();
+    return Napi::Value();
 }
 bool ode_napi_read_into(const Napi::Value &value, ODE_MemoryBuffer &target) {
     if (!value.IsArrayBuffer()) {
@@ -91,4 +94,12 @@ bool ode_napi_read_into(const Napi::Value &value, ODE_MemoryBuffer &target) {
     target.data = arrayBuffer.Data();
     target.length = arrayBuffer.ByteLength();
     return true;
+}
+
+
+
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_String &value) {
+    auto result = Napi::String::New(env, value.data, value.length);
+    ode_destroyString(value);
+    return result;
 }
