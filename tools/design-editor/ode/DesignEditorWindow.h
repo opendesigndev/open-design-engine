@@ -14,7 +14,7 @@ public:
 
 private:
     /// Initalize the render graph inspector window with dimensions
-    explicit DesignEditorWindow(int width_, int height_);
+    DesignEditorWindow();
     ~DesignEditorWindow();
 
 public:

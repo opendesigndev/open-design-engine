@@ -155,15 +155,11 @@ const char *blendModes[] = {
 }
 
 struct DesignEditorWindow::Internal {
-    Internal(int width_, int height_) :
-        gc(GraphicsContext("[Open Design Engine] Design Editor", Vector2i(width_, height_))) {
-    }
+    Internal() = default;
     ~Internal() {
         loadedOctopus.clear();
     }
 
-    /// Graphics context of the application.
-    GraphicsContext gc;
     /// Loaded octopus file data
     // TODO: Loaded Octopus
     DesignEditorLoadedOctopus loadedOctopus;
@@ -172,7 +168,8 @@ struct DesignEditorWindow::Internal {
 
     int selectedLayerId = -1;
 
-    DesignEditorRenderer renderer;
+    /// Renderer
+    std::unique_ptr<DesignEditorRenderer> renderer;
 
     /// Current and previous context of the ImGui widgets displayed
     DesignEditorWidgetsContext widgetsContext;
@@ -190,11 +187,15 @@ struct DesignEditorWindow::Internal {
         ODE_RendererContextHandle rc;
         ODE_DesignImageBaseHandle imageBase;
         ODE_PR1_AnimationRendererHandle renderer;
-        // Loaded component
         ODE_ComponentHandle component;
         ODE_Bitmap bitmap;
         ODE_PR1_FrameView frameView;
     } context;
+
+    /// Graphics context accessor
+    GraphicsContext *gc() {
+        return reinterpret_cast<GraphicsContext *>(context.rc.ptr);
+    }
 
     struct ZoomContext {
         float designImageZoom = 1.0f;
@@ -249,8 +250,8 @@ struct DesignEditorWindow::Internal {
     int initialize() {
         CHECK(ode_initializeEngineAttributes(&context.engineAttribs));
         CHECK(ode_createEngine(&context.engine, &context.engineAttribs));
-        // TODO: This context is in conflict with the ImGui context.
-        CHECK(ode_createRendererContext(context.engine, &context.rc, stringRef("Design Editor"), gc));
+        CHECK(ode_createRendererContext(context.engine, &context.rc, stringRef("Design Editor")));
+        renderer = std::make_unique<DesignEditorRenderer>();
         return 0;
     }
 
@@ -281,7 +282,7 @@ struct DesignEditorWindow::Internal {
 
         CHECK(ode_component_listLayers(context.component, &loadedOctopus.layerList));
 
-        GLFWwindow *window = gc.getNativeHandle<GLFWwindow *>();
+        GLFWwindow *window = gc()->getNativeHandle<GLFWwindow *>();
         glfwGetFramebufferSize(window, &context.frameView.width, &context.frameView.height);
         context.frameView.scale = 1;
         CHECK(ode_pr1_drawComponent(context.rc, context.component, context.imageBase, &context.bitmap, &context.frameView));
@@ -315,12 +316,12 @@ struct DesignEditorWindow::Internal {
 
 
 /*static*/ DesignEditorWindow& DesignEditorWindow::getInstance() {
-    static DesignEditorWindow instance(1280, 720);
+    static DesignEditorWindow instance;
     return instance;
 }
 
-DesignEditorWindow::DesignEditorWindow(int width_, int height_) :
-    data(new Internal(width_, height_)) {
+DesignEditorWindow::DesignEditorWindow() :
+    data(new Internal()) {
     data->initialize();
 }
 
@@ -330,7 +331,7 @@ DesignEditorWindow::~DesignEditorWindow() {
 
 int DesignEditorWindow::display() {
     // Get the GLFW window as initialized in ODE GraphicsContext
-    GLFWwindow *window = data->gc.getNativeHandle<GLFWwindow *>();
+    GLFWwindow *window = data->gc()->getNativeHandle<GLFWwindow *>();
 
     // Set file drop callback
     glfwSetDropCallback(window, fileDropCallback);
@@ -574,7 +575,7 @@ void DesignEditorWindow::drawDesignViewWidget() {
         ode::Bitmap bitmap(PixelFormat::PREMULTIPLIED_RGBA, reinterpret_cast<const void*>(bmp.pixels), bmp.width, bmp.height);
 
         const ScaledBounds placement {0,0,static_cast<double>(bitmap.width()),static_cast<double>(bitmap.height())};
-        data->texturesContext.designImageTexture = data->renderer.blendImageToTexture(std::move(bitmap), placement, 2);
+        data->texturesContext.designImageTexture = data->renderer->blendImageToTexture(std::move(bitmap), placement, 2);
 
         drawImGuiWidgetTexture(data->texturesContext.designImageTexture->getInternalGLHandle(),
                                data->texturesContext.designImageTexture->dimensions().x,
