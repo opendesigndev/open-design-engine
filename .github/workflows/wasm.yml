@@ -71,7 +71,6 @@ jobs:
             ${{ env.DOCKER_CACHE }},name=${{ github.ref_name }},mode=max
       - name: Cache base image in main
         uses: docker/build-push-action@v3
-        if: ${{ github.ref_name == 'main' }}
         with:
           context: .
           file: ode-animation-prototype/docker/Dockerfile
