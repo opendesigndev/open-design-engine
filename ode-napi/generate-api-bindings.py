@@ -58,6 +58,7 @@ reMixedMember = re.compile(r"(^|[\w\s\*]*[\s\*])\s*(\w+)\s*$", re.DOTALL)
 reMemberVariable = re.compile(r"^(\w[\w\s\*]*\w|\w)([\s\*][\w\s\*,]*\w)\s*(\[[\w\s\[\]]*\])?\s*;")
 reMemberVariableName = re.compile(r"^(|.*[\s\*])(\w+)$")
 reTupleMarker = re.compile(r"^ODE_TUPLE[\s\n]")
+reManualMarker = re.compile(r"^ODE_MANUAL[\s\n]")
 reBindConstructor = re.compile(r"^ODE_BIND_CONSTRUCTOR\s*\(\s*\(\s*([\w\s\:\*&\,]*)\s*\)\s*,\s*("+nestedBrackets('(', ')', 6)+r")\s*\)\s*;")
 reBindMethod = re.compile(r"^ODE_BIND_METHOD\s*\(\s*([\w\s\:\*&]+)\s*\(\s*([\w\s\:\*&\,]*)\s*\)\s*,\s*(\w+)\s*,\s*("+nestedBrackets('(', ')', 6)+r")\s*\)\s*;")
 reBindPtrGetter = re.compile(r"^ODE_BIND_PTR_GETTER\s*\(\s*(\w+)\s*,\s*(\w+)\s*\)\s*;")
@@ -218,6 +219,12 @@ def parseStruct(entities, groups, desc, namespace = []):
         # ODE_TUPLE marker
         if (match := reTupleMarker.search(body)):
             category = "tuple"
+            memberDesc = None
+            body = body[match.end():]
+
+        # ODE_MANUAL marker
+        elif (match := reManualMarker.search(body)):
+            category = "manual"
             memberDesc = None
             body = body[match.end():]
 
@@ -665,23 +672,11 @@ def generateNapiBindings(entities, apiPath):
                 f'    Napi::Object obj = Napi::Object::New(env);\n'
             )
             for member in entity.members:
-                if member.category == 'member_variable' and (member.type.endswith("*") or member.type.endswith("Ptr")):
-                    read_into += (
-                        f'    uintptr_t ptr_{member.name};\n'
-                        f'    if (ode_napi_read_into(obj.Get("{member.name}"), ptr_{member.name})) {{\n'
-                        f'        parsed.{member.name} = reinterpret_cast<{member.type}>(ptr_{member.name});\n'
-                        f'    }} else {{\n'
-                        f'        auto ex = env.GetAndClearPendingException();\n'
-                        f'        Napi::Error::New(env, "Invalid value for field {member.name} ("+ex.Message()+")").ThrowAsJavaScriptException();\n'
-                        f'        return false;\n'
-                        f'    }}\n'
-                    )
-                    serialize += f'    Napi::Value {member.name} = ode_napi_serialize(env, (uintptr_t)source.{member.name});\n'
-                elif member.category == 'member_variable':
+                if member.category == 'member_variable':
                     read_into += (
                         f'    if (!ode_napi_read_into(obj.Get("{member.name}"), parsed.{member.name})) {{\n'
-                        f'        env.GetAndClearPendingException();\n'
-                        f'        Napi::Error::New(env, "Invalid value for field {member.name}").ThrowAsJavaScriptException();\n'
+                        f'        auto ex = env.GetAndClearPendingException();\n'
+                        f'        Napi::Error::New(env, "Invalid value for field {member.name} of {fullName} ("+ex.Message()+")").ThrowAsJavaScriptException();\n'
                         f'        return false;\n'
                         f'    }}\n'
                     )
@@ -693,13 +688,12 @@ def generateNapiBindings(entities, apiPath):
                     src_head += f'{signature};\n'
                     src_tail += (
                         f'{signature} {{\n'
-                        f'    // {fullName} self;\n'
-                        f'    // Napi::Env env = info.Env();\n'
-                        f'    // if (!ode_napi_read_into(info[0], self)) {{ return Napi::Value(); }};\n'
-                        f'    // int i = info[1].As<Napi::Number>().Uint32Value();\n'
-                        f'    // if (i < 0 || i >= self.{n}) {{ Napi::Error::New(env, "Index out of range").ThrowAsJavaScriptException(); return Napi::Value(); }}\n'
-                        f'    // return ode_napi_serialize(info.Env(), self.{entries}[i]);\n'
-                        f'    return Napi::String::New(info.Env(), "TODO");\n'
+                        f'    {fullName} self;\n'
+                        f'    Napi::Env env = info.Env();\n'
+                        f'    if (!ode_napi_read_into(info[0], self)) {{ return Napi::Value(); }};\n'
+                        f'    int i = info[1].As<Napi::Number>().Uint32Value();\n'
+                        f'    if (i < 0 || i >= self.{n}) {{ Napi::Error::New(env, "Index out of range").ThrowAsJavaScriptException(); return Napi::Value(); }}\n'
+                        f'    return ode_napi_serialize(info.Env(), self.{entries}[i]);\n'
                         f'}}\n'
                     )
                     src_body += f'    exports.Set("{fn_name}", Napi::Function::New<node_napi_{fn_name}>(env, "{fn_name}"));\n'
@@ -720,6 +714,48 @@ def generateNapiBindings(entities, apiPath):
                 f'}}\n\n'
             )
             src_tail += read_into + serialize
+        
+        # Tuple
+        elif entity.category == 'tuple':
+            serialize_signature = f'Napi::Value ode_napi_serialize(Napi::Env env, const {fullName}& source)'
+            read_into_signature = f'bool ode_napi_read_into(const Napi::Value& value, {fullName}& parsed)'
+            header += f'{serialize_signature};\n{read_into_signature};\n'
+            read_into = (
+                f'{read_into_signature} {{\n'
+                f'    Napi::Env env = value.Env();\n'
+                f'    Napi::Array obj = value.As<Napi::Array>();\n'
+            )
+            serialize = (
+                f'{serialize_signature} {{\n'
+                f'    Napi::Array obj = Napi::Array::New(env);\n'
+            )
+            i = 0
+            for member in entity.members:
+                read_into += (
+                    f'    if (!ode_napi_read_into(obj.Get(uint32_t({i})), parsed.{member.name})) {{\n'
+                    f'        auto ex = env.GetAndClearPendingException();\n'
+                    f'        Napi::Error::New(env, "Invalid value for field {member.name} of {fullName} ("+ex.Message()+") got: "+(std::string)obj.Get(uint32_t({i})).Unwrap().ToString().Unwrap()).ThrowAsJavaScriptException();\n'
+                    f'        return false;\n'
+                    f'    }}\n'
+                )
+                serialize += f'    Napi::Value {member.name} = ode_napi_serialize(env, source.{member.name});\n'
+            
+            
+                serialize += (
+                    f'    if ({member.name}.IsEmpty()) return Napi::Value();\n'
+                    f'    obj.Set(uint32_t({i}), {member.name});\n'
+                )
+                i += 1
+            read_into += (
+                f'    return true;\n'
+                f'}}\n'
+            ) 
+            serialize += (
+                f'    return obj;\n'
+                f'}}\n\n'
+            )
+            src_tail += read_into + serialize
+
         else:
             src_body += f"    // TODO: {entity.category} {emName}\n"
 
@@ -735,14 +771,22 @@ def generateNapiBindings(entities, apiPath):
 tsTypes = []
 
 def tsType(type):
+    type = type.strip()
+    wrap = ""
     if type.startswith("ODE_IN "): type = type[7:]
-    if type.startswith("ODE_OUT "): type = type[8:]
+    if type.startswith("ODE_OUT "):
+        type = type[8:]
+        # The argument object does not have to contain any values, but it has
+        # to be there for us to be able to write into it.
+        wrap = 'Partial'
     if type.startswith("ODE_IN_OUT "): type = type[11:]
     if type.startswith("ODE_OUT_RETURN "): type = type[15:]
     if type:
         type = (' '+type+' ').replace('*', ' ').replace(' const ', '').strip()
         if (jsType := jsTypeName(type)):
             tsType = jsType[0].upper()+jsType[1:]
+            if wrap:
+                return f'{wrap}<ode.{tsType}>'
             return 'ode.'+tsType
     return 'unknown'
 
@@ -809,11 +853,8 @@ def generateTypescriptBindings(entities):
         elif entity.category == 'handle':
             tsTypes.append(name)
             ts += tsDescription(entity.description)
-            ts += 'export const '+name+': { new (): ode.'+name+' };\n'
             ts += 'export type '+name+' = {\n'
-            ts += padding+'[EngineSymbol]: "'+name+'";\n'
-            ts += padding+'constructor();\n'
-            ts += padding+'delete(): void;\n'
+            ts += f'     {name}: number;'
             ts += '};\n\n'
 
         # Value object struct

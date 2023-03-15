@@ -7,6 +7,7 @@ set(ODE_NAPI_SOURCES
     ${CMAKE_CURRENT_BINARY_DIR}/src/gen-logic-api.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/src/gen-renderer-api.cpp
     "manual-api-base.cpp"
+    "manual-logic-api.cpp"
 )
 
 # LIBRARY / EXECUTABLE

@@ -6,9 +6,7 @@
 
 #include <ode/api-base.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+ODE_CPP_ONLY(extern "C" {)
 
 // Layer flags for ODE_LayerList::Entry::flags
 /// Layer has visible attribute set to true
@@ -38,6 +36,7 @@ typedef enum {
 
 /// A 3x2 affine transformation matrix in column-major order
 typedef struct {
+    ODE_MANUAL
     ODE_Scalar matrix[6];
 } ODE_Transformation;
 
@@ -311,7 +310,7 @@ ODE_Result ODE_API ode_pr1_component_loadAnimation(ODE_ComponentHandle component
  *     OPACITY - 1x ODE_Scalar
  *     FILL_COLOR - 4x ODE_Scalar (RGBA)
  */
-ODE_Result ODE_API ode_pr1_component_getAnimationValueAtTime(ODE_ComponentHandle component, int index, ODE_Scalar time, ODE_VarDataPtr value);
+ODE_Result ODE_API ode_pr1_component_getAnimationValueAtTime(ODE_ComponentHandle component, int index, ODE_Scalar time, ODE_OUT_RETURN ODE_VarDataPtr value);
 
 /**
  * Outputs a list of all layers within a component and their metadata
@@ -325,7 +324,7 @@ ODE_Result ODE_API ode_component_listLayers(ODE_ComponentHandle component, ODE_O
  * @param position - position in component's coordinate system
  * @param radius - tolerance radius around position (a layer not intersecting position but within this radius may be outputted)
  */
-ODE_Result ODE_API ode_component_identifyLayer(ODE_ComponentHandle component, ODE_OUT ODE_String *layerId, ODE_Vector2 position, ODE_Scalar radius);
+ODE_Result ODE_API ode_component_identifyLayer(ODE_ComponentHandle component, ODE_OUT_RETURN ODE_String *layerId, ODE_Vector2 position, ODE_Scalar radius);
 
 /**
  * Outputs layer metrics for a given layer of a component
@@ -333,7 +332,7 @@ ODE_Result ODE_API ode_component_identifyLayer(ODE_ComponentHandle component, OD
  * @param layerId - layer's ID
  * @param layerMetrics - output argument where the layer's metrics will be stored
  */
-ODE_Result ODE_API ode_component_getLayerMetrics(ODE_ComponentHandle component, ODE_StringRef layerId, ODE_LayerMetrics *layerMetrics);
+ODE_Result ODE_API ode_component_getLayerMetrics(ODE_ComponentHandle component, ODE_StringRef layerId, ODE_OUT_RETURN ODE_LayerMetrics *layerMetrics);
 
 /**
  * Outputs a list of fonts (post-script names) required by a design component which haven't been provided yet
@@ -350,8 +349,6 @@ ODE_Result ODE_API ode_component_getOctopus(ODE_ComponentHandle component, ODE_S
 ODE_Result ODE_FUTURE_API ode_component_getInstancedOctopus(ODE_ComponentHandle component, ODE_String *octopusString);
 ODE_Result ODE_FUTURE_API ode_component_getLayerOctopus(ODE_ComponentHandle *component, ODE_String *octopusString, ODE_StringRef layerId);
 
-#ifdef __cplusplus
-}
-#endif
+ODE_CPP_ONLY(})
 
 #endif // ODE_LOGIC_API_H

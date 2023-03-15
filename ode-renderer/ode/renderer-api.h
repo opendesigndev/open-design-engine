@@ -7,9 +7,7 @@
 #include <ode/api-base.h>
 #include <ode/logic-api.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+ODE_CPP_ONLY(extern "C" {)
 
 /// Pixel format of 4 channels - red, green, blue, alpha, each channel represented by 8-bit unsigned integer (0 to 255 range)
 extern ODE_API const int ODE_PIXEL_FORMAT_RGBA;
@@ -33,7 +31,7 @@ typedef struct {
     /// The pixel format (see ODE_PIXEL_FORMAT_... constants)
     int format;
     /// Pointer to the first (top-left) pixel. Pixels are stored contiguously in memory in row-major order
-    ODE_ConstDataPtr pixels;
+    ODE_MemoryBuffer pixels;
     /// Dimensions of bitmap
     int width, height;
 } ODE_BitmapRef;
@@ -118,15 +116,14 @@ ODE_Result ODE_API ode_pr1_destroyAnimationRenderer(ODE_PR1_AnimationRendererHan
  */
 ODE_Result ODE_API ode_pr1_animation_drawFrame(ODE_PR1_AnimationRendererHandle renderer, const ODE_PR1_FrameView *frameView, ODE_Scalar time);
 
-#ifdef __cplusplus
-}
-#endif
+ODE_CPP_ONLY(})
 
 /// Creates a reference (ODE_BitmapRef) to an ODE_Bitmap object
 inline ODE_BitmapRef ode_bitmapRef(ODE_Bitmap bitmap) {
     ODE_BitmapRef ref = { };
     ref.format = bitmap.format;
-    ref.pixels = bitmap.pixels;
+    ref.pixels.data = bitmap.pixels;
+    ref.pixels.length = bitmap.width*bitmap.height*4; // TODO: take format into account
     ref.width = bitmap.width;
     ref.height = bitmap.height;
     return ref;

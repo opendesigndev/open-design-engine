@@ -9,6 +9,7 @@
 #include <ode/api-base.h>
 #include <optional>
 #include "manual-api-base.h"
+#include "manual-logic-api.h"
 
 Napi::Object init_gen_api_base(Napi::Env env, Napi::Object exports);
 Napi::Object init_gen_logic_api(Napi::Env env, Napi::Object exports);
@@ -30,6 +31,22 @@ public:
 };
 
 using ODE_Scalar_array_6 = ODE_Scalar[6];
+
+
+template<typename T>
+inline bool ode_napi_serialize(Napi::Env env, const T *&parsed) {
+    return ode_napi_serialize(env, (uintptr_t) parsed);
+}
+
+template<typename T>
+inline bool ode_napi_read_into(const Napi::Value &value, T *&parsed) {
+    uintptr_t target;
+    if (ode_napi_read_into(value, target)) {
+        parsed = reinterpret_cast<T *>(target);
+        return true;
+    }
+    return false;
+}
 
 template<typename T>
 inline bool ode_napi_read_into(const Napi::Maybe<Napi::Value> &value, T &target) {
