@@ -1,17 +1,8 @@
 #include "addon.h"
 #include "gen-api-base.h"
 
-Napi::Value Method(const Napi::CallbackInfo &info) {
-    Napi::Env env = info.Env();
-    Addon &addon = Addon::from_env(env);
-    return Napi::Number::New(env, (double) addon.new_counter);
-}
 
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
-    Addon *addon = new Addon(exports);
-    env.SetInstanceData(addon);
-
-    exports.Set("readHandleCount", Napi::Function::New<Method>(env, "readHandleCount"));
     exports = init_gen_api_base(env, exports);
     exports = init_gen_logic_api(env, exports);
     exports = init_gen_renderer_api(env, exports);
@@ -27,15 +18,6 @@ bool check_result(Napi::Env env, ODE_Result result) {
         return false;
     }
     return true;
-}
-
-Addon::Addon(Napi::Object exports) {
-    this->exports = Napi::Persistent(exports);
-}
-
-Addon &Addon::from_env(const Napi::Env &env) {
-    auto ptr = env.GetInstanceData<Addon>();
-    return *ptr;
 }
 
 bool copy_values(Napi::Value from, Napi::Value to) {

@@ -22,16 +22,6 @@ Napi::Object init_gen_renderer_api(Napi::Env env, Napi::Object exports);
 #define THROW_ON_ERROR_V(pred) THROW_ON_ERROR(pred) Napi::Value()
 bool check_result(Napi::Env env, ODE_Result result);
 
-class Addon {
-public:
-    Addon(Napi::Object exports);
-
-    Napi::ObjectReference exports;
-    int new_counter;
-    static Addon &from_env(const Napi::Env &);
-};
-
-using ODE_Scalar_array_6 = ODE_Scalar[6];
 
 Napi::Object init_api_base(Napi::Env env, Napi::Object exports);
 Napi::Value ode_napi_serialize(Napi::Env env, const int &value);
