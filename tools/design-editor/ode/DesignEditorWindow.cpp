@@ -89,8 +89,7 @@ std::string layerTypeToString(ODE_LayerType layerType) {
     return "-";
 }
 
-
-void drawLayerListRecursiveStep(const ODE_LayerList &layerList, int idx, int &idxClicked, const std::vector<int> &selectedLayerIdx) {
+void drawLayerListRecursiveStep(const ODE_LayerList &layerList, int idx, int &idxClicked, const std::vector<ODE_StringRef> &selectedLayerIDs) {
     if (idx >= layerList.n) {
         return;
     }
@@ -103,7 +102,9 @@ void drawLayerListRecursiveStep(const ODE_LayerList &layerList, int idx, int &id
     const bool hasAnyChildren = (idx+1 < layerList.n) && areEq(layerList.entries[idx+1].parentId, rootLayer.id);
     const std::string layerLabel = "["+layerTypeToShortString(rootLayer.type)+"] "+std::string(rootLayer.id.data);
 
-    const bool isSelected = std::find(selectedLayerIdx.begin(), selectedLayerIdx.end(), idx) != selectedLayerIdx.end();
+    const bool isSelected = std::find_if(selectedLayerIDs.begin(), selectedLayerIDs.end(), [&id = rootLayer.id](const ODE_StringRef &selectedLayerID)->bool {
+        return strcmp(id.data, selectedLayerID.data) == 0;
+    }) != selectedLayerIDs.end();
     const ImU32 listEntryColor = isSelected ? IM_COLOR_LIGHT_BLUE : IM_COLOR_WHITE;
 
     if (hasAnyChildren) {
@@ -118,7 +119,7 @@ void drawLayerListRecursiveStep(const ODE_LayerList &layerList, int idx, int &id
             for (int i = idx+1; i < layerList.n; i++) {
                 const ODE_LayerList::Entry &entry = layerList.entries[i];
                 if (areEq(entry.parentId, rootLayer.id)) {
-                    drawLayerListRecursiveStep(layerList, i, idxClicked, selectedLayerIdx);
+                    drawLayerListRecursiveStep(layerList, i, idxClicked, selectedLayerIDs);
                 }
             }
             ImGui::TreePop();
@@ -165,6 +166,12 @@ const char *blendModes[] = {
     "VIVID_LIGHT",
 };
 
+bool isImGuiMultiselectKeyDown() {
+    return (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_LeftShift) ||
+            ImGui::IsKeyDown(ImGuiKey_LeftSuper) || ImGui::IsKeyDown(ImGuiKey_RightCtrl) ||
+            ImGui::IsKeyDown(ImGuiKey_RightShift) || ImGui::IsKeyDown(ImGuiKey_RightSuper));
+}
+
 }
 
 struct DesignEditorWindow::Internal {
@@ -179,8 +186,6 @@ struct DesignEditorWindow::Internal {
     /// A flag that is true just after a new Octopus file is loaded
     bool octopusFileReloaded = false;
 
-    std::vector<int> selectedLayerIdx {};
-
     /// Renderer
     std::unique_ptr<DesignEditorRenderer> renderer;
 
@@ -191,6 +196,47 @@ struct DesignEditorWindow::Internal {
     /// Current and previous image visualization params
     DesignEditorImageVisualizationParams imageVisualizationParams;
     DesignEditorImageVisualizationParams prevImageVisualizationParams;
+
+    struct SelectionContext {
+        std::vector<ODE_StringRef> layerIDs {};
+
+        void select(const ODE_StringRef &layerID) {
+            select(layerID.data);
+        }
+        void select(const ODE_String &layerID) {
+            select(layerID.data);
+        }
+        void select(const char *layerID) {
+            const int length = static_cast<int>(strlen(layerID));
+            if (layerID == nullptr || length <= 0) {
+                layerIDs.clear();
+            } else {
+                if (isImGuiMultiselectKeyDown()) {
+                    if (!isSelected(layerID)) {
+                        layerIDs.emplace_back(ODE_StringRef { layerID, length });
+                    }
+                } else {
+                    layerIDs = { ODE_StringRef { layerID, length } };
+                }
+            }
+        }
+        bool isSelected(const char *layerID) {
+            for (const ODE_StringRef &id : layerIDs) {
+                if (strcmp(id.data, layerID) == 0) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    } selectionContext;
+
+    struct CanvasContext {
+        bool isMouseOver = false;
+        ImVec2 bbSize;
+        ImVec2 bbMin;
+        ImVec2 bbMax;
+        float zoom = 1.0f;
+    } canvasContext;
 
     struct Context {
         ODE_EngineHandle engine;
@@ -209,20 +255,6 @@ struct DesignEditorWindow::Internal {
     GraphicsContext *gc() {
         return reinterpret_cast<GraphicsContext *>(context.rc.ptr);
     }
-
-    struct ZoomContext {
-        float designImageZoom = 1.0f;
-
-        const float minZoom = 1.0f;
-        const float maxZoom = 10.0f;
-
-        void operator+=(float v) {
-            designImageZoom = std::clamp(designImageZoom + v, minZoom, maxZoom);
-        }
-        void operator-=(float v) {
-            *this += -v;
-        }
-    } zoomContext;
 
     struct ImGuiWindowContext {
         const ImVec4 clearColor = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
@@ -389,6 +421,29 @@ int DesignEditorWindow::display() {
                 data->octopusFileReloaded = false;
 
                 // TODO: Display result texture
+            }
+        }
+
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && data->canvasContext.isMouseOver) {
+            const ImVec2 mousePosInScreenSpace = ImGui::GetMousePos();
+            const ImVec2 mousePosInCanvasSpace = ImVec2 {
+                (mousePosInScreenSpace.x - data->canvasContext.bbMin.x) / data->canvasContext.bbSize.x,
+                (mousePosInScreenSpace.y - data->canvasContext.bbMin.y) / data->canvasContext.bbSize.y,
+            };
+
+            // TODO: Is image space position from top layer bounds correct ?
+            ODE_LayerMetrics topLayerMetrics;
+            CHECK(ode_component_getLayerMetrics(data->context.component, data->loadedOctopus.layerList.entries[0].id, &topLayerMetrics));
+            const ODE_Rectangle &topLayerBounds = topLayerMetrics.logicalBounds;
+            const ODE_Vector2 imageSpacePosition {
+                mousePosInCanvasSpace.x * topLayerBounds.b.x,
+                mousePosInCanvasSpace.y * topLayerBounds.b.y
+            };
+
+            if (data->mode == Internal::Mode::SELECT) {
+                ODE_String selectedLayerId;
+                CHECK(ode_component_identifyLayer(data->context.component, &selectedLayerId, imageSpacePosition, 2.0f));
+                data->selectionContext.select(selectedLayerId);
             }
         }
 
@@ -559,6 +614,38 @@ void DesignEditorWindow::drawControlsWidget() {
 void DesignEditorWindow::drawToolbarWidget() {
     ImGui::Begin("Toolbar");
 
+    ImGui::PushStyleColor(ImGuiCol_Button, data->mode == Internal::Mode::SELECT ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, data->mode == Internal::Mode::SELECT ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
+    if (ImGui::Button("Select")) {
+        data->mode = Internal::Mode::SELECT;
+    }
+    ImGui::PopStyleColor(2);
+    ImGui::SameLine();
+
+    ImGui::PushStyleColor(ImGuiCol_Button, data->mode == Internal::Mode::ADD_RECTANGLE ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, data->mode == Internal::Mode::ADD_RECTANGLE ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
+    if (ImGui::Button("Add Rectangle")) {
+        data->mode = Internal::Mode::ADD_RECTANGLE;
+    }
+    ImGui::PopStyleColor(2);
+    ImGui::SameLine();
+
+    ImGui::PushStyleColor(ImGuiCol_Button, data->mode == Internal::Mode::ADD_ELLIPSE ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, data->mode == Internal::Mode::ADD_ELLIPSE ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
+    if (ImGui::Button("Add Ellipse")) {
+        data->mode = Internal::Mode::ADD_ELLIPSE;
+    }
+    ImGui::PopStyleColor(2);
+    ImGui::SameLine();
+
+    ImGui::PushStyleColor(ImGuiCol_Button, data->mode == Internal::Mode::ADD_TEXT ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, data->mode == Internal::Mode::ADD_TEXT ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
+    if (ImGui::Button("Add Text")) {
+        data->mode = Internal::Mode::ADD_TEXT;
+    }
+    ImGui::PopStyleColor(2);
+    ImGui::SameLine();
+
     ImGui::End();
 }
 
@@ -567,16 +654,9 @@ void DesignEditorWindow::drawLayerListWidget() {
 
     if (data->loadedOctopus.isLoaded()) {
         int idxClicked = -1;
-        drawLayerListRecursiveStep(data->loadedOctopus.layerList, 0, idxClicked, data->selectedLayerIdx);
+        drawLayerListRecursiveStep(data->loadedOctopus.layerList, 0, idxClicked, data->selectionContext.layerIDs);
         if (idxClicked >= 0) {
-            const bool isMultipleSelectionKeyDown = (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_LeftShift) ||
-                                                     ImGui::IsKeyDown(ImGuiKey_LeftSuper) || ImGui::IsKeyDown(ImGuiKey_RightCtrl) ||
-                                                     ImGui::IsKeyDown(ImGuiKey_RightShift) || ImGui::IsKeyDown(ImGuiKey_RightSuper));
-            if (isMultipleSelectionKeyDown) {
-                data->selectedLayerIdx.emplace_back(idxClicked);
-            } else {
-                data->selectedLayerIdx = { idxClicked };
-            }
+            data->selectionContext.select(data->loadedOctopus.layerList.entries[idxClicked].id);
         }
     } else {
         ImGui::Text("---");
@@ -598,7 +678,12 @@ void DesignEditorWindow::drawDesignViewWidget() {
         drawImGuiWidgetTexture(data->texturesContext.designImageTexture->getInternalGLHandle(),
                                data->texturesContext.designImageTexture->dimensions().x,
                                data->texturesContext.designImageTexture->dimensions().y,
-                               data->zoomContext.designImageZoom);
+                               data->canvasContext.zoom);
+
+        data->canvasContext.isMouseOver = ImGui::IsItemHovered();
+        data->canvasContext.bbSize = ImGui::GetItemRectSize();
+        data->canvasContext.bbMin = ImGui::GetItemRectMin();
+        data->canvasContext.bbMax = ImGui::GetItemRectMax();
     }
 
     ImGui::End();
@@ -607,12 +692,11 @@ void DesignEditorWindow::drawDesignViewWidget() {
 void DesignEditorWindow::drawLayerPropertiesWidget() {
     ImGui::Begin("Selected Layer Properties");
 
-    for (int selectedLayerIdx : data->selectedLayerIdx) {
-        if (selectedLayerIdx >= 0 && selectedLayerIdx < data->loadedOctopus.layerList.n) {
-            const ODE_LayerList::Entry &selectedLayer = data->loadedOctopus.layerList.entries[selectedLayerIdx];
-
-            const auto layerPropName = [&selectedLayer](const char *invisibleId, const char *visibleLabel = "")->std::string {
-                return std::string(visibleLabel)+std::string("##layer-")+std::string(invisibleId)+std::string("-")+std::string(selectedLayer.id.data);
+    for (int i = 0; i < data->loadedOctopus.layerList.n; ++i) {
+        const ODE_LayerList::Entry &layer = data->loadedOctopus.layerList.entries[i];
+        if (data->selectionContext.isSelected(layer.id.data)) {
+            const auto layerPropName = [&layer](const char *invisibleId, const char *visibleLabel = "")->std::string {
+                return std::string(visibleLabel)+std::string("##layer-")+std::string(invisibleId)+std::string("-")+std::string(layer.id.data);
             };
 
             bool layerVisible = true; // TODO: Get layer visibility
@@ -620,7 +704,7 @@ void DesignEditorWindow::drawLayerPropertiesWidget() {
             const char *blendModeStr = "NORMAL"; // TODO: Get layer blend mode as string
 
             ODE_LayerMetrics layerMetrics;
-            CHECK_IMEND(ode_component_getLayerMetrics(data->context.component, selectedLayer.id, &layerMetrics));
+            CHECK_IMEND(ode_component_getLayerMetrics(data->context.component, layer.id, &layerMetrics));
 
             const float a = static_cast<float>(layerMetrics.transformation.matrix[0]);
             const float b = static_cast<float>(layerMetrics.transformation.matrix[2]);
@@ -644,22 +728,22 @@ void DesignEditorWindow::drawLayerPropertiesWidget() {
             const float origRotation = rotation;
 
             const std::string layerSectionHeader =
-                std::string("[")+layerTypeToShortString(selectedLayer.type)+std::string("] ")+
-                std::string(selectedLayer.id.data)+std::string(" ")+
-                std::string("(")+std::string(selectedLayer.name.data)+std::string(")");
+                std::string("[")+layerTypeToShortString(layer.type)+std::string("] ")+
+                std::string(layer.id.data)+std::string(" ")+
+                std::string("(")+std::string(layer.name.data)+std::string(")");
 
             if (ImGui::CollapsingHeader(layerSectionHeader.c_str())) {
                 ImGui::Text("%s", "ID:");
                 ImGui::SameLine(100);
-                ImGui::Text("%s", selectedLayer.id.data);
+                ImGui::Text("%s", layer.id.data);
 
                 ImGui::Text("%s", "Name:");
                 ImGui::SameLine(100);
-                ImGui::Text("%s", selectedLayer.name.data);
+                ImGui::Text("%s", layer.name.data);
 
                 ImGui::Text("%s", "Type:");
                 ImGui::SameLine(100);
-                ImGui::Text("%s", layerTypeToString(selectedLayer.type).c_str());
+                ImGui::Text("%s", layerTypeToString(layer.type).c_str());
 
                 ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
 
@@ -697,9 +781,9 @@ void DesignEditorWindow::drawLayerPropertiesWidget() {
 
                 ImGui::Text("Translation:");
                 ImGui::SameLine(100);
-                if (ImGui::DragFloat2((std::string("##translation-")+std::string(selectedLayer.id.data)).c_str(), &translation.x, 1.0f)) {
+                if (ImGui::DragFloat2((std::string("##translation-")+std::string(layer.id.data)).c_str(), &translation.x, 1.0f)) {
                     const ODE_Transformation newTransformation { 1,0,0,1,translation.x-origTranslation.x,translation.y-origTranslation.y };
-                    CHECK_IMEND(ode_component_transformLayer(data->context.component, selectedLayer.id, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation));
+                    CHECK_IMEND(ode_component_transformLayer(data->context.component, layer.id, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation));
                     CHECK_IMEND(ode_pr1_drawComponent(data->context.rc, data->context.component, data->context.imageBase, &data->context.bitmap, &data->context.frameView));
                 }
 
@@ -707,16 +791,16 @@ void DesignEditorWindow::drawLayerPropertiesWidget() {
                 ImGui::SameLine(100);
                 if (ImGui::DragFloat2(layerPropName("blend-scale").c_str(), &scale.x, 0.05f, 0.0f, 100.0f)) {
                     const ODE_Transformation newTransformation { scale.x/origScale.x,0,0,scale.y/origScale.y,0,0 };
-                    CHECK_IMEND(ode_component_transformLayer(data->context.component, selectedLayer.id, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation));
+                    CHECK_IMEND(ode_component_transformLayer(data->context.component, layer.id, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation));
                     CHECK_IMEND(ode_pr1_drawComponent(data->context.rc, data->context.component, data->context.imageBase, &data->context.bitmap, &data->context.frameView));
                 }
 
                 ImGui::Text("Rotation:");
                 ImGui::SameLine(100);
                 if (ImGui::DragFloat(layerPropName("blend-rotation").c_str(), &rotation)) {
-                    const float rotationChangeRad = (rotation-origRotation)*M_PI/180.0f;
+                    const float rotationChangeRad = -(rotation-origRotation)*M_PI/180.0f;
                     const ODE_Transformation newTransformation { cos(rotationChangeRad),-sin(rotationChangeRad),sin(rotationChangeRad),cos(rotationChangeRad),0,0 };
-                    CHECK_IMEND(ode_component_transformLayer(data->context.component, selectedLayer.id, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation));
+                    CHECK_IMEND(ode_component_transformLayer(data->context.component, layer.id, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation));
                     CHECK_IMEND(ode_pr1_drawComponent(data->context.rc, data->context.component, data->context.imageBase, &data->context.bitmap, &data->context.frameView));
                 }
 
@@ -769,10 +853,22 @@ void DesignEditorWindow::drawLayerPropertiesWidget() {
 
 void DesignEditorWindow::handleKeyboardEvents() {
     const float zoomKeySpeed = 0.03f;
+    const float minZoom = 1.0f;
+    const float maxZoom = 10.0f;
+
+    if (ImGui::IsKeyPressed(ImGuiKey_1)) {
+        data->mode = Internal::Mode::SELECT;
+    } else if (ImGui::IsKeyPressed(ImGuiKey_2)) {
+        data->mode = Internal::Mode::ADD_RECTANGLE;
+    } else if (ImGui::IsKeyPressed(ImGuiKey_3)) {
+        data->mode = Internal::Mode::ADD_ELLIPSE;
+    } else if (ImGui::IsKeyPressed(ImGuiKey_4)) {
+        data->mode = Internal::Mode::ADD_TEXT;
+    }
 
     if (ImGui::IsKeyDown(ImGuiKey_W)) {
-        data->zoomContext += zoomKeySpeed;
+        data->canvasContext.zoom = std::clamp(data->canvasContext.zoom + zoomKeySpeed, minZoom, maxZoom);
     } else if (ImGui::IsKeyDown(ImGuiKey_S)) {
-        data->zoomContext -= zoomKeySpeed;
+        data->canvasContext.zoom = std::clamp(data->canvasContext.zoom - zoomKeySpeed, minZoom, maxZoom);
     }
 }
