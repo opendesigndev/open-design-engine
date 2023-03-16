@@ -45,7 +45,7 @@ Napi::Value ode_napi_serialize(Napi::Env env, const size_t &value) {
 }
 
 bool ode_napi_read_into(const Napi::Value &value, ODE_VarDataPtr &parsed) {
-    intptr_t v = (intptr_t) value.As<Napi::Number>();
+    intptr_t v = (intptr_t) (int64_t) value.As<Napi::Number>();
     if (value.Env().IsExceptionPending())
         return false;
     parsed = reinterpret_cast<ODE_VarDataPtr>(v);

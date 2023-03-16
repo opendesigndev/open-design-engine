@@ -7,6 +7,7 @@
 #define NODE_ADDON_API_ENABLE_MAYBE
 #include <napi.h>
 #include <ode/api-base.h>
+#include <cstdlib>
 #include <optional>
 #include "manual-api-base.h"
 #include "manual-logic-api.h"
@@ -31,6 +32,22 @@ public:
 };
 
 using ODE_Scalar_array_6 = ODE_Scalar[6];
+
+Napi::Object init_api_base(Napi::Env env, Napi::Object exports);
+Napi::Value ode_napi_serialize(Napi::Env env, const int &value);
+Napi::Value ode_napi_serialize(Napi::Env env, const size_t &value);
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_ConstDataPtr &value);
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_VarDataPtr &value);
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_Scalar &value);
+bool ode_napi_read_into(const Napi::Value &value, int &parsed);
+bool ode_napi_read_into(const Napi::Value &value, size_t &parsed);
+bool ode_napi_read_into(const Napi::Value &value, ODE_VarDataPtr &parsed);
+bool ode_napi_read_into(const Napi::Value &value, ODE_Scalar &parsed);
+
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_MemoryBuffer &value);
+bool ode_napi_read_into(const Napi::Value &value, ODE_MemoryBuffer &target);
+
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_String &value);
 
 
 template<typename T>
