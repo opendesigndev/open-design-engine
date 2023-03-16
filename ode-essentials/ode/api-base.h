@@ -87,6 +87,7 @@ typedef double ODE_Scalar;
 typedef void *ODE_VarDataPtr;
 typedef const void *ODE_ConstDataPtr;
 typedef const char *ODE_ConstCharPtr;
+typedef char *ODE_CharPtr;
 
 /// A mathematical 2-dimensional vector
 typedef struct {
@@ -110,10 +111,9 @@ typedef struct {
 
 /// A standalone string in its own memory block (must be manually destroyed with ode_destroyString)
 typedef struct {
-    ODE_MANUAL
     /// Pointer to the beginning of UTF-8 encoded string
-        char *data;
-        /// Length of the string in bytes excluding the terminating null character
+    ODE_CharPtr data;
+    /// Length of the string in bytes excluding the terminating null character
     int length;
 } ODE_String;
 
@@ -137,7 +137,7 @@ typedef struct {
 } ODE_StringList;
 
 /// Destroys the ODE_String object, freeing its allocated memory
-ODE_Result ode_destroyString(ODE_String string);
+ODE_Result ODE_API ode_destroyString(ODE_String string);
 
 /**
  * Allocates a new memory buffer of a given size

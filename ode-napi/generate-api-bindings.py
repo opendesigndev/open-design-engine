@@ -834,7 +834,7 @@ def generateTypescriptBindings(entities):
             ts += tsDescription(entity.description)
             ts += 'export type '+name+' = {\n'
             for member in entity.members:
-                if member.category == 'member_variable' and not '*' in member.type:
+                if member.category == 'member_variable':
                     ts += tsDescription(member.description, padding)
                     ts += padding+member.name+': '+tsType(member.type)+';\n'
             ts += '};\n\n'

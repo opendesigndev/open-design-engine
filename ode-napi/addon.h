@@ -47,8 +47,6 @@ bool ode_napi_read_into(const Napi::Value &value, ODE_Scalar &parsed);
 Napi::Value ode_napi_serialize(Napi::Env env, const ODE_MemoryBuffer &value);
 bool ode_napi_read_into(const Napi::Value &value, ODE_MemoryBuffer &target);
 
-Napi::Value ode_napi_serialize(Napi::Env env, const ODE_String &value);
-
 
 template<typename T>
 inline bool ode_napi_serialize(Napi::Env env, const T *&parsed) {

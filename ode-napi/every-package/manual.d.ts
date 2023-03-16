@@ -11,4 +11,3 @@ export type Transformation = [
 ]
 export function makeString(value: string): StringRef
 export function readString(value: StringRef): string
-export type String = string
