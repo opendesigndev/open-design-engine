@@ -933,8 +933,8 @@ def write(file, contents):
         f.write(contents)
 
 def generateBindings(headerPath, out_path):
-    napiBindingsPath = os.path.join(out_path, "src", "gen-"+os.path.splitext(os.path.basename(headerPath))[0])
-    typescriptBindingsPath = os.path.join(out_path, "package", os.path.splitext(os.path.basename(headerPath))[0]+".d.ts")
+    napiBindingsPath = os.path.join(out_path, "codegen", "gen-"+os.path.splitext(os.path.basename(headerPath))[0])
+    typescriptBindingsPath = os.path.join(out_path, "codegen", os.path.splitext(os.path.basename(headerPath))[0]+".d.ts")
     with open(headerPath, "r") as f:
         header = f.read()
     entities = parseHeader(header)
@@ -945,7 +945,7 @@ def generateBindings(headerPath, out_path):
     write(typescriptBindingsPath, preamble+typescriptBindings)
 
 def generateTopLevelBindings(paths, out_path):
-    typescriptBindingsPath = os.path.join(out_path, "package", "index.d.ts")
+    typescriptBindingsPath = os.path.join(out_path, "codegen", "index.d.ts")
     typescriptBindings = generateTopLevelTypescriptBindings()
     write(typescriptBindingsPath, preamble+typescriptBindings)
     
@@ -953,7 +953,7 @@ def generateTopLevelBindings(paths, out_path):
     for path in paths:
         basename = os.path.basename(path)
         includes += f'#include "gen-{basename}"\n'
-    write(os.path.join(out_path, "src", "gen.h"), "#pragma once\n"+preamble+includes)
+    write(os.path.join(out_path, "codegen", "gen.h"), "#pragma once\n"+preamble+includes)
 
 out_path = sys.argv[1]
 paths = sys.argv[2:]

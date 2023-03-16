@@ -4,11 +4,11 @@
     "private": true,
     "description": "Purpose of this package is to be used in local development with portal: protocol. See wraper-package for actually release package.",
     "dependencies": {
-        "@opendesign/engine-wasm": "portal:../../../wasm-rel/ode-napi/package"
+        "@opendesign/engine-wasm": "portal:${CMAKE_SOURCE_DIR}/build/wasm-rel/ode-napi/target-specific"
     },
     "optionalDependencies": {
-        "@opendesign/engine-${ODE_PLATFORM_OS}-${ODE_PLATFORM_CPU}": "portal:../package",
-        "@opendesign/engine-source": "portal:../../../.."
+        "@opendesign/engine-${ODE_PLATFORM_OS}-${ODE_PLATFORM_CPU}": "portal:../target-specific",
+        "@opendesign/engine-source": "portal:${CMAKE_SOURCE_DIR}"
     },
     "type": "module",
     "exports": {

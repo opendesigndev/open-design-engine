@@ -3,9 +3,9 @@ cmake_minimum_required(VERSION 3.16)
 
 set(ODE_NAPI_SOURCES
     "addon.cpp"
-    ${CMAKE_CURRENT_BINARY_DIR}/src/gen-api-base.cpp
-    ${CMAKE_CURRENT_BINARY_DIR}/src/gen-logic-api.cpp
-    ${CMAKE_CURRENT_BINARY_DIR}/src/gen-renderer-api.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/codegen/gen-api-base.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/codegen/gen-logic-api.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/codegen/gen-renderer-api.cpp
     "manual-api-base.cpp"
     "manual-logic-api.cpp"
 )
@@ -29,7 +29,7 @@ target_include_directories(ode-napi INTERFACE
 )
 target_include_directories(ode-napi PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-    ${CMAKE_CURRENT_BINARY_DIR}/src/
+    ${CMAKE_CURRENT_BINARY_DIR}/codegen/
 )
 
 SET(ODE_NAPI_CODEGEN_INPUT
@@ -40,17 +40,17 @@ SET(ODE_NAPI_CODEGEN_INPUT
 
 add_custom_command(
         OUTPUT
-            ${CMAKE_CURRENT_BINARY_DIR}/package/api-base.d.ts
-            ${CMAKE_CURRENT_BINARY_DIR}/package/index.d.ts
-            ${CMAKE_CURRENT_BINARY_DIR}/package/logic-api.d.ts
-            ${CMAKE_CURRENT_BINARY_DIR}/package/renderer-api.d.ts
-            ${CMAKE_CURRENT_BINARY_DIR}/src/gen-api-base.cpp
-            ${CMAKE_CURRENT_BINARY_DIR}/src/gen-api-base.h
-            ${CMAKE_CURRENT_BINARY_DIR}/src/gen-logic-api.cpp
-            ${CMAKE_CURRENT_BINARY_DIR}/src/gen-logic-api.h
-            ${CMAKE_CURRENT_BINARY_DIR}/src/gen-renderer-api.cpp
-            ${CMAKE_CURRENT_BINARY_DIR}/src/gen-renderer-api.h
-            ${CMAKE_CURRENT_BINARY_DIR}/src/gen.h
+            ${CMAKE_CURRENT_BINARY_DIR}/codegen/api-base.d.ts
+            ${CMAKE_CURRENT_BINARY_DIR}/codegen/index.d.ts
+            ${CMAKE_CURRENT_BINARY_DIR}/codegen/logic-api.d.ts
+            ${CMAKE_CURRENT_BINARY_DIR}/codegen/renderer-api.d.ts
+            ${CMAKE_CURRENT_BINARY_DIR}/codegen/gen-api-base.cpp
+            ${CMAKE_CURRENT_BINARY_DIR}/codegen/gen-api-base.h
+            ${CMAKE_CURRENT_BINARY_DIR}/codegen/gen-logic-api.cpp
+            ${CMAKE_CURRENT_BINARY_DIR}/codegen/gen-logic-api.h
+            ${CMAKE_CURRENT_BINARY_DIR}/codegen/gen-renderer-api.cpp
+            ${CMAKE_CURRENT_BINARY_DIR}/codegen/gen-renderer-api.h
+            ${CMAKE_CURRENT_BINARY_DIR}/codegen/gen.h
         MAIN_DEPENDENCY
             generate-api-bindings.py
         DEPENDS
@@ -60,28 +60,53 @@ add_custom_command(
         VERBATIM
 )
 
-function(copy_to_npm_package file package)
+function(copy_file_to_package packages from)
     set(target ${ARGV2})
     if(NOT target)
-        get_filename_component(target ${file} NAME)
+        get_filename_component(target "${from}" NAME)
     endif()
-    add_custom_command(TARGET ode-napi POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE_DIR:ode-napi>/${file}
-        $<TARGET_FILE_DIR:ode-napi>/${package}/${target}
-        DEPENDS $<TARGET_FILE_DIR:ode-napi>/${file}
-    )
+    foreach(package IN LISTS packages)
+        set(avail_packages "target-specific;wrapper")
+        if(NOT ${package} IN_LIST avail_packages)
+            message(FATAL_ERROR "Invalid package ${package}")
+        endif()
+
+        add_custom_command(TARGET ode-napi POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy ${from}
+            $<TARGET_FILE_DIR:ode-napi>/${package}/${target}
+            DEPENDS ${from}
+        )
+    endforeach()
 endfunction()
 
-function(copy_to_npm_package_from_package file package)
-    set(target ${ARGV2})
-    if(NOT target)
-        get_filename_component(target ${file} NAME)
-    endif()
-    add_custom_command(TARGET ode-napi POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/package/${file}
-        $<TARGET_FILE_DIR:ode-napi>/${package}/${target}
-        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/package/${file}
-    )
+# There are two packages generated:
+# - wrapper, which just reexports native and wasm so that one package could
+#   be used in both web and nodejs
+#   - the real one gets generated from wasm build, one for local testing is
+#     generated from native build
+# - native/wasm package - target-specific one which contains the real file
+# - there is also source only package which basically contains all sources from
+#   this repo but that one is not generate using cmake.
+#
+# Then there are three sources for files which can be put into those packages:
+# - source files
+# - binary files, which are generated per config in case of cmake multi config setup
+# - codegened files, which are only generated once
+#
+# Use correct function from the following list:
+# copy_built_file_to_package, copy_codegen_file_to_package, copy_source_file_to_package
+# and first argument is always the target package or list of packages
+
+function(copy_built_file_to_package packages file)
+    copy_file_to_package("${packages}" $<TARGET_FILE_DIR:ode-napi>/${file} ${ARGV2})
+endfunction()
+
+function(copy_codegen_file_to_package packages file)
+    copy_file_to_package("${packages}" ${CMAKE_CURRENT_BINARY_DIR}/codegen/${file} ${ARGV2})
+endfunction()
+
+function(copy_source_file_to_package packages file)
+    copy_file_to_package("${packages}" ${CMAKE_CURRENT_LIST_DIR}/${file} ${ARGV2})
 endfunction()
 
 if(EMSCRIPTEN)
@@ -121,19 +146,17 @@ if(EMSCRIPTEN)
         target_link_options(ode-napi PRIVATE "SHELL:-s USE_WEBGL2=1")
     endif()
 
-    configure_file(wasm-package/package.json ${CMAKE_CURRENT_BINARY_DIR}/package/package.json) # CHECK PATH
-    configure_file(wasm-package/index.js ${CMAKE_CURRENT_BINARY_DIR}/package/index.js) # CHECK PATH
-    copy_to_npm_package(ode.js package) # CHECK PATH
-    copy_to_npm_package(ode.wasm package) # CHECK PATH
+    configure_file(wasm-package/index.js codegen/index.js)
+    copy_codegen_file_to_package("target-specific" index.js)
+    configure_file(wasm-package/package.json codegen/target-specific/package.json)
+    copy_codegen_file_to_package("target-specific" target-specific/package.json)
+    copy_built_file_to_package("target-specific" ode.js)
+    copy_built_file_to_package("target-specific" ode.wasm)
 
-    configure_file(wrapper-package/package.json wrapper/package.json)
-    configure_file(wrapper-package/wasm.js wrapper/wasm.js COPYONLY)
-    configure_file(wrapper-package/node.js wrapper/node.js)
-    copy_to_npm_package_from_package(api-base.d.ts wrapper)
-    copy_to_npm_package_from_package(index.d.ts wrapper node.d.ts)
-    copy_to_npm_package_from_package(index.d.ts wrapper wasm.d.ts)
-    copy_to_npm_package_from_package(logic-api.d.ts wrapper)
-    copy_to_npm_package_from_package(renderer-api.d.ts wrapper)
+    # configure_file does variable replacement
+    configure_file(wrapper-package/package.json codegen/package.json)
+    configure_file(wrapper-package/node.js codegen/node.js)
+    configure_file(wrapper-package/wasm.js codegen/wasm.js)
 else()
     # Removes some warning
     set_target_properties(ode-napi PROPERTIES
@@ -165,26 +188,32 @@ else()
             endif()
         endif()
     endif()
+    
     if(DEFINED ODE_PLATFORM_OS AND DEFINED ODE_PLATFORM_CPU)
-        configure_file(native-package/package.json package/package.json) # CHECK PATH
-        configure_file(native-package/index.js package/index.js) # CHECK PATH
-        copy_to_npm_package(ode-napi.node package)
+        configure_file(native-package/index.js codegen/index.js)
+        copy_codegen_file_to_package("target-specific" index.js)
+        configure_file(native-package/package.json codegen/target-specific/package.json)
+        copy_codegen_file_to_package("target-specific" target-specific/package.json)
     endif()
-
-    configure_file(native-package/index.js package/index.js)
-
-    configure_file(wrapper-package-test/package.json wrapper/package.json)
-    configure_file(wrapper-package-test/wasm.js wrapper/wasm.js COPYONLY)
-    configure_file(wrapper-package-test/node.js wrapper/node.js)
-    copy_to_npm_package_from_package(api-base.d.ts wrapper)
-    copy_to_npm_package_from_package(index.d.ts wrapper node.d.ts)
-    copy_to_npm_package_from_package(index.d.ts wrapper wasm.d.ts)
-    copy_to_npm_package_from_package(logic-api.d.ts wrapper)
-    copy_to_npm_package_from_package(renderer-api.d.ts wrapper)
+    copy_built_file_to_package("target-specific" ode-napi.node)
+    
+    # configure_file does variable replacement
+    configure_file(wrapper-package-test/package.json codegen/package.json)
+    configure_file(wrapper-package-test/node.js codegen/node.js)
+    configure_file(wrapper-package-test/wasm.js codegen/wasm.js)
 endif()
 
-configure_file(every-package/exports.d.ts ${CMAKE_CURRENT_BINARY_DIR}/package/exports.d.ts COPYONLY)
-configure_file(every-package/common.d.ts ${CMAKE_CURRENT_BINARY_DIR}/package/common.d.ts COPYONLY)
-configure_file(every-package/exports.d.ts wrapper/exports.d.ts COPYONLY) # CHECK PATH
-configure_file(every-package/common.d.ts wrapper/common.d.ts COPYONLY) # CHECK PATH
-configure_file(every-package/manual.d.ts wrapper/manual.d.ts COPYONLY) # CHECK PATH
+
+copy_codegen_file_to_package("wrapper" wasm.js)
+copy_codegen_file_to_package("wrapper" package.json)
+copy_codegen_file_to_package("wrapper" node.js)
+
+copy_codegen_file_to_package("target-specific;wrapper" api-base.d.ts)
+copy_codegen_file_to_package("wrapper" index.d.ts node.d.ts)
+copy_codegen_file_to_package("wrapper" index.d.ts wasm.d.ts)
+copy_codegen_file_to_package("target-specific" index.d.ts)
+copy_codegen_file_to_package("target-specific;wrapper" logic-api.d.ts)
+copy_codegen_file_to_package("target-specific;wrapper" renderer-api.d.ts)
+copy_source_file_to_package("target-specific;wrapper" every-package/exports.d.ts)
+copy_source_file_to_package("target-specific;wrapper" every-package/common.d.ts)
+copy_source_file_to_package("target-specific;wrapper" every-package/manual.d.ts)
