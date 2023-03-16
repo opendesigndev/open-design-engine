@@ -2,6 +2,7 @@
 #include "manual-api-base.h"
 
 #include <cstddef>
+#include <cstdint>
 #include <ode/api-base.h>
 #include "napi-wrap.h"
 #include "gen.h"
@@ -41,6 +42,14 @@ Napi::Value ode_napi_serialize(Napi::Env env, const size_t &value) {
         return Napi::Value();
     }
     return Napi::Number::New(env, (uint32_t) value);
+}
+
+bool ode_napi_read_into(const Napi::Value &value, ODE_VarDataPtr &parsed) {
+    intptr_t v = (intptr_t) value.As<Napi::Number>();
+    if (value.Env().IsExceptionPending())
+        return false;
+    parsed = reinterpret_cast<ODE_VarDataPtr>(v);
+    return true;
 }
 
 Napi::Value ode_napi_serialize(Napi::Env env, const ODE_VarDataPtr &value) {

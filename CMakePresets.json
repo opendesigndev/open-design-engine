@@ -50,7 +50,6 @@
       "name": "osx-rel",
       "displayName": "Mac OS arm64 release configuration",
       "binaryDir": "${sourceDir}/build/osx-rel",
-      "generator": "Ninja",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "VCPKG_TARGET_TRIPLET": "arm64-osx",

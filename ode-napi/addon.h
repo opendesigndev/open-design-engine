@@ -35,7 +35,7 @@ using ODE_Scalar_array_6 = ODE_Scalar[6];
 
 template<typename T>
 inline bool ode_napi_serialize(Napi::Env env, const T *&parsed) {
-    return ode_napi_serialize(env, (uintptr_t) parsed);
+    return ode_napi_serialize(env, reinterpret_cast<ODE_ConstDataPtr>(parsed));
 }
 
 template<typename T>
