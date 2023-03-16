@@ -50,15 +50,9 @@ jobs:
           configurePreset: osx-arm64
           buildPreset: osx-arm64
 
-      - name: Configure and build ODE
-        uses: lukka/run-cmake@v10
-        with:
-          configurePreset: osx-x64
-          buildPreset: osx-x64
-
       - name: Gather artifacts
         run: |
-          for arch in x64 arm64; do
+          for arch in arm64; do
             mkdir -p build/artifacts/open-design-engine/$arch
             cp build/osx-$arch/ode-logic/ode-logic-cli build/artifacts/open-design-engine/$arch
             cp build/osx-$arch/ode-renderer/ode-renderer-cli build/artifacts/open-design-engine/$arch
@@ -67,8 +61,8 @@ jobs:
             cp build/osx-$arch/tools/render-graph-inspector/render-graph-inspector build/artifacts/open-design-engine/$arch
           done
 
-      - name: Upload arifacts
+      - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: ode-osx64
+          name: ode-osx
           path: build/artifacts
