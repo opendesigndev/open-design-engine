@@ -1,4 +1,7 @@
-#include "addon.h"
+
+#include "manual-api-base.h"
+
+#include <cstddef>
 #include <ode/api-base.h>
 #include "napi-wrap.h"
 #include "gen.h"
@@ -13,8 +16,9 @@ Napi::Object init_api_base(Napi::Env env, Napi::Object exports) {
 }
 
 bool ode_napi_read_into(const Napi::Value &value, int &parsed) {
-    auto v = (int32_t) value.As<Napi::Number>();
-    if (value.Env().IsExceptionPending()) return false;
+    int32_t v = (int32_t) value.As<Napi::Number>();
+    if (value.Env().IsExceptionPending())
+        return false;
     parsed = v;
     return true;
 }
@@ -23,15 +27,16 @@ Napi::Value ode_napi_serialize(Napi::Env env, const int &value) {
 }
 
 
-bool ode_napi_read_into(const Napi::Value &value, unsigned long &parsed) {
-    auto v = (int64_t) value.As<Napi::Number>();
-    if (value.Env().IsExceptionPending()) return false;
+bool ode_napi_read_into(const Napi::Value &value, size_t &parsed) {
+    int64_t v = (int64_t) value.As<Napi::Number>();
+    if (value.Env().IsExceptionPending())
+        return false;
     parsed = v;
     return true;
 }
-Napi::Value ode_napi_serialize(Napi::Env env, const unsigned long &value) {
-    auto sgn = static_cast<int64_t>(value);
-    if (static_cast<unsigned long>(sgn) != value || sgn < 0) {
+Napi::Value ode_napi_serialize(Napi::Env env, const size_t &value) {
+    ptrdiff_t signedValue = ptrdiff_t(value);
+    if (uint32_t(value) != value || signedValue < 0) {
         Napi::Error::New(env, "Too big to convert to js number").ThrowAsJavaScriptException();
         return Napi::Value();
     }
@@ -39,12 +44,12 @@ Napi::Value ode_napi_serialize(Napi::Env env, const unsigned long &value) {
 }
 
 Napi::Value ode_napi_serialize(Napi::Env env, const ODE_VarDataPtr &value) {
-    return ode_napi_serialize(env, (unsigned long) value);
+    return ode_napi_serialize(env, size_t(reinterpret_cast<uintptr_t>(value)));
 }
 
 
 Napi::Value ode_napi_serialize(Napi::Env env, const ODE_ConstDataPtr &value) {
-    return ode_napi_serialize(env, (uintptr_t) value);
+    return ode_napi_serialize(env, size_t(reinterpret_cast<uintptr_t>(value)));
 }
 
 bool ode_napi_read_into(const Napi::Value &value, ODE_Scalar &parsed) {

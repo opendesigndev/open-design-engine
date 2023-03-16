@@ -18,7 +18,7 @@ else()
 endif()
 
 # dependencies
-add_library(ode-napi-lib INTERFACE )
+add_library(ode-napi-lib INTERFACE)
 target_link_libraries(ode-napi-lib INTERFACE liboctopus ode-essentials ode-logic ode-renderer)
 target_link_libraries(ode-napi PRIVATE ode-napi-lib)
 
@@ -72,6 +72,18 @@ function(copy_to_npm_package file package)
     )
 endfunction()
 
+function(copy_to_npm_package_from_package file package)
+    set(target ${ARGV2})
+    if(NOT target)
+        get_filename_component(target ${file} NAME)
+    endif()
+    add_custom_command(TARGET ode-napi POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/package/${file}
+        $<TARGET_FILE_DIR:ode-napi>/${package}/${target}
+        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/package/${file}
+    )
+endfunction()
+
 if(EMSCRIPTEN)
     # Enable emnapi
     include(FetchContent)
@@ -109,19 +121,19 @@ if(EMSCRIPTEN)
         target_link_options(ode-napi PRIVATE "SHELL:-s USE_WEBGL2=1")
     endif()
 
-    configure_file(wasm-package/package.json package/package.json)
-    configure_file(wasm-package/index.js package/index.js)
-    copy_to_npm_package(ode.js package)
-    copy_to_npm_package(ode.wasm package)
+    configure_file(wasm-package/package.json ${CMAKE_CURRENT_BINARY_DIR}/package/package.json) # CHECK PATH
+    configure_file(wasm-package/index.js ${CMAKE_CURRENT_BINARY_DIR}/package/index.js) # CHECK PATH
+    copy_to_npm_package(ode.js package) # CHECK PATH
+    copy_to_npm_package(ode.wasm package) # CHECK PATH
 
     configure_file(wrapper-package/package.json wrapper/package.json)
     configure_file(wrapper-package/wasm.js wrapper/wasm.js COPYONLY)
     configure_file(wrapper-package/node.js wrapper/node.js)
-    copy_to_npm_package(package/api-base.d.ts wrapper)
-    copy_to_npm_package(package/index.d.ts wrapper node.d.ts)
-    copy_to_npm_package(package/index.d.ts wrapper wasm.d.ts)
-    copy_to_npm_package(package/logic-api.d.ts wrapper)
-    copy_to_npm_package(package/renderer-api.d.ts wrapper)
+    copy_to_npm_package_from_package(api-base.d.ts wrapper)
+    copy_to_npm_package_from_package(index.d.ts wrapper node.d.ts)
+    copy_to_npm_package_from_package(index.d.ts wrapper wasm.d.ts)
+    copy_to_npm_package_from_package(logic-api.d.ts wrapper)
+    copy_to_npm_package_from_package(renderer-api.d.ts wrapper)
 else()
     # Removes some warning
     set_target_properties(ode-napi PROPERTIES
@@ -154,8 +166,8 @@ else()
         endif()
     endif()
     if(DEFINED ODE_PLATFORM_OS AND DEFINED ODE_PLATFORM_CPU)
-        configure_file(native-package/package.json package/package.json)
-        configure_file(native-package/index.js package/index.js)
+        configure_file(native-package/package.json package/package.json) # CHECK PATH
+        configure_file(native-package/index.js package/index.js) # CHECK PATH
         copy_to_npm_package(ode-napi.node package)
     endif()
 
@@ -164,15 +176,15 @@ else()
     configure_file(wrapper-package-test/package.json wrapper/package.json)
     configure_file(wrapper-package-test/wasm.js wrapper/wasm.js COPYONLY)
     configure_file(wrapper-package-test/node.js wrapper/node.js)
-    copy_to_npm_package(package/api-base.d.ts wrapper)
-    copy_to_npm_package(package/index.d.ts wrapper node.d.ts)
-    copy_to_npm_package(package/index.d.ts wrapper wasm.d.ts)
-    copy_to_npm_package(package/logic-api.d.ts wrapper)
-    copy_to_npm_package(package/renderer-api.d.ts wrapper)
+    copy_to_npm_package_from_package(api-base.d.ts wrapper)
+    copy_to_npm_package_from_package(index.d.ts wrapper node.d.ts)
+    copy_to_npm_package_from_package(index.d.ts wrapper wasm.d.ts)
+    copy_to_npm_package_from_package(logic-api.d.ts wrapper)
+    copy_to_npm_package_from_package(renderer-api.d.ts wrapper)
 endif()
 
 configure_file(every-package/exports.d.ts ${CMAKE_CURRENT_BINARY_DIR}/package/exports.d.ts COPYONLY)
 configure_file(every-package/common.d.ts ${CMAKE_CURRENT_BINARY_DIR}/package/common.d.ts COPYONLY)
-configure_file(every-package/exports.d.ts ${CMAKE_CURRENT_BINARY_DIR}/wrapper/exports.d.ts COPYONLY)
-configure_file(every-package/common.d.ts ${CMAKE_CURRENT_BINARY_DIR}/wrapper/common.d.ts COPYONLY)
-configure_file(every-package/manual.d.ts ${CMAKE_CURRENT_BINARY_DIR}/wrapper/manual.d.ts COPYONLY)
+configure_file(every-package/exports.d.ts wrapper/exports.d.ts COPYONLY) # CHECK PATH
+configure_file(every-package/common.d.ts wrapper/common.d.ts COPYONLY) # CHECK PATH
+configure_file(every-package/manual.d.ts wrapper/manual.d.ts COPYONLY) # CHECK PATH
