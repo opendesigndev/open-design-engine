@@ -1,29 +1,22 @@
 name: Mac OS build
 on:
-  pull_request:
-    types:
-      - opened
-      - edited
-      - reopened
-      - synchronize
-      - review_requested
-      - ready_for_review
-  push:
-    branches:
-      - main
-    tags:
-      - '*'
+  push
 
 jobs:
   macos:
+    strategy:
+      matrix:
+        arch: [ARM64, X64]
     if: |
       (github.event_name == 'pull_request' && github.event.pull_request.draft == false) || github.event_name == 'push'
-    runs-on: macos-latest
-
-    env:
-      VCPKG_DEFAULT_TRIPLET: x64-osx-release
+    runs-on: [self-hosted, macOS, "${{ matrix.arch }}"]
 
     steps:
+      #- name: Install prerequisites
+      #  run: brew install automake autoconf autoconf-archive ninja git
+      - name: Setup env
+        # The runner has: brew automake autoconf autoconf-archive ninja git cmake
+        run: echo "PATH=/opt/homebrew/bin:$PATH" >> $GITHUB_ENV
       - uses: actions/checkout@v3
         with:
           # Personal token with read-only access to liboctopus and open-design-text-renderer
@@ -31,12 +24,10 @@ jobs:
           token: ${{ secrets.ODE_REPOS_TOKEN }}
           submodules: true
 
-      - name: Install prerequisites
-        run: brew install automake autoconf autoconf-archive ninja
-
       - name: Get project variables
         run: |
           printf "VCPKG_BASELINE=%s\n" $(jq -r '."builtin-baseline"' vcpkg.json) >> $GITHUB_ENV;
+          echo "ARCH_LOWER=`echo ${{ matrix.arch }} | tr '[:upper:]' '[:lower:]'`" >> ${GITHUB_ENV}
 
       - name: Setup vcpkg dependencies (cached)
         uses: lukka/run-vcpkg@v10
@@ -47,22 +38,22 @@ jobs:
       - name: Configure and build ODE
         uses: lukka/run-cmake@v10
         with:
-          configurePreset: osx-arm64
-          buildPreset: osx-arm64
+          configurePreset: osx-${{ env.ARCH_LOWER }}
+          buildPreset: osx-${{ env.ARCH_LOWER }}
 
       - name: Gather artifacts
         run: |
-          for arch in arm64; do
-            mkdir -p build/artifacts/open-design-engine/$arch
-            cp build/osx-$arch/ode-logic/Release/ode-logic-cli build/artifacts/open-design-engine/$arch
-            cp build/osx-$arch/ode-renderer/Release/ode-renderer-cli build/artifacts/open-design-engine/$arch
-            cp build/osx-$arch/ode-animation-prototype/Release/ode-animation-prototype-window build/artifacts/open-design-engine/$arch
-            cp build/osx-$arch/tests/renderer-unit-tests/Release/renderer-unit-tests build/artifacts/open-design-engine/$arch
-            cp build/osx-$arch/tools/render-graph-inspector/Release/render-graph-inspector build/artifacts/open-design-engine/$arch
-          done
+          mkdir -p build/artifacts/open-design-engine/$arch
+          cp build/osx-$arch/ode-logic/Release/ode-logic-cli build/artifacts/open-design-engine/$arch
+          cp build/osx-$arch/ode-renderer/Release/ode-renderer-cli build/artifacts/open-design-engine/$arch
+          cp build/osx-$arch/ode-animation-prototype/Release/ode-animation-prototype-window build/artifacts/open-design-engine/$arch
+          cp build/osx-$arch/tests/renderer-unit-tests/Release/renderer-unit-tests build/artifacts/open-design-engine/$arch
+          cp build/osx-$arch/tools/render-graph-inspector/Release/render-graph-inspector build/artifacts/open-design-engine/$arch
+        env:
+          arch: ${{ env.ARCH_LOWER }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: ode-osx
+          name: ode-osx-${{ env.ARCH_LOWER }}
           path: build/artifacts
