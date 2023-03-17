@@ -54,11 +54,11 @@ jobs:
         run: |
           for arch in arm64; do
             mkdir -p build/artifacts/open-design-engine/$arch
-            cp build/osx-$arch/ode-logic/ode-logic-cli build/artifacts/open-design-engine/$arch
-            cp build/osx-$arch/ode-renderer/ode-renderer-cli build/artifacts/open-design-engine/$arch
-            cp build/osx-$arch/ode-animation-prototype/ode-animation-prototype-window build/artifacts/open-design-engine/$arch
-            cp build/osx-$arch/tests/renderer-unit-tests/renderer-unit-tests build/artifacts/open-design-engine/$arch
-            cp build/osx-$arch/tools/render-graph-inspector/render-graph-inspector build/artifacts/open-design-engine/$arch
+            cp build/osx-$arch/ode-logic/Release/ode-logic-cli build/artifacts/open-design-engine/$arch
+            cp build/osx-$arch/ode-renderer/Release/ode-renderer-cli build/artifacts/open-design-engine/$arch
+            cp build/osx-$arch/ode-animation-prototype/Release/ode-animation-prototype-window build/artifacts/open-design-engine/$arch
+            cp build/osx-$arch/tests/renderer-unit-tests/Release/renderer-unit-tests build/artifacts/open-design-engine/$arch
+            cp build/osx-$arch/tools/render-graph-inspector/Release/render-graph-inspector build/artifacts/open-design-engine/$arch
           done
 
       - name: Upload artifacts
