@@ -7,6 +7,8 @@ env:
   GITLAB_PROJECT: opendesign/open-design-engine/wasm
   GITLAB_USERNAME: registry
   DOCKER_CACHE: "type=s3,region=us-east-1,bucket=opendesign-pc-ceros-dev-github-ci,prefix=open-design-engine/wasm/"
+  EMSCRIPTEN_VERSION: 3.1.12
+  EMSCRIPTEN_PORTS: freetype zlib harfbuzz libpng icu libjpeg
 
 jobs:
   wasm:
@@ -18,81 +20,51 @@ jobs:
           # https://github.com/organizations/opendesigndev/settings/personal-access-tokens/39049
           token: ${{ secrets.ODE_REPOS_TOKEN }}
           submodules: true
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      - name: Configure AWS credentials for ECR access
-        uses: "aws-actions/configure-aws-credentials@v1"
+      - name: Setup system dependencies
+        run: sudo apt-get -y install ninja-build
+      - name: Setup emsdk
+        uses: mymindstorm/setup-emsdk@v11
         with:
-          # GithubCIUser
-          aws-access-key-id: "${{ vars.AWS_ACCESS_KEY_ID }}"
-          aws-region: us-east-1
-          aws-secret-access-key: "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
-      - name: Login to Gitlab Container Registry
-        uses: docker/login-action@v2
+          version: ${{ env.EMSCRIPTEN_VERSION }}
+          actions-cache-folder: 'emsdk-cache'
+      - name: "Emscripten ports: Restore cache"
+        id: cache-emports
+        uses: actions/cache/restore@v3
         with:
-          registry: ${{ env.GITLAB_REGISTRY }}
-          username: ${{ env.GITLAB_USERNAME }}
-          password: ${{ secrets.GITLAB_PASSWORD }}
-      - run: |
-          # Looks like metadata-action enable condition only allows boolean variables
-          if [ $GITHUB_REF_TYPE == branch ];
-          then
-            echo "ON_BRANCH=true" >> $GITHUB_ENV;
-            echo "ON_TAG=false" >> $GITHUB_ENV;
-          else
-            echo "ON_BRANCH=false" >> $GITHUB_ENV;
-            echo "ON_TAG=true" >> $GITHUB_ENV;
-          fi
-      - name: Extract job Docker meta
-        id: meta
-        uses: docker/metadata-action@v4
+          path: emsdk-cache/emsdk-main/upstream/emscripten/cache
+          key: wasm-emports-${{ env.EMSCRIPTEN_VERSION }}-${{ join(env.EMSCRIPTEN_PORTS) }}
+      - name: "Emscripten ports: Build"
+        if: steps.cache-emports.outputs.cache-hit != 'true'
+        run: embuilder build ${{ env.EMSCRIPTEN_PORTS }}
+      - name: "Emscripten ports: Save cache"
+        uses: actions/cache/save@v3
+        if: steps.cache-emports.outputs.cache-hit != 'true'
         with:
-          images: |
-            ${{ env.GITLAB_REGISTRY }}/${{ env.GITLAB_PROJECT }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=sha,prefix={{branch}}-,enable=${{ env.ON_BRANCH }}
-            type=sha,prefix={{tag}}-,enable=${{ env.ON_TAG }}
-      - name: Build and push base image
-        uses: docker/build-push-action@v3
+          path: emsdk-cache/emsdk-main/upstream/emscripten/cache
+          key: ${{ steps.cache-emports.outputs.cache-primary-key }}
+      - name: "Skia: Restore cache"
+        id: cache-skia
+        uses: actions/cache/restore@v3
         with:
-          push: true
-          context: .
-          file: dockerfiles/wasm-build/Dockerfile
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: |
-            ${{ env.DOCKER_CACHE }},name=main
-            ${{ env.DOCKER_CACHE }},name=${{ github.ref_name }}
-          cache-to: |
-            ${{ env.DOCKER_CACHE }},name=${{ github.ref_name }},mode=max
-      - name: Cache base image in main
-        uses: docker/build-push-action@v3
-        if: ${{ github.ref_name == 'main' }}
+          path: |
+            third-party/skia/out/wasm/release/libskia.a
+            third-party/skia/out/include
+          key: wasm-skia-${{ hashFiles('third-party/skia/**/*') }}
+      - name: "Skia: Build"
+        if: steps.cache-skia.outputs.cache-hit != 'true'
+        run: ./third-party/skia/build.sh
+      - name: "Skia: Save cache"
+        uses: actions/cache/save@v3
+        if: steps.cache-skia.outputs.cache-hit != 'true'
         with:
-          context: .
-          file: ode-animation-prototype/docker/Dockerfile
-          cache-from: |
-            ${{ env.DOCKER_CACHE }},name=${{ github.ref_name }}
-          cache-to: |
-            ${{ env.DOCKER_CACHE }},name=main,mode=max
-      - name: Adding output tags to summary
-        run: |
-          echo "Main docker image: ${{ fromJSON(steps.meta.outputs.json).tags[1] }}" >> $GITHUB_STEP_SUMMARY
-      - name: Build WASM and publish
-        run: docker run -v $(pwd):/src -e NPM_TOKEN=$NPM_TOKEN $BASE_IMAGE_TAG bash dockerfiles/wasm-build/build.sh --publish
-        if: github.ref == 'refs/heads/main'
-        env:
-          NPM_TOKEN: ${{secrets.NPM_TOKEN}}
-          BASE_IMAGE_TAG: "${{ fromJSON(steps.meta.outputs.json).tags[1] }}"
+          path: |
+            third-party/skia/out/wasm/release/libskia.a
+            third-party/skia/out/include
+          key: ${{ steps.cache-skia.outputs.cache-primary-key }}
+      - name: Configure WASM
+        run: cmake --preset wasm-rel
       - name: Build WASM
-        run: docker run -v $(pwd):/src $BASE_IMAGE_TAG bash dockerfiles/wasm-build/build.sh
-        if: github.ref != 'refs/heads/main'
-        env:
-          BASE_IMAGE_TAG: "${{ fromJSON(steps.meta.outputs.json).tags[1] }}"
+        run: cmake --build --preset wasm-rel
       - name: WASM artifacts
         uses: actions/upload-artifact@v3
         with:
