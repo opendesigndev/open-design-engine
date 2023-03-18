@@ -1,5 +1,5 @@
 
-#include "manual-api-base.h"
+#include "addon.h"
 
 #include <cstddef>
 #include <cstdint>

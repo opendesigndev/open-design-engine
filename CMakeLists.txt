@@ -1,5 +1,6 @@
 
 cmake_minimum_required(VERSION 3.16)
+# Recommended by cmake-js https://github.com/cmake-js/cmake-js
 cmake_policy(SET CMP0091 NEW)
 cmake_policy(SET CMP0042 NEW)
 
@@ -22,14 +23,14 @@ if(NOT CMAKE_TOOLCHAIN_FILE AND NOT EMSCRIPTEN)
         include(FetchContent)
         FetchContent_Declare(vcpkg
             GIT_REPOSITORY https://github.com/microsoft/vcpkg/
-            GIT_TAG 2023.02.24
+            GIT_TAG a7b6122f6b6504d16d96117336a0562693579933
         )
         FetchContent_MakeAvailable(vcpkg)
         set(CMAKE_TOOLCHAIN_FILE "${vcpkg_SOURCE_DIR}/scripts/buildsystems/vcpkg.cmake" CACHE FILEPATH "")
     endif()
 endif()
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-SET(CMAKE_OSX_DEPLOYMENT_TARGET 13.0)
+set(CMAKE_OSX_DEPLOYMENT_TARGET 13.0)
 
 # Set static vcpkg triplet for Windows
 if(WIN32 AND NOT VCPKG_TARGET_TRIPLET)

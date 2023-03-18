@@ -9,12 +9,6 @@
 #define ODE_API // for DLL export etc.
 #endif
 
-#ifdef __cplusplus
-#  define ODE_CPP_ONLY(arg) arg
-#else
-#  define ODE_CPP_ONLY(arg)
-#endif
-
 /// Functions with ODE_NATIVE_API prefix are not available in Emscripten
 #define ODE_NATIVE_API ODE_API
 /// Functions with ODE_FUTURE_API prefix are not yet implemented
@@ -40,8 +34,9 @@
 #define ODE_BIND_ARRAY_GETTER(methodName, memberArray, memberCount)
 #endif
 
-// This is the only reasonable way to stop clang-format from indenting everything
-ODE_CPP_ONLY(extern "C" {)
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /// Handle object declaration
 #define ODE_HANDLE_DECL(T) struct T; typedef struct { struct T *ptr; }
@@ -90,15 +85,13 @@ typedef const char *ODE_ConstCharPtr;
 typedef char *ODE_CharPtr;
 
 /// A mathematical 2-dimensional vector
-typedef struct {
-    ODE_TUPLE
-        ODE_Scalar x, y;
+typedef struct { ODE_TUPLE
+    ODE_Scalar x, y;
 } ODE_Vector2;
 
 /// An axis-aligned rectangle specified by its two opposite corners
-typedef struct {
-    ODE_TUPLE
-        ODE_Vector2 a, b;
+typedef struct { ODE_TUPLE
+    ODE_Vector2 a, b;
 } ODE_Rectangle;
 
 /// A reference to an immutable null-terminated string in contiguous memory (does not hold or change ownership)
@@ -121,8 +114,8 @@ typedef struct {
 typedef struct {
     ODE_MANUAL
     /// Pointer to the beginning of the memory block
-        ODE_VarDataPtr data;
-        /// Length of the buffer in bytes
+    ODE_VarDataPtr data;
+    /// Length of the buffer in bytes
     size_t length;
 } ODE_MemoryBuffer;
 
@@ -157,9 +150,8 @@ ODE_Result ODE_API ode_reallocateMemoryBuffer(ODE_MemoryBuffer *buffer, size_t l
 /// Destroys the memory buffer, freeing its allocated memory
 ODE_Result ODE_API ode_destroyMemoryBuffer(ODE_MemoryBuffer *buffer);
 
-ODE_CPP_ONLY(
-})
 #ifdef __cplusplus
+}
 
 #ifndef ODE_MINIMAL_API
 

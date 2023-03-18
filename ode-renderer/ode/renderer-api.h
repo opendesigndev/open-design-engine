@@ -7,7 +7,9 @@
 #include <ode/api-base.h>
 #include <ode/logic-api.h>
 
-ODE_CPP_ONLY(extern "C" {)
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /// Pixel format of 4 channels - red, green, blue, alpha, each channel represented by 8-bit unsigned integer (0 to 255 range)
 extern ODE_API const int ODE_PIXEL_FORMAT_RGBA;
@@ -116,7 +118,9 @@ ODE_Result ODE_API ode_pr1_destroyAnimationRenderer(ODE_PR1_AnimationRendererHan
  */
 ODE_Result ODE_API ode_pr1_animation_drawFrame(ODE_PR1_AnimationRendererHandle renderer, const ODE_PR1_FrameView *frameView, ODE_Scalar time);
 
-ODE_CPP_ONLY(})
+#ifdef __cplusplus
+}
+#endif
 
 /// Creates a reference (ODE_BitmapRef) to an ODE_Bitmap object
 inline ODE_BitmapRef ode_bitmapRef(ODE_Bitmap bitmap) {

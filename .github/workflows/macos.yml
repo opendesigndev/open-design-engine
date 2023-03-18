@@ -29,7 +29,7 @@ jobs:
           printf "VCPKG_BASELINE=%s\n" $(jq -r '."builtin-baseline"' vcpkg.json) >> $GITHUB_ENV;
           echo "ARCH_LOWER=`echo ${{ matrix.arch }} | tr '[:upper:]' '[:lower:]'`" >> ${GITHUB_ENV}
 
-      - name: Setup vcpkg dependencies (cached)
+      - name: Setup vcpkg
         uses: lukka/run-vcpkg@v10
         with:
           vcpkgJsonGlob: vcpkg.json
@@ -40,6 +40,7 @@ jobs:
         with:
           configurePreset: osx-${{ env.ARCH_LOWER }}
           buildPreset: osx-${{ env.ARCH_LOWER }}
+          configurePresetAdditionalArgs: "['-DVCPKG_TARGET_TRIPLET=${{ env.ARCH_LOWER }}-osx-release']"
 
       - name: Gather artifacts
         run: |

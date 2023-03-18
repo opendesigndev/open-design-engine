@@ -17,7 +17,9 @@ else()
     add_library(ode-napi SHARED ${ODE_NAPI_SOURCES})
 endif()
 
-# dependencies
+# DEPENDENCIES
+# The intermediate target is required to avoid some dependencies being linked
+# twice in wasm build.
 add_library(ode-napi-lib INTERFACE)
 target_link_libraries(ode-napi-lib INTERFACE liboctopus ode-essentials ode-logic ode-renderer)
 target_link_libraries(ode-napi PRIVATE ode-napi-lib)

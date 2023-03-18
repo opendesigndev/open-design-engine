@@ -9,7 +9,6 @@
 #include <ode/api-base.h>
 #include <cstdlib>
 #include <optional>
-#include "manual-api-base.h"
 #include "manual-logic-api.h"
 
 Napi::Object init_gen_api_base(Napi::Env env, Napi::Object exports);

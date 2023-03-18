@@ -6,7 +6,9 @@
 
 #include <ode/api-base.h>
 
-ODE_CPP_ONLY(extern "C" {)
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // Layer flags for ODE_LayerList::Entry::flags
 /// Layer has visible attribute set to true
@@ -162,7 +164,7 @@ ODE_Result ODE_API ode_createDesign(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_
  * @param path - path to design file
  * @param parseError - output argument to store details of parse error if ODE_RESULT_OCTOPUS_PARSE_ERROR or ODE_RESULT_OCTOPUS_MANIFEST_PARSE_ERROR is returned. Can be null if this information is not needed.
  */
-ODE_Result ODE_FUTURE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_DesignHandle *design, ODE_StringRef path, ODE_OUT ODE_ParseError *parseError);
+ODE_Result ODE_FUTURE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_DesignHandle *design, ODE_StringRef path, ODE_OUT ODE_ParseError *parseError);
 
 /**
  * Loads a design from an Octopus Manifest file - deallocate with ode_destroyDesign
@@ -349,6 +351,8 @@ ODE_Result ODE_API ode_component_getOctopus(ODE_ComponentHandle component, ODE_O
 ODE_Result ODE_FUTURE_API ode_component_getInstancedOctopus(ODE_ComponentHandle component, ODE_String *octopusString);
 ODE_Result ODE_FUTURE_API ode_component_getLayerOctopus(ODE_ComponentHandle *component, ODE_String *octopusString, ODE_StringRef layerId);
 
-ODE_CPP_ONLY(})
+#ifdef __cplusplus
+}
+#endif
 
 #endif // ODE_LOGIC_API_H

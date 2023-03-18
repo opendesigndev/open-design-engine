@@ -51,14 +51,14 @@ std::optional<CommandLineInput> parseCommandLineArguments(int argc, const char *
             } else if (curArg == "--version") {
                 puts(
                     "\nOPEN DESIGN ENGINE" /* " v" ODE_STRINGIZE(ODE_VERSION) */ " by Ceros\n\n" // put in when version is actually used
-                    "      Build version: " ODE_STRINGIZE(ODE_BUILD_COMMIT) "\n"
+                    "      Build version: " ODE_STRINGIZE(ODE_BUILD_COMMIT_SHA) "\n"
                     "         Build date: " ODE_STRINGIZE(ODE_BUILD_DATE) "\n"
                     "         Build type: " BUILD_TYPE "\n"
                     "    Octopus version: " OCTOPUS_VERSION ", manifest " OCTOPUS_MANIFEST_VERSION "\n"
                     "           Skia GPU: " CONFIG_SKIA_GPU "\n"
                 );
                 return std::nullopt;
-             } else if (curArg == "--") {
+            } else if (curArg == "--") {
                 argEnd = true;
             } else if (*argv[i] == '-') {
                 fprintf(stderr, "Unknown setting: %s\n", argv[i]);

@@ -45,8 +45,8 @@ RUN make install SYSTEM=linux-osmesa -C /home/glew-2.2.0
 # Build image
 FROM ode-debian-build-base AS ode-debian-build
 
-ARG ODE_BUILD_COMMIT
-ARG ODE_THIS_COMMIT
+ARG ODE_BUILD_COMMIT_SHA
+ARG ODE_BUILD_COMMIT_WITH_DATE
 
 RUN mkdir -p /home/ode
 COPY . /home/ode
@@ -66,8 +66,8 @@ RUN cmake \
     -DODE_TEST_MODULES=OFF \
     -DODE_SKIA_GPU=OFF \
     -DCMAKE_CXX_STANDARD_LIBRARIES=-lOSMesa \
-    -DODE_BUILD_COMMIT=$ODE_BUILD_COMMIT \
-    -DODE_THIS_COMMIT=$ODE_THIS_COMMIT \
+    -DODE_BUILD_COMMIT_SHA=$ODE_BUILD_COMMIT_SHA \
+    -DODE_BUILD_COMMIT_WITH_DATE=$ODE_BUILD_COMMIT_WITH_DATE \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER=clang \
     -DCMAKE_CXX_COMPILER=clang++ \
@@ -91,4 +91,4 @@ ENV PATH="${PATH}:/opt/ode-renderer/bin"
 COPY --from=ode-debian-build /opt/ode-renderer /opt/ode-renderer
 
 # Build locally using:
-# bash -c 'docker build . -f dockerfiles/debian-build/Dockerfile --build-arg ODE_BUILD_COMMIT=`git rev-parse HEAD` --build-arg ODE_THIS_COMMIT=`git log -n 1 "--pretty=format:%h_%cs"` --tag ode --platform linux/amd64'
+# bash -c 'docker build . -f dockerfiles/debian-build/Dockerfile --build-arg ODE_BUILD_COMMIT_SHA=`git rev-parse HEAD` --build-arg ODE_BUILD_COMMIT_WITH_DATE=`git log -n 1 "--pretty=format:%h_%cs"` --tag ode --platform linux/amd64'
