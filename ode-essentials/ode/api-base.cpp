@@ -33,3 +33,11 @@ ODE_Result ODE_API ode_destroyMemoryBuffer(ODE_MemoryBuffer *buffer) {
     buffer->length = 0;
     return ODE_RESULT_OK;
 }
+
+ODE_Result ODE_API ode_makeMemoryBuffer(ODE_MemoryRef ref, ODE_OUT_RETURN ODE_MemoryBuffer *buffer) {
+    ODE_ASSERT(ref.data && ref.length > 0);
+    auto result = ode_allocateMemoryBuffer(buffer, ref.length);
+    if (result != ODE_RESULT_OK) return result;
+    memcpy(buffer->data, ref.data, ref.length);
+    return ODE_RESULT_OK;
+}

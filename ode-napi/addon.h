@@ -33,8 +33,8 @@ bool ode_napi_read_into(const Napi::Value &value, size_t &parsed);
 bool ode_napi_read_into(const Napi::Value &value, ODE_VarDataPtr &parsed);
 bool ode_napi_read_into(const Napi::Value &value, ODE_Scalar &parsed);
 
-Napi::Value ode_napi_serialize(Napi::Env env, const ODE_MemoryBuffer &value);
-bool ode_napi_read_into(const Napi::Value &value, ODE_MemoryBuffer &target);
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_MemoryRef &value);
+bool ode_napi_read_into(const Napi::Value &value, ODE_MemoryRef &target);
 
 
 template<typename T>

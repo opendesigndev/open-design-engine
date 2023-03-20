@@ -1,6 +1,6 @@
 import { StringRef } from './exports.js'
 
-export type MemoryBuffer = ArrayBuffer;
+export type MemoryRef = ArrayBuffer;
 export type Transformation = [
     a: number,
     b: number,

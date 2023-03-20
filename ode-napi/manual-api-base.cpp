@@ -92,11 +92,11 @@ Napi::Value node_napi_readString(const Napi::CallbackInfo &info) {
     return Napi::String::New(env, ref.data, ref.length);
 }
 
-Napi::Value ode_napi_serialize(Napi::Env env, const ODE_MemoryBuffer &value) {
+Napi::Value ode_napi_serialize(Napi::Env env, const ODE_MemoryRef &value) {
     Napi::TypeError::New(env, "Not implemented yet").ThrowAsJavaScriptException();
     return Napi::Value();
 }
-bool ode_napi_read_into(const Napi::Value &value, ODE_MemoryBuffer &target) {
+bool ode_napi_read_into(const Napi::Value &value, ODE_MemoryRef &target) {
     if (!value.IsArrayBuffer()) {
         Napi::TypeError::New(value.Env(), "Expected ArrayBuffer").ThrowAsJavaScriptException();
         return false;

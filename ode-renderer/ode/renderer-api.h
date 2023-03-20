@@ -33,7 +33,7 @@ typedef struct {
     /// The pixel format (see ODE_PIXEL_FORMAT_... constants)
     int format;
     /// Pointer to the first (top-left) pixel. Pixels are stored contiguously in memory in row-major order
-    ODE_MemoryBuffer pixels;
+    ODE_MemoryRef pixels;
     /// Dimensions of bitmap
     int width, height;
 } ODE_BitmapRef;

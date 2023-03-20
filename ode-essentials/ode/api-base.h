@@ -112,12 +112,20 @@ typedef struct {
 
 /// A buffer of raw data bytes in physical memory - deallocate with ode_destroyMemoryBuffer
 typedef struct {
-    ODE_MANUAL
     /// Pointer to the beginning of the memory block
     ODE_VarDataPtr data;
     /// Length of the buffer in bytes
     size_t length;
 } ODE_MemoryBuffer;
+
+/// A reference to area of memory. Does not hold ownership of the passed data.
+typedef struct {
+    ODE_MANUAL
+    /// Pointer to the beginning of the memory block
+    ODE_VarDataPtr data;
+    /// Length of the buffer in bytes
+    size_t length;
+} ODE_MemoryRef;
 
 /// A list of immutable string references
 typedef struct {
@@ -211,6 +219,11 @@ inline ODE_String ode_makeString(const ODE_StringRef &ref) {
     }
     return string;
 }
+
+/// Create na ODE_MemoryBuffer from ODE_MemoryRef by allocating new memory area
+/// and copying the data over.
+/// Deallocate using ode_destroyMemoryBuffer
+ODE_Result ODE_API ode_makeMemoryBuffer(ODE_MemoryRef ref, ODE_OUT_RETURN ODE_MemoryBuffer *buffer);
 
 #endif
 #endif
