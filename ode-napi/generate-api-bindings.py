@@ -484,8 +484,6 @@ def generateNapiFunctionBinding(entity, emName, fullName):
         elif t.startswith("ODE_IN"): inout_type = "IN"
         elif t.startswith("ODE_OUT_RETURN"): inout_type = "RETURN"
         elif t.startswith("ODE_OUT"): inout_type = "OUT"
-        elif t.endswith("*") and t.startswith("const "): inout_type = "IN"
-        elif t.endswith("*"): inout_type = "INOUT"
 
         if t.startswith("const") and t.endswith("*"):
             t = t[6:-1].strip()

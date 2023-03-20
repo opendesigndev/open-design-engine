@@ -26,8 +26,7 @@
 /// Arguments marked with ODE_IN_OUT will be read and written into
 #define ODE_IN_OUT
 /// Arguments marked with ODE_IN will be read, but not written into.
-/// Unmarked argument types are determined using heuristics, but are usually
-/// treated as ODE_IN.
+/// Unmarked argument types are treated as ODE_IN.
 #define ODE_IN
 
 #ifndef ODE_BIND_ARRAY_GETTER
@@ -145,7 +144,7 @@ ODE_Result ODE_API ode_destroyString(ODE_String string);
  * @param buffer - the resulting memory buffer will be stored in this output argument
  * @param length - the desired length of the buffer in bytes
  */
-ODE_Result ODE_API ode_allocateMemoryBuffer(ODE_MemoryBuffer *buffer, size_t length);
+ODE_Result ODE_API ode_allocateMemoryBuffer(ODE_OUT_RETURN ODE_MemoryBuffer *buffer, size_t length);
 
 /**
  * Resizes an existing memory buffer to a given size, or allocates a new memory buffer if buffer's data and length are zero.
@@ -153,10 +152,10 @@ ODE_Result ODE_API ode_allocateMemoryBuffer(ODE_MemoryBuffer *buffer, size_t len
  * @param buffer - the memory buffer to be resized
  * @param length - the desired new length of the buffer in bytes
  */
-ODE_Result ODE_API ode_reallocateMemoryBuffer(ODE_MemoryBuffer *buffer, size_t length);
+ODE_Result ODE_API ode_reallocateMemoryBuffer(ODE_IN_OUT ODE_MemoryBuffer *buffer, size_t length);
 
 /// Destroys the memory buffer, freeing its allocated memory
-ODE_Result ODE_API ode_destroyMemoryBuffer(ODE_MemoryBuffer *buffer);
+ODE_Result ODE_API ode_destroyMemoryBuffer(ODE_IN_OUT ODE_MemoryBuffer *buffer);
 
 #ifdef __cplusplus
 }

@@ -182,7 +182,7 @@ ODE_Result ODE_NATIVE_API ode_loadDesignFromManifestFile(ODE_EngineHandle engine
  * @param manifestString - Octopus manifest JSON string reference
  * @param parseError - output argument to store details of parse error if ODE_RESULT_OCTOPUS_MANIFEST_PARSE_ERROR or ODE_RESULT_OCTOPUS_PARSE_ERROR is returned. Can be null if this information is not needed.
  */
-ODE_Result ODE_API ode_loadDesignFromManifestString(ODE_EngineHandle engine, ODE_DesignHandle *design, ODE_StringRef manifestString, ODE_OUT ODE_ParseError *parseError);
+ODE_Result ODE_API ode_loadDesignFromManifestString(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_DesignHandle *design, ODE_StringRef manifestString, ODE_OUT ODE_ParseError *parseError);
 
 /// Destroys a design and its components
 ODE_Result ODE_API ode_destroyDesign(ODE_DesignHandle design);
