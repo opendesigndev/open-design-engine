@@ -1,6 +1,9 @@
 name: WebAssembly build
 on:
-  push
+  push:
+    branches: ['main']
+    tags: ['*']
+  pull_request:
 
 env:
   GITLAB_REGISTRY: registry.avcd.cz
@@ -20,8 +23,10 @@ jobs:
           # https://github.com/organizations/opendesigndev/settings/personal-access-tokens/39049
           token: ${{ secrets.ODE_REPOS_TOKEN }}
           submodules: true
+      - id: version
+        uses: ./.github/actions/determine-version
       - name: Setup system dependencies
-        run: sudo apt-get -y install ninja-build
+        run: sudo apt-get update && sudo apt-get -y install ninja-build
       - name: Setup emsdk
         uses: mymindstorm/setup-emsdk@v11
         with:
@@ -71,3 +76,8 @@ jobs:
           name: wasm-build
           path: |
             build/wasm-rel/ode-napi
+      - uses: ./.github/actions/npm-publish
+        if: contains(github.event.pull_request.labels.*.name, 'ci:npm-publish') || github.event_name == 'push'
+        with:
+          npm_token: ${{ secrets.NPM_TOKEN }}
+          directory: build/wasm-rel/ode-napi/target-specific

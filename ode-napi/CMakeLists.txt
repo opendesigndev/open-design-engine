@@ -178,12 +178,9 @@ else()
         # Generate node.lib
         execute_process(COMMAND ${CMAKE_AR} /def:${CMAKE_JS_NODELIB_DEF} /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS})
     endif()
-    if(CMAKE_JS_VERSION)
-        # We ARE in @opendesign/engine-source package
-        set(ODE_NATIVE_MODULE_PATH "../ode-napi.node")
-    else()
+    set(ODE_NATIVE_MODULE_PATH "./ode-napi.node")
+    if(NOT CMAKE_JS_VERSION)
         # We are NOT in @opendesign/engine-source package, populate the package folder.
-        set(ODE_NATIVE_MODULE_PATH "./ode-napi.node")
         if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
             set(ODE_PLATFORM_OS "darwin")
             if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm64")
@@ -193,10 +190,10 @@ else()
             endif()
         endif()
     endif()
-    
+
+    configure_file(native-package/index.js codegen/index.js)
+    copy_codegen_file_to_package("target-specific" index.js)
     if(DEFINED ODE_PLATFORM_OS AND DEFINED ODE_PLATFORM_CPU)
-        configure_file(native-package/index.js codegen/index.js)
-        copy_codegen_file_to_package("target-specific" index.js)
         configure_file(native-package/package.json codegen/target-specific/package.json)
         copy_codegen_file_to_package("target-specific" target-specific/package.json)
     endif()
