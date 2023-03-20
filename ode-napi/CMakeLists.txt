@@ -8,6 +8,9 @@ set(ODE_NAPI_SOURCES
     ${CMAKE_CURRENT_BINARY_DIR}/codegen/gen-renderer-api.cpp
     "manual-api-base.cpp"
     "manual-logic-api.cpp"
+    "addon.h"
+    "manual-logic-api.h"
+    "napi-wrap.h"
 )
 
 # LIBRARY / EXECUTABLE
