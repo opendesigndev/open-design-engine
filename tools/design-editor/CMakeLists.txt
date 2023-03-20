@@ -59,6 +59,7 @@ set(INTERNAL_LIBRARY_DEPENDENCIES
     ode-essentials
     ode-logic
     ode-renderer
+    ode-diagnostics
 )
 
 # Module dependencies

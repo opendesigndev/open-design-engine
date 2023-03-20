@@ -13,20 +13,22 @@
 
 // OD includes
 #include <ode-renderer.h>
+#include <ode-diagnostics.h>
+#include <ode-media.h>
 #include <ode/renderer-api.h>
-#include "DesignEditorWidgetsContext.h"
 #include "DesignEditorLoadedOctopus.h"
 #include "DesignEditorImageVisualizationParams.h"
 #include "DesignEditorRenderer.h"
+#include "context/DesignEditorWidgetsContext.h"
+#include "context/DesignEditorContext.h"
+#include "widgets/DesignEditorToolbarWidget.h"
+#include "widgets/DesignEditorLayerListWidget.h"
+#include "widgets/DesignEditorDesignViewWidget.h"
+#include "widgets/DesignEditorLayerPropertiesWidget.h"
 
 namespace {
 
 #define CHECK(x) do { if ((x)) return -1; } while (false)
-#define CHECK_IMEND(x) do { if ((x)) { ImGui::End(); return; } } while (false)
-
-const ImU32 IM_COLOR_WHITE = 4294967295;
-const ImU32 IM_COLOR_DARK_RED = 4278190233;
-const ImU32 IM_COLOR_LIGHT_BLUE = 4294941081;
 
 // TODO move to common API utils
 static ODE_StringRef stringRef(const std::string &str) {
@@ -36,140 +38,12 @@ static ODE_StringRef stringRef(const std::string &str) {
     return ref;
 }
 
-void drawImGuiWidgetTexture(const GLuint textureHandle, int width, int height, float &zoom, size_t colsCount = 1, size_t rowsCount = 1) {
-    const ImVec2 windowSize = ImGui::GetWindowSize();
-
-    const int horizontalPadding = 18;
-    const int verticalPadding = 100;
-    const float scaling = std::min(
-        static_cast<float>(windowSize.x / static_cast<float>(colsCount) - horizontalPadding) / static_cast<float>(width),
-        static_cast<float>(windowSize.y / static_cast<float>(rowsCount) - verticalPadding) / static_cast<float>(height));
-
-    const ImVec2 newImageSize(std::max(scaling * width, 0.0f) * zoom, std::max(scaling * height, 0.0f) * zoom);
-
-    ImGui::Text("GL Handle:        %d", textureHandle);
-    ImGui::Text("Texture size:     %d x %d", width, height);
-    ImGui::Text("Display size:     %d x %d", static_cast<int>(std::round(newImageSize.x)), static_cast<int>(std::round(newImageSize.y)));
-    ImGui::SliderFloat("Zoom [-S][+W]", &zoom, 1.0f, 10.0f);
-
-    ImGui::Image((void*)(intptr_t)textureHandle, newImageSize);
-}
-
 void fileDropCallback(GLFWwindow* window, int count, const char** paths) {
     glfwFocusWindow(window);
     if (count == 1) {
         DesignEditorWindow &rgiWindow = DesignEditorWindow::getInstance();
         rgiWindow.readOctopusFile(paths[0]);
     }
-}
-
-std::string layerTypeToShortString(ODE_LayerType layerType) {
-    switch (layerType) {
-        case ODE_LAYER_TYPE_UNSPECIFIED: return "-";
-        case ODE_LAYER_TYPE_SHAPE: return "S";
-        case ODE_LAYER_TYPE_TEXT: return "T";
-        case ODE_LAYER_TYPE_GROUP: return "G";
-        case ODE_LAYER_TYPE_MASK_GROUP: return "M";
-        case ODE_LAYER_TYPE_COMPONENT_REFERENCE: return "CR";
-        case ODE_LAYER_TYPE_COMPONENT_INSTANCE: return "CI";
-    }
-    return "-";
-}
-
-std::string layerTypeToString(ODE_LayerType layerType) {
-    switch (layerType) {
-        case ODE_LAYER_TYPE_UNSPECIFIED: return "-";
-        case ODE_LAYER_TYPE_SHAPE: return "Shape";
-        case ODE_LAYER_TYPE_TEXT: return "Text";
-        case ODE_LAYER_TYPE_GROUP: return "Group";
-        case ODE_LAYER_TYPE_MASK_GROUP: return "Mask Group";
-        case ODE_LAYER_TYPE_COMPONENT_REFERENCE: return "Component Reference";
-        case ODE_LAYER_TYPE_COMPONENT_INSTANCE: return "Component Instance";
-    }
-    return "-";
-}
-
-void drawLayerListRecursiveStep(const ODE_LayerList &layerList, int idx, int &idxClicked, const std::vector<ODE_StringRef> &selectedLayerIDs) {
-    if (idx >= layerList.n) {
-        return;
-    }
-
-    const auto areEq = [](const ODE_StringRef &a, const ODE_StringRef &b)->bool {
-        return a.length == b.length && strcmp(a.data, b.data) == 0;
-    };
-
-    const ODE_LayerList::Entry &rootLayer = layerList.entries[idx];
-    const bool hasAnyChildren = (idx+1 < layerList.n) && areEq(layerList.entries[idx+1].parentId, rootLayer.id);
-    const std::string layerLabel = "["+layerTypeToShortString(rootLayer.type)+"] "+std::string(rootLayer.id.data);
-
-    const bool isSelected = std::find_if(selectedLayerIDs.begin(), selectedLayerIDs.end(), [&id = rootLayer.id](const ODE_StringRef &selectedLayerID)->bool {
-        return strcmp(id.data, selectedLayerID.data) == 0;
-    }) != selectedLayerIDs.end();
-    const ImU32 listEntryColor = isSelected ? IM_COLOR_LIGHT_BLUE : IM_COLOR_WHITE;
-
-    if (hasAnyChildren) {
-        ImGui::PushStyleColor(ImGuiCol_Text, listEntryColor);
-        const bool isOpened = ImGui::TreeNodeEx((layerLabel+std::string("##")+std::string(rootLayer.id.data)).c_str(), ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick);
-        ImGui::PopStyleColor(1);
-
-        if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
-            idxClicked = idx;
-        }
-        if (isOpened) {
-            for (int i = idx+1; i < layerList.n; i++) {
-                const ODE_LayerList::Entry &entry = layerList.entries[i];
-                if (areEq(entry.parentId, rootLayer.id)) {
-                    drawLayerListRecursiveStep(layerList, i, idxClicked, selectedLayerIDs);
-                }
-            }
-            ImGui::TreePop();
-        }
-    } else {
-        ImGui::PushStyleColor(ImGuiCol_Text, listEntryColor);
-        ImGui::BulletText("%s", layerLabel.c_str());
-        ImGui::PopStyleColor(1);
-
-        if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
-            idxClicked = idx;
-        }
-    }
-}
-
-// TODO: Cleanup:
-const char *blendModes[] = {
-    "NORMAL",
-    "PASS_THROUGH",
-    "COLOR",
-    "COLOR_BURN",
-    "COLOR_DODGE",
-    "DARKEN",
-    "DARKER_COLOR",
-    "DIFFERENCE",
-    "DIVIDE",
-    "EXCLUSION",
-    "HARD_LIGHT",
-    "HARD_MIX",
-    "HUE",
-    "LIGHTEN",
-    "LIGHTER_COLOR",
-    "LINEAR_BURN",
-    "LINEAR_DODGE",
-    "LINEAR_LIGHT",
-    "LUMINOSITY",
-    "MULTIPLY",
-    "OVERLAY",
-    "PIN_LIGHT",
-    "SATURATION",
-    "SCREEN",
-    "SOFT_LIGHT",
-    "SUBTRACT",
-    "VIVID_LIGHT",
-};
-
-bool isImGuiMultiselectKeyDown() {
-    return (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_LeftShift) ||
-            ImGui::IsKeyDown(ImGuiKey_LeftSuper) || ImGui::IsKeyDown(ImGuiKey_RightCtrl) ||
-            ImGui::IsKeyDown(ImGuiKey_RightShift) || ImGui::IsKeyDown(ImGuiKey_RightSuper));
 }
 
 }
@@ -197,59 +71,7 @@ struct DesignEditorWindow::Internal {
     DesignEditorImageVisualizationParams imageVisualizationParams;
     DesignEditorImageVisualizationParams prevImageVisualizationParams;
 
-    struct SelectionContext {
-        std::vector<ODE_StringRef> layerIDs {};
-
-        void select(const ODE_StringRef &layerID) {
-            select(layerID.data);
-        }
-        void select(const ODE_String &layerID) {
-            select(layerID.data);
-        }
-        void select(const char *layerID) {
-            const int length = static_cast<int>(strlen(layerID));
-            if (layerID == nullptr || length <= 0) {
-                layerIDs.clear();
-            } else {
-                if (isImGuiMultiselectKeyDown()) {
-                    if (!isSelected(layerID)) {
-                        layerIDs.emplace_back(ODE_StringRef { layerID, length });
-                    }
-                } else {
-                    layerIDs = { ODE_StringRef { layerID, length } };
-                }
-            }
-        }
-        bool isSelected(const char *layerID) {
-            for (const ODE_StringRef &id : layerIDs) {
-                if (strcmp(id.data, layerID) == 0) {
-                    return true;
-                }
-            }
-            return false;
-        }
-    } selectionContext;
-
-    struct CanvasContext {
-        bool isMouseOver = false;
-        ImVec2 bbSize;
-        ImVec2 bbMin;
-        ImVec2 bbMax;
-        float zoom = 1.0f;
-    } canvasContext;
-
-    struct Context {
-        ODE_EngineHandle engine;
-        ODE_EngineAttributes engineAttribs;
-        ODE_DesignHandle design;
-        ODE_ComponentMetadata metadata = { };
-        ODE_RendererContextHandle rc;
-        ODE_DesignImageBaseHandle imageBase;
-        ODE_PR1_AnimationRendererHandle renderer;
-        ODE_ComponentHandle component;
-        ODE_Bitmap bitmap;
-        ODE_PR1_FrameView frameView;
-    } context;
+    DesignEditorContext context;
 
     /// Graphics context accessor
     GraphicsContext *gc() {
@@ -265,10 +87,6 @@ struct DesignEditorWindow::Internal {
         std::string fileName;
     } fileDialogContext;
 
-    struct TexturesContext {
-        TexturePtr designImageTexture = nullptr;
-    } texturesContext;
-
     struct Icons {
         TexturePtr cursorTexture = nullptr;
         TexturePtr addRectangleTexture = nullptr;
@@ -276,18 +94,7 @@ struct DesignEditorWindow::Internal {
         TexturePtr addTextTexture = nullptr;
     } icons;
 
-    enum class Mode {
-        SELECT,
-        ADD_RECTANGLE,
-        ADD_ELLIPSE,
-        ADD_TEXT,
-    } mode = Mode::SELECT;
-
-    // TODO: Remove and read from the selected layers
-    struct LayerPropertiesContext {
-        std::string strokeFillText;
-        std::vector<std::string> effects;
-    } layerPropertiesContext;
+    DesignEditorMode mode = DesignEditorMode::SELECT;
 
 
     int initialize() {
@@ -348,7 +155,6 @@ struct DesignEditorWindow::Internal {
     }
 
     int destroy() {
-        CHECK(ode_pr1_destroyAnimationRenderer(context.renderer));
         CHECK(ode_destroyDesignImageBase(context.imageBase));
         CHECK(ode_destroyRendererContext(context.rc));
         CHECK(ode_destroyDesign(context.design));
@@ -424,16 +230,17 @@ int DesignEditorWindow::display() {
             }
         }
 
-        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && data->canvasContext.isMouseOver) {
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && data->context.canvas.isMouseOver) {
             const ImVec2 mousePosInScreenSpace = ImGui::GetMousePos();
             const ImVec2 mousePosInCanvasSpace = ImVec2 {
-                (mousePosInScreenSpace.x - data->canvasContext.bbMin.x) / data->canvasContext.bbSize.x,
-                (mousePosInScreenSpace.y - data->canvasContext.bbMin.y) / data->canvasContext.bbSize.y,
+                (mousePosInScreenSpace.x - data->context.canvas.bbMin.x) / data->context.canvas.bbSize.x,
+                (mousePosInScreenSpace.y - data->context.canvas.bbMin.y) / data->context.canvas.bbSize.y,
             };
 
             // TODO: Is image space position from top layer bounds correct ?
+            const ODE_StringRef &topLayerID = data->loadedOctopus.layerList.entries[0].id;
             ODE_LayerMetrics topLayerMetrics;
-            CHECK(ode_component_getLayerMetrics(data->context.component, data->loadedOctopus.layerList.entries[0].id, &topLayerMetrics));
+            ode_component_getLayerMetrics(data->context.component, topLayerID, &topLayerMetrics);
             const ODE_Rectangle &topLayerBounds = topLayerMetrics.logicalBounds;
             const ODE_Vector2 imageSpacePosition {
                 mousePosInCanvasSpace.x * topLayerBounds.b.x,
@@ -451,16 +258,16 @@ int DesignEditorWindow::display() {
         drawControlsWidget();
 
         if (data->widgetsContext.showToolbar) {
-            drawToolbarWidget();
+            drawToolbarWidget(data->mode);
         }
         if (data->widgetsContext.showLayerList) {
-            drawLayerListWidget();
+            drawLayerListWidget(data->context, data->loadedOctopus);
         }
         if (data->widgetsContext.showDesignView) {
-            drawDesignViewWidget();
+            drawDesignViewWidget(data->context, *data->renderer);
         }
         if (data->widgetsContext.showLayerProperties) {
-            drawLayerPropertiesWidget();
+            drawLayerPropertiesWidget(data->loadedOctopus.layerList, data->context);
         }
 
         if (data->widgetsContext.showImGuiDebugger) {
@@ -611,264 +418,24 @@ void DesignEditorWindow::drawControlsWidget() {
     ImGui::End();
 }
 
-void DesignEditorWindow::drawToolbarWidget() {
-    ImGui::Begin("Toolbar");
-
-    ImGui::PushStyleColor(ImGuiCol_Button, data->mode == Internal::Mode::SELECT ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, data->mode == Internal::Mode::SELECT ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
-    if (ImGui::Button("Select")) {
-        data->mode = Internal::Mode::SELECT;
-    }
-    ImGui::PopStyleColor(2);
-    ImGui::SameLine();
-
-    ImGui::PushStyleColor(ImGuiCol_Button, data->mode == Internal::Mode::ADD_RECTANGLE ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, data->mode == Internal::Mode::ADD_RECTANGLE ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
-    if (ImGui::Button("Add Rectangle")) {
-        data->mode = Internal::Mode::ADD_RECTANGLE;
-    }
-    ImGui::PopStyleColor(2);
-    ImGui::SameLine();
-
-    ImGui::PushStyleColor(ImGuiCol_Button, data->mode == Internal::Mode::ADD_ELLIPSE ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, data->mode == Internal::Mode::ADD_ELLIPSE ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
-    if (ImGui::Button("Add Ellipse")) {
-        data->mode = Internal::Mode::ADD_ELLIPSE;
-    }
-    ImGui::PopStyleColor(2);
-    ImGui::SameLine();
-
-    ImGui::PushStyleColor(ImGuiCol_Button, data->mode == Internal::Mode::ADD_TEXT ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, data->mode == Internal::Mode::ADD_TEXT ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
-    if (ImGui::Button("Add Text")) {
-        data->mode = Internal::Mode::ADD_TEXT;
-    }
-    ImGui::PopStyleColor(2);
-    ImGui::SameLine();
-
-    ImGui::End();
-}
-
-void DesignEditorWindow::drawLayerListWidget() {
-    ImGui::Begin("Layer List");
-
-    if (data->loadedOctopus.isLoaded()) {
-        int idxClicked = -1;
-        drawLayerListRecursiveStep(data->loadedOctopus.layerList, 0, idxClicked, data->selectionContext.layerIDs);
-        if (idxClicked >= 0) {
-            data->selectionContext.select(data->loadedOctopus.layerList.entries[idxClicked].id);
-        }
-    } else {
-        ImGui::Text("---");
-    }
-
-    ImGui::End();
-}
-
-void DesignEditorWindow::drawDesignViewWidget() {
-    ImGui::Begin("Interactive Design View");
-
-    const ODE_Bitmap &bmp = data->context.bitmap;
-    if (bmp.width > 0 && bmp.height > 0) {
-        ode::Bitmap bitmap(PixelFormat::PREMULTIPLIED_RGBA, reinterpret_cast<const void*>(bmp.pixels), bmp.width, bmp.height);
-
-        const ScaledBounds placement {0,0,static_cast<double>(bitmap.width()),static_cast<double>(bitmap.height())};
-        data->texturesContext.designImageTexture = data->renderer->blendImageToTexture(std::move(bitmap), placement, 2);
-
-        drawImGuiWidgetTexture(data->texturesContext.designImageTexture->getInternalGLHandle(),
-                               data->texturesContext.designImageTexture->dimensions().x,
-                               data->texturesContext.designImageTexture->dimensions().y,
-                               data->canvasContext.zoom);
-
-        data->canvasContext.isMouseOver = ImGui::IsItemHovered();
-        data->canvasContext.bbSize = ImGui::GetItemRectSize();
-        data->canvasContext.bbMin = ImGui::GetItemRectMin();
-        data->canvasContext.bbMax = ImGui::GetItemRectMax();
-    }
-
-    ImGui::End();
-}
-
-void DesignEditorWindow::drawLayerPropertiesWidget() {
-    ImGui::Begin("Selected Layer Properties");
-
-    for (int i = 0; i < data->loadedOctopus.layerList.n; ++i) {
-        const ODE_LayerList::Entry &layer = data->loadedOctopus.layerList.entries[i];
-        if (data->selectionContext.isSelected(layer.id.data)) {
-            const auto layerPropName = [&layer](const char *invisibleId, const char *visibleLabel = "")->std::string {
-                return std::string(visibleLabel)+std::string("##layer-")+std::string(invisibleId)+std::string("-")+std::string(layer.id.data);
-            };
-
-            bool layerVisible = true; // TODO: Get layer visibility
-            float layerOpacity = 1.0f; // TODO: Get layer opacity
-            const char *blendModeStr = "NORMAL"; // TODO: Get layer blend mode as string
-
-            ODE_LayerMetrics layerMetrics;
-            CHECK_IMEND(ode_component_getLayerMetrics(data->context.component, layer.id, &layerMetrics));
-
-            const float a = static_cast<float>(layerMetrics.transformation.matrix[0]);
-            const float b = static_cast<float>(layerMetrics.transformation.matrix[2]);
-            const float c = static_cast<float>(layerMetrics.transformation.matrix[1]);
-            const float d = static_cast<float>(layerMetrics.transformation.matrix[3]);
-            const float trX = static_cast<float>(layerMetrics.transformation.matrix[4]);
-            const float trY = static_cast<float>(layerMetrics.transformation.matrix[5]);
-
-            Vector2f translation {
-                trX,
-                trY,
-            };
-            Vector2f scale {
-                sqrt(a*a+b*b),
-                sqrt(c*c+d*d),
-            };
-            float rotation = atan(c/d) * (180.0f/M_PI);
-
-            const Vector2f origTranslation = translation;
-            const Vector2f origScale = scale;
-            const float origRotation = rotation;
-
-            const std::string layerSectionHeader =
-                std::string("[")+layerTypeToShortString(layer.type)+std::string("] ")+
-                std::string(layer.id.data)+std::string(" ")+
-                std::string("(")+std::string(layer.name.data)+std::string(")");
-
-            if (ImGui::CollapsingHeader(layerSectionHeader.c_str())) {
-                ImGui::Text("%s", "ID:");
-                ImGui::SameLine(100);
-                ImGui::Text("%s", layer.id.data);
-
-                ImGui::Text("%s", "Name:");
-                ImGui::SameLine(100);
-                ImGui::Text("%s", layer.name.data);
-
-                ImGui::Text("%s", "Type:");
-                ImGui::SameLine(100);
-                ImGui::Text("%s", layerTypeToString(layer.type).c_str());
-
-                ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
-
-                ImGui::Text("Visible:");
-                ImGui::SameLine(100);
-                if (ImGui::Checkbox(layerPropName("visibility").c_str(), &layerVisible)) {
-                    // TODO: Update layer visiblity
-                    CHECK_IMEND(ode_pr1_drawComponent(data->context.rc, data->context.component, data->context.imageBase, &data->context.bitmap, &data->context.frameView));
-                }
-
-                ImGui::Text("Opacity:");
-                ImGui::SameLine(100);
-                if (ImGui::DragFloat(layerPropName("opacity").c_str(), &layerOpacity)) {
-                    // TODO: Update layer opacity
-                    CHECK_IMEND(ode_pr1_drawComponent(data->context.rc, data->context.component, data->context.imageBase, &data->context.bitmap, &data->context.frameView));
-                }
-
-                ImGui::Text("Bend mode:");
-                ImGui::SameLine(100);
-                if (ImGui::BeginCombo(layerPropName("blend-mode").c_str(), blendModeStr)) {
-                    for (int n = 0; n < IM_ARRAYSIZE(blendModes); n++) {
-                        bool isSelected = (blendModeStr == blendModes[n]);
-                        if (ImGui::Selectable(blendModes[n], isSelected)) {
-                            // TODO: Update layer blend mode
-                            blendModeStr = blendModes[n];
-                        }
-                        if (isSelected) {
-                            ImGui::SetItemDefaultFocus();
-                        }
-                    }
-                    ImGui::EndCombo();
-                }
-
-                ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
-
-                ImGui::Text("Translation:");
-                ImGui::SameLine(100);
-                if (ImGui::DragFloat2((std::string("##translation-")+std::string(layer.id.data)).c_str(), &translation.x, 1.0f)) {
-                    const ODE_Transformation newTransformation { 1,0,0,1,translation.x-origTranslation.x,translation.y-origTranslation.y };
-                    CHECK_IMEND(ode_component_transformLayer(data->context.component, layer.id, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation));
-                    CHECK_IMEND(ode_pr1_drawComponent(data->context.rc, data->context.component, data->context.imageBase, &data->context.bitmap, &data->context.frameView));
-                }
-
-                ImGui::Text("Scale:");
-                ImGui::SameLine(100);
-                if (ImGui::DragFloat2(layerPropName("blend-scale").c_str(), &scale.x, 0.05f, 0.0f, 100.0f)) {
-                    const ODE_Transformation newTransformation { scale.x/origScale.x,0,0,scale.y/origScale.y,0,0 };
-                    CHECK_IMEND(ode_component_transformLayer(data->context.component, layer.id, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation));
-                    CHECK_IMEND(ode_pr1_drawComponent(data->context.rc, data->context.component, data->context.imageBase, &data->context.bitmap, &data->context.frameView));
-                }
-
-                ImGui::Text("Rotation:");
-                ImGui::SameLine(100);
-                if (ImGui::DragFloat(layerPropName("blend-rotation").c_str(), &rotation)) {
-                    const float rotationChangeRad = -(rotation-origRotation)*M_PI/180.0f;
-                    const ODE_Transformation newTransformation { cos(rotationChangeRad),-sin(rotationChangeRad),sin(rotationChangeRad),cos(rotationChangeRad),0,0 };
-                    CHECK_IMEND(ode_component_transformLayer(data->context.component, layer.id, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation));
-                    CHECK_IMEND(ode_pr1_drawComponent(data->context.rc, data->context.component, data->context.imageBase, &data->context.bitmap, &data->context.frameView));
-                }
-
-                ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
-
-                ImGui::Text("Fill & stroke / text:");
-                ImGui::Dummy(ImVec2(20.0f, 0.0f));
-                ImGui::SameLine(50);
-                ImGui::InputText(layerPropName("fill").c_str(), data->layerPropertiesContext.strokeFillText.data(), 50);
-
-                ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
-
-                ImGui::Text("Effects:");
-                ImGui::SameLine(415);
-                if (ImGui::SmallButton(layerPropName("effect-add", "+").c_str())) {
-                    data->layerPropertiesContext.effects.emplace_back();
-                }
-                int effectToRemove = -1;
-                for (size_t ei = 0; ei < data->layerPropertiesContext.effects.size(); ++ei) {
-                    ImGui::Dummy(ImVec2(20.0f, 0.0f));
-                    ImGui::SameLine(50);
-                    ImGui::InputText(layerPropName((std::string("effect-")+std::to_string(ei)).c_str()).c_str(), data->layerPropertiesContext.effects[ei].data(), 50);
-                    ImGui::SameLine(415);
-                    if (ImGui::SmallButton((std::string("-##layer-effect-remove")+std::to_string(ei)).c_str())) {
-                        effectToRemove = static_cast<int>(ei);
-                    }
-                }
-                if (effectToRemove >= 0 && effectToRemove < static_cast<int>(data->layerPropertiesContext.effects.size())) {
-                    data->layerPropertiesContext.effects.erase(data->layerPropertiesContext.effects.begin()+effectToRemove);
-                }
-
-                ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
-
-                ImGui::PushStyleColor(ImGuiCol_Button, IM_COLOR_DARK_RED);
-                ImGui::SameLine(100);
-                if (ImGui::Button(layerPropName("delete", "Delete Layer [FUTURE_API]").c_str(), ImVec2 { 250, 20 })) {
-                    // TODO: Remove layer when API available
-                    // CHECK_IMEND(ode_component_removeLayer(data->context.component, selectedLayer.id));
-                    CHECK_IMEND(ode_pr1_drawComponent(data->context.rc, data->context.component, data->context.imageBase, &data->context.bitmap, &data->context.frameView));
-                }
-                ImGui::PopStyleColor(1);
-
-                ImGui::Dummy(ImVec2 { 0.0f, 20.0f });
-            }
-        }
-    }
-
-    ImGui::End();
-}
-
 void DesignEditorWindow::handleKeyboardEvents() {
     const float zoomKeySpeed = 0.03f;
     const float minZoom = 1.0f;
     const float maxZoom = 10.0f;
 
     if (ImGui::IsKeyPressed(ImGuiKey_1)) {
-        data->mode = Internal::Mode::SELECT;
+        data->mode = DesignEditorMode::SELECT;
     } else if (ImGui::IsKeyPressed(ImGuiKey_2)) {
-        data->mode = Internal::Mode::ADD_RECTANGLE;
+        data->mode = DesignEditorMode::ADD_RECTANGLE;
     } else if (ImGui::IsKeyPressed(ImGuiKey_3)) {
-        data->mode = Internal::Mode::ADD_ELLIPSE;
+        data->mode = DesignEditorMode::ADD_ELLIPSE;
     } else if (ImGui::IsKeyPressed(ImGuiKey_4)) {
-        data->mode = Internal::Mode::ADD_TEXT;
+        data->mode = DesignEditorMode::ADD_TEXT;
     }
 
     if (ImGui::IsKeyDown(ImGuiKey_W)) {
-        data->canvasContext.zoom = std::clamp(data->canvasContext.zoom + zoomKeySpeed, minZoom, maxZoom);
+        data->context.canvas.zoom = std::clamp(data->context.canvas.zoom + zoomKeySpeed, minZoom, maxZoom);
     } else if (ImGui::IsKeyDown(ImGuiKey_S)) {
-        data->canvasContext.zoom = std::clamp(data->canvasContext.zoom - zoomKeySpeed, minZoom, maxZoom);
+        data->context.canvas.zoom = std::clamp(data->context.canvas.zoom - zoomKeySpeed, minZoom, maxZoom);
     }
 }

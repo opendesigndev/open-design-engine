@@ -4,8 +4,6 @@
 #include <memory>
 #include <ode-essentials.h>
 
-using namespace ode;
-
 /// Representation of a Design Editor window and its widgets.
 class DesignEditorWindow {
 public:
@@ -24,25 +22,21 @@ public:
     /// Display the window - initialize and run its main loop
     int display();
     /// Read the specified octopus manifest file - multiple components
-    bool readManifestFile(const FilePath &manifestPath);
+    bool readManifestFile(const ode::FilePath &manifestPath);
     /// Read the specified octopus file - single component
-    bool readOctopusFile(const FilePath &octopusPath);
+    bool readOctopusFile(const ode::FilePath &octopusPath);
 
-    void setImageDirectory(const FilePath &imageDirectory_);
-    void setFontDirectory(const FilePath &fontDirectory);
+    void setImageDirectory(const ode::FilePath &imageDirectory_);
+    void setFontDirectory(const ode::FilePath &fontDirectory);
     void setIgnoreValidation(bool ignoreValidation);
 
 private:
     void drawControlsWidget();
-    void drawToolbarWidget();
-    void drawLayerListWidget();
-    void drawDesignViewWidget();
-    void drawLayerPropertiesWidget();
 
     void handleKeyboardEvents();
 
-    FilePath imageDirectory;
-    FilePath fontDirectory;
+    ode::FilePath imageDirectory;
+    ode::FilePath fontDirectory;
     bool ignoreValidation = false;
 
     struct Internal;
