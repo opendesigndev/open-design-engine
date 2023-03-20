@@ -9,15 +9,15 @@ bool isImGuiMultiselectKeyDown() {
 }
 }
 
-void DesignEditorContext::Selection::select(const ODE_StringRef &layerID) {
+void DesignEditorContext::LayerSelection::select(const ODE_StringRef &layerID) {
     select(layerID.data);
 }
 
-void DesignEditorContext::Selection::select(const ODE_String &layerID) {
+void DesignEditorContext::LayerSelection::select(const ODE_String &layerID) {
     select(layerID.data);
 }
 
-void DesignEditorContext::Selection::select(const char *layerID) {
+void DesignEditorContext::LayerSelection::select(const char *layerID) {
     const int length = static_cast<int>(strlen(layerID));
     if (layerID == nullptr || length <= 0) {
         layerIDs.clear();
@@ -32,7 +32,7 @@ void DesignEditorContext::Selection::select(const char *layerID) {
     }
 }
 
-bool DesignEditorContext::Selection::isSelected(const char *layerID) {
+bool DesignEditorContext::LayerSelection::isSelected(const char *layerID) {
     for (const ODE_StringRef &id : layerIDs) {
         if (strcmp(id.data, layerID) == 0) {
             return true;

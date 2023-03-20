@@ -3,6 +3,7 @@
 
 void DesignEditorLoadedOctopus::clear() {
     filePath = "";
+    reloaded = true;
 }
 
 bool DesignEditorLoadedOctopus::isLoaded() const {

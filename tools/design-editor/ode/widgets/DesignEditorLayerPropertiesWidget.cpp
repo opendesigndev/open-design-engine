@@ -72,12 +72,15 @@ std::string layerTypeToString(ODE_LayerType layerType) {
 
 }
 
-void drawLayerPropertiesWidget(const ODE_LayerList &layerList, DesignEditorContext &context) {
+void drawLayerPropertiesWidget(const ODE_LayerList &layerList,
+                               DesignEditorContext::Api &apiContext,
+                               DesignEditorContext::LayerSelection &layerSelectionContext,
+                               DesignEditorContext::LayerProperties &layerPropertiesContext) {
     ImGui::Begin("Selected Layer Properties");
 
     for (int i = 0; i < layerList.n; ++i) {
         const ODE_LayerList::Entry &layer = layerList.entries[i];
-        if (context.selection.isSelected(layer.id.data)) {
+        if (layerSelectionContext.isSelected(layer.id.data)) {
             const auto layerPropName = [&layer](const char *invisibleId, const char *visibleLabel = "")->std::string {
                 return std::string(visibleLabel)+std::string("##layer-")+std::string(invisibleId)+std::string("-")+std::string(layer.id.data);
             };
@@ -87,7 +90,7 @@ void drawLayerPropertiesWidget(const ODE_LayerList &layerList, DesignEditorConte
             const char *blendModeStr = "NORMAL"; // TODO: Get layer blend mode as string
 
             ODE_LayerMetrics layerMetrics;
-            CHECK_IMEND(ode_component_getLayerMetrics(context.component, layer.id, &layerMetrics));
+            CHECK_IMEND(ode_component_getLayerMetrics(apiContext.component, layer.id, &layerMetrics));
 
             const float a = static_cast<float>(layerMetrics.transformation.matrix[0]);
             const float b = static_cast<float>(layerMetrics.transformation.matrix[2]);
@@ -134,14 +137,14 @@ void drawLayerPropertiesWidget(const ODE_LayerList &layerList, DesignEditorConte
                 ImGui::SameLine(100);
                 if (ImGui::Checkbox(layerPropName("visibility").c_str(), &layerVisible)) {
                     // TODO: Update layer visiblity
-                    CHECK_IMEND(ode_pr1_drawComponent(context.rc, context.component, context.imageBase, &context.bitmap, &context.frameView));
+                    CHECK_IMEND(ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView));
                 }
 
                 ImGui::Text("Opacity:");
                 ImGui::SameLine(100);
                 if (ImGui::DragFloat(layerPropName("opacity").c_str(), &layerOpacity)) {
                     // TODO: Update layer opacity
-                    CHECK_IMEND(ode_pr1_drawComponent(context.rc, context.component, context.imageBase, &context.bitmap, &context.frameView));
+                    CHECK_IMEND(ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView));
                 }
 
                 ImGui::Text("Bend mode:");
@@ -166,16 +169,16 @@ void drawLayerPropertiesWidget(const ODE_LayerList &layerList, DesignEditorConte
                 ImGui::SameLine(100);
                 if (ImGui::DragFloat2((std::string("##translation-")+std::string(layer.id.data)).c_str(), &translation.x, 1.0f)) {
                     const ODE_Transformation newTransformation { 1,0,0,1,translation.x-origTranslation.x,translation.y-origTranslation.y };
-                    CHECK_IMEND(ode_component_transformLayer(context.component, layer.id, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation));
-                    CHECK_IMEND(ode_pr1_drawComponent(context.rc, context.component, context.imageBase, &context.bitmap, &context.frameView));
+                    CHECK_IMEND(ode_component_transformLayer(apiContext.component, layer.id, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation));
+                    CHECK_IMEND(ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView));
                 }
 
                 ImGui::Text("Scale:");
                 ImGui::SameLine(100);
                 if (ImGui::DragFloat2(layerPropName("blend-scale").c_str(), &scale.x, 0.05f, 0.0f, 100.0f)) {
                     const ODE_Transformation newTransformation { scale.x/origScale.x,0,0,scale.y/origScale.y,0,0 };
-                    CHECK_IMEND(ode_component_transformLayer(context.component, layer.id, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation));
-                    CHECK_IMEND(ode_pr1_drawComponent(context.rc, context.component, context.imageBase, &context.bitmap, &context.frameView));
+                    CHECK_IMEND(ode_component_transformLayer(apiContext.component, layer.id, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation));
+                    CHECK_IMEND(ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView));
                 }
 
                 ImGui::Text("Rotation:");
@@ -183,8 +186,8 @@ void drawLayerPropertiesWidget(const ODE_LayerList &layerList, DesignEditorConte
                 if (ImGui::DragFloat(layerPropName("blend-rotation").c_str(), &rotation)) {
                     const float rotationChangeRad = -(rotation-origRotation)*M_PI/180.0f;
                     const ODE_Transformation newTransformation { cos(rotationChangeRad),-sin(rotationChangeRad),sin(rotationChangeRad),cos(rotationChangeRad),0,0 };
-                    CHECK_IMEND(ode_component_transformLayer(context.component, layer.id, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation));
-                    CHECK_IMEND(ode_pr1_drawComponent(context.rc, context.component, context.imageBase, &context.bitmap, &context.frameView));
+                    CHECK_IMEND(ode_component_transformLayer(apiContext.component, layer.id, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation));
+                    CHECK_IMEND(ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView));
                 }
 
                 ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
@@ -192,27 +195,27 @@ void drawLayerPropertiesWidget(const ODE_LayerList &layerList, DesignEditorConte
                 ImGui::Text("Fill & stroke / text:");
                 ImGui::Dummy(ImVec2(20.0f, 0.0f));
                 ImGui::SameLine(50);
-                ImGui::InputText(layerPropName("fill").c_str(), context.layerProperties.strokeFillText.data(), 50);
+                ImGui::InputText(layerPropName("fill").c_str(), layerPropertiesContext.strokeFillText.data(), 50);
 
                 ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
 
                 ImGui::Text("Effects:");
                 ImGui::SameLine(415);
                 if (ImGui::SmallButton(layerPropName("effect-add", "+").c_str())) {
-                    context.layerProperties.effects.emplace_back();
+                    layerPropertiesContext.effects.emplace_back();
                 }
                 int effectToRemove = -1;
-                for (size_t ei = 0; ei < context.layerProperties.effects.size(); ++ei) {
+                for (size_t ei = 0; ei < layerPropertiesContext.effects.size(); ++ei) {
                     ImGui::Dummy(ImVec2(20.0f, 0.0f));
                     ImGui::SameLine(50);
-                    ImGui::InputText(layerPropName((std::string("effect-")+std::to_string(ei)).c_str()).c_str(), context.layerProperties.effects[ei].data(), 50);
+                    ImGui::InputText(layerPropName((std::string("effect-")+std::to_string(ei)).c_str()).c_str(), layerPropertiesContext.effects[ei].data(), 50);
                     ImGui::SameLine(415);
                     if (ImGui::SmallButton((std::string("-##layer-effect-remove")+std::to_string(ei)).c_str())) {
                         effectToRemove = static_cast<int>(ei);
                     }
                 }
-                if (effectToRemove >= 0 && effectToRemove < static_cast<int>(context.layerProperties.effects.size())) {
-                    context.layerProperties.effects.erase(context.layerProperties.effects.begin()+effectToRemove);
+                if (effectToRemove >= 0 && effectToRemove < static_cast<int>(layerPropertiesContext.effects.size())) {
+                    layerPropertiesContext.effects.erase(layerPropertiesContext.effects.begin()+effectToRemove);
                 }
 
                 ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
@@ -222,7 +225,7 @@ void drawLayerPropertiesWidget(const ODE_LayerList &layerList, DesignEditorConte
                 if (ImGui::Button(layerPropName("delete", "Delete Layer [FUTURE_API]").c_str(), ImVec2 { 250, 20 })) {
                     // TODO: Remove layer when API available
                     // CHECK_IMEND(ode_component_removeLayer(context.component, selectedLayer.id));
-                    CHECK_IMEND(ode_pr1_drawComponent(context.rc, context.component, context.imageBase, &context.bitmap, &context.frameView));
+                    CHECK_IMEND(ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView));
                 }
                 ImGui::PopStyleColor(1);
 

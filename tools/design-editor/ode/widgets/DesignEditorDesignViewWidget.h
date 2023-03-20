@@ -2,7 +2,10 @@
 #pragma once
 
 #include "../DesignEditorRenderer.h"
-#include "../context/DesignEditorContext.h"
+#include "../DesignEditorContext.h"
 
 /// Draw DE Design View widget
-void drawDesignViewWidget(DesignEditorContext &context, DesignEditorRenderer &renderer);
+void drawDesignViewWidget(const ODE_Bitmap &bmp,
+                          DesignEditorRenderer &renderer,
+                          DesignEditorContext::Textures &texturesContext,
+                          DesignEditorContext::Canvas &canvasContext);

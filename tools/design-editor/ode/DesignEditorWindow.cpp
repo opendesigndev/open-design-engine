@@ -19,8 +19,7 @@
 #include "DesignEditorLoadedOctopus.h"
 #include "DesignEditorImageVisualizationParams.h"
 #include "DesignEditorRenderer.h"
-#include "context/DesignEditorWidgetsContext.h"
-#include "context/DesignEditorContext.h"
+#include "DesignEditorContext.h"
 #include "widgets/DesignEditorToolbarWidget.h"
 #include "widgets/DesignEditorLayerListWidget.h"
 #include "widgets/DesignEditorDesignViewWidget.h"
@@ -57,15 +56,9 @@ struct DesignEditorWindow::Internal {
     /// Loaded octopus file data
     // TODO: Loaded Octopus
     DesignEditorLoadedOctopus loadedOctopus;
-    /// A flag that is true just after a new Octopus file is loaded
-    bool octopusFileReloaded = false;
 
     /// Renderer
     std::unique_ptr<DesignEditorRenderer> renderer;
-
-    /// Current and previous context of the ImGui widgets displayed
-    DesignEditorWidgetsContext widgetsContext;
-    DesignEditorWidgetsContext prevWidgetsContext;
 
     /// Current and previous image visualization params
     DesignEditorImageVisualizationParams imageVisualizationParams;
@@ -74,52 +67,35 @@ struct DesignEditorWindow::Internal {
     DesignEditorContext context;
 
     /// Graphics context accessor
-    GraphicsContext *gc() {
-        return reinterpret_cast<GraphicsContext *>(context.rc.ptr);
+    GraphicsContext *gc(DesignEditorContext::Api &apiContext) {
+        return reinterpret_cast<GraphicsContext *>(apiContext.rc.ptr);
     }
 
-    struct ImGuiWindowContext {
-        const ImVec4 clearColor = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-    } imGuiWindowContext;
-
-    struct FileDialogContext {
-        std::string filePath = ".";
-        std::string fileName;
-    } fileDialogContext;
-
-    struct Icons {
-        TexturePtr cursorTexture = nullptr;
-        TexturePtr addRectangleTexture = nullptr;
-        TexturePtr addEllipseTexture = nullptr;
-        TexturePtr addTextTexture = nullptr;
-    } icons;
-
-    DesignEditorMode mode = DesignEditorMode::SELECT;
-
-
-    int initialize() {
-        CHECK(ode_initializeEngineAttributes(&context.engineAttribs));
-        CHECK(ode_createEngine(&context.engine, &context.engineAttribs));
-        CHECK(ode_createRendererContext(context.engine, &context.rc, stringRef("Design Editor")));
+    // TODO: Move
+    int initialize(DesignEditorContext::Api &apiContext) {
+        CHECK(ode_initializeEngineAttributes(&apiContext.engineAttribs));
+        CHECK(ode_createEngine(&apiContext.engine, &apiContext.engineAttribs));
+        CHECK(ode_createRendererContext(apiContext.engine, &apiContext.rc, stringRef("Design Editor")));
         renderer = std::make_unique<DesignEditorRenderer>();
         return 0;
     }
 
-    int loadOctopus(const std::string &octopusJson, const FilePath &octopusPath, const FilePath &fontDir) {
-        if (context.design.ptr) {
-            CHECK(ode_destroyDesign(context.design));
+    // TODO: Move
+    int loadOctopus(const std::string &octopusJson, const FilePath &octopusPath, const FilePath &fontDir, DesignEditorContext::Api &apiContext) {
+        if (apiContext.design.ptr) {
+            CHECK(ode_destroyDesign(apiContext.design));
         }
 
-        CHECK(ode_createDesign(context.engine, &context.design));
+        CHECK(ode_createDesign(apiContext.engine, &apiContext.design));
 
         // TODO: Image base:
-        CHECK(ode_createDesignImageBase(context.rc, context.design, &context.imageBase));
-        reinterpret_cast<ImageBase *>(context.imageBase.ptr)->setImageDirectory(octopusPath.parent());
+        CHECK(ode_createDesignImageBase(apiContext.rc, apiContext.design, &apiContext.imageBase));
+        reinterpret_cast<ImageBase *>(apiContext.imageBase.ptr)->setImageDirectory(octopusPath.parent());
 
-        CHECK(ode_design_addComponentFromOctopusString(context.design, &context.component, context.metadata, stringRef(octopusJson), nullptr));
+        CHECK(ode_design_addComponentFromOctopusString(apiContext.design, &apiContext.component, apiContext.metadata, stringRef(octopusJson), nullptr));
 
         ODE_StringList missingFonts;
-        CHECK(ode_design_listMissingFonts(context.design, &missingFonts));
+        CHECK(ode_design_listMissingFonts(apiContext.design, &missingFonts));
 
         for (int i = 0; i < missingFonts.n; ++i) {
             if (missingFonts.entries[i].length <= 0) {
@@ -127,38 +103,40 @@ struct DesignEditorWindow::Internal {
             }
             const std::string pathStr = (std::string)fontDir+std::string("/")+std::string(missingFonts.entries[i].data)+std::string(".ttf");
             const ODE_StringRef path { pathStr.c_str(), static_cast<int>(strlen(path.data)) };
-            ode_design_loadFontFile(context.design, missingFonts.entries[i], path, ODE_StringRef());
+            ode_design_loadFontFile(apiContext.design, missingFonts.entries[i], path, ODE_StringRef());
         }
 
-        CHECK(ode_component_listLayers(context.component, &loadedOctopus.layerList));
+        CHECK(ode_component_listLayers(apiContext.component, &loadedOctopus.layerList));
 
-        GLFWwindow *window = gc()->getNativeHandle<GLFWwindow *>();
-        glfwGetFramebufferSize(window, &context.frameView.width, &context.frameView.height);
-        context.frameView.scale = 1;
-        CHECK(ode_pr1_drawComponent(context.rc, context.component, context.imageBase, &context.bitmap, &context.frameView));
+        GLFWwindow *window = gc(apiContext)->getNativeHandle<GLFWwindow *>();
+        glfwGetFramebufferSize(window, &apiContext.frameView.width, &apiContext.frameView.height);
+        apiContext.frameView.scale = 1;
+        CHECK(ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView));
 
         return 0;
     }
 
-    int loadManifest(const std::string &manifestPath) {
-        if (context.design.ptr) {
-            CHECK(ode_destroyDesign(context.design));
+    // TODO: Move
+    int loadManifest(const std::string &manifestPath, DesignEditorContext::Api &apiContext) {
+        if (apiContext.design.ptr) {
+            CHECK(ode_destroyDesign(apiContext.design));
         }
 
-        CHECK(ode_createDesign(context.engine, &context.design));
+        CHECK(ode_createDesign(apiContext.engine, &apiContext.design));
 
         const ODE_String manifestPathStr = ode_makeString(manifestPath);
         ODE_ParseError parseError;
 
-        CHECK(ode_design_loadManifestFile(context.design, ode_stringRef(manifestPathStr), &parseError));
+        CHECK(ode_design_loadManifestFile(apiContext.design, ode_stringRef(manifestPathStr), &parseError));
         return 0;
     }
 
-    int destroy() {
-        CHECK(ode_destroyDesignImageBase(context.imageBase));
-        CHECK(ode_destroyRendererContext(context.rc));
-        CHECK(ode_destroyDesign(context.design));
-        CHECK(ode_destroyEngine(context.engine));
+    // TODO: Move
+    int destroy(DesignEditorContext::Api &apiContext) {
+        CHECK(ode_destroyDesignImageBase(apiContext.imageBase));
+        CHECK(ode_destroyRendererContext(apiContext.rc));
+        CHECK(ode_destroyDesign(apiContext.design));
+        CHECK(ode_destroyEngine(apiContext.engine));
         return 0;
     }
 };
@@ -171,16 +149,16 @@ struct DesignEditorWindow::Internal {
 
 DesignEditorWindow::DesignEditorWindow() :
     data(new Internal()) {
-    data->initialize();
+    data->initialize(data->context.api);
 }
 
 DesignEditorWindow::~DesignEditorWindow() {
-    data->destroy();
+    data->destroy(data->context.api);
 }
 
 int DesignEditorWindow::display() {
     // Get the GLFW window as initialized in ODE GraphicsContext
-    GLFWwindow *window = data->gc()->getNativeHandle<GLFWwindow *>();
+    GLFWwindow *window = data->gc(data->context.api)->getNativeHandle<GLFWwindow *>();
 
     // Set file drop callback
     glfwSetDropCallback(window, fileDropCallback);
@@ -218,13 +196,13 @@ int DesignEditorWindow::display() {
         // Keyboard events (move slider, zoom)
         handleKeyboardEvents();
 
-        const bool widgetsContextChanged = data->prevWidgetsContext != data->widgetsContext;
+        const bool widgetsContextChanged = data->context.widgets != data->context.preWidgets;
         const bool imageVisualizationParamsChanged = data->imageVisualizationParams != data->prevImageVisualizationParams;
 
         // Display result texture
         if (data->loadedOctopus.isLoaded()) {
-            if (data->octopusFileReloaded || widgetsContextChanged || imageVisualizationParamsChanged) {
-                data->octopusFileReloaded = false;
+            if (data->loadedOctopus.reloaded || widgetsContextChanged || imageVisualizationParamsChanged) {
+                data->loadedOctopus.reloaded = false;
 
                 // TODO: Display result texture
             }
@@ -240,7 +218,7 @@ int DesignEditorWindow::display() {
             // TODO: Is image space position from top layer bounds correct ?
             const ODE_StringRef &topLayerID = data->loadedOctopus.layerList.entries[0].id;
             ODE_LayerMetrics topLayerMetrics;
-            ode_component_getLayerMetrics(data->context.component, topLayerID, &topLayerMetrics);
+            ode_component_getLayerMetrics(data->context.api.component, topLayerID, &topLayerMetrics);
             const ODE_Rectangle &topLayerBounds = topLayerMetrics.logicalBounds;
             const ODE_Vector2 imageSpacePosition {
                 mousePosInCanvasSpace.x * topLayerBounds.b.x,
@@ -257,20 +235,20 @@ int DesignEditorWindow::display() {
         // ODE DesignEditor controls window
         drawControlsWidget();
 
-        if (data->widgetsContext.showToolbar) {
-            drawToolbarWidget(data->mode);
+        if (data->context.widgets.showToolbar) {
+            drawToolbarWidget(data->context.mode);
         }
-        if (data->widgetsContext.showLayerList) {
-            drawLayerListWidget(data->context, data->loadedOctopus);
+        if (data->context.widgets.showLayerList) {
+            drawLayerListWidget(data->loadedOctopus, data->context.layerSelection);
         }
-        if (data->widgetsContext.showDesignView) {
-            drawDesignViewWidget(data->context, *data->renderer);
+        if (data->context.widgets.showDesignView) {
+            drawDesignViewWidget(data->context.api.bitmap, *data->renderer, data->context.textures, data->context.canvas);
         }
-        if (data->widgetsContext.showLayerProperties) {
-            drawLayerPropertiesWidget(data->loadedOctopus.layerList, data->context);
+        if (data->context.widgets.showLayerProperties) {
+            drawLayerPropertiesWidget(data->loadedOctopus.layerList, data->context.api, data->context.layerSelection, data->context.layerProperties);
         }
 
-        if (data->widgetsContext.showImGuiDebugger) {
+        if (data->context.widgets.showImGuiDebugger) {
             ImGui::ShowMetricsWindow();
         }
 
@@ -279,7 +257,7 @@ int DesignEditorWindow::display() {
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
-        const ImVec4 &clearColor = data->imGuiWindowContext.clearColor;
+        const ImVec4 &clearColor = data->context.imGuiWindow.clearColor;
         glClearColor(clearColor.x * clearColor.w, clearColor.y * clearColor.w, clearColor.z * clearColor.w, clearColor.w);
         glClear(GL_COLOR_BUFFER_BIT);
 
@@ -304,14 +282,12 @@ int DesignEditorWindow::display() {
 }
 
 bool DesignEditorWindow::readManifestFile(const FilePath &manifestPath) {
-    const int loadError = data->loadManifest((std::string)manifestPath);
+    const int loadError = data->loadManifest((std::string)manifestPath, data->context.api);
     return loadError == 0;
 }
 
 bool DesignEditorWindow::readOctopusFile(const FilePath &octopusPath) {
-    data->octopusFileReloaded = true;
     data->loadedOctopus.clear();
-
     data->loadedOctopus.filePath = octopusPath;
 
     if (!readFile(octopusPath, data->loadedOctopus.octopusJson)) {
@@ -319,7 +295,7 @@ bool DesignEditorWindow::readOctopusFile(const FilePath &octopusPath) {
         return false;
     }
 
-    const int loadError = data->loadOctopus(data->loadedOctopus.octopusJson, octopusPath, fontDirectory);
+    const int loadError = data->loadOctopus(data->loadedOctopus.octopusJson, octopusPath, fontDirectory, data->context.api);
     return loadError == 0;
 }
 
@@ -336,7 +312,7 @@ void DesignEditorWindow::setIgnoreValidation(bool ignoreValidation_) {
 }
 
 void DesignEditorWindow::drawControlsWidget() {
-    data->prevWidgetsContext = data->widgetsContext;
+    data->context.preWidgets = data->context.widgets;
     data->prevImageVisualizationParams = data->imageVisualizationParams;
 
     ImGui::Begin("Controls");
@@ -346,21 +322,21 @@ void DesignEditorWindow::drawControlsWidget() {
     // Open "Open Octopus File" file dialog on button press
     if (ImGui::Button("Open Octopus File")) {
         const char* filters = ".json";
-        ImGuiFileDialog::Instance()->OpenDialog("ChooseOctopusFileDlgKey", "Choose Octopus *.json File", filters, data->fileDialogContext.filePath, data->fileDialogContext.fileName);
+        ImGuiFileDialog::Instance()->OpenDialog("ChooseOctopusFileDlgKey", "Choose Octopus *.json File", filters, data->context.fileDialog.filePath, data->context.fileDialog.fileName);
     }
 
     if (data->loadedOctopus.isLoaded()) {
         // Open "Save Graphiz File" file dialog on button press
         if (ImGui::Button("Save Octopus File")) {
             const char* filters = ".json";
-            ImGuiFileDialog::Instance()->OpenDialog("SaveOctopusFileDlgKey", "Save as *.json", filters, data->fileDialogContext.filePath, data->fileDialogContext.fileName);
+            ImGuiFileDialog::Instance()->OpenDialog("SaveOctopusFileDlgKey", "Save as *.json", filters, data->context.fileDialog.filePath, data->context.fileDialog.fileName);
         }
     }
 
     // Display "Open Octopus File" file dialog
     if (ImGuiFileDialog::Instance()->Display("ChooseOctopusFileDlgKey")) {
-        data->fileDialogContext.filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
-        data->fileDialogContext.fileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
+        data->context.fileDialog.filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+        data->context.fileDialog.fileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
 
         if (ImGuiFileDialog::Instance()->IsOk()) {
             const std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
@@ -378,8 +354,8 @@ void DesignEditorWindow::drawControlsWidget() {
     if (data->loadedOctopus.isLoaded()) {
         // Display "Save Octopus File" file dialog
         if (ImGuiFileDialog::Instance()->Display("SaveOctopusFileDlgKey")) {
-            data->fileDialogContext.filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
-            data->fileDialogContext.fileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
+            data->context.fileDialog.filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+            data->context.fileDialog.fileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
 
             if (ImGuiFileDialog::Instance()->IsOk()) {
                 const std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
@@ -397,10 +373,10 @@ void DesignEditorWindow::drawControlsWidget() {
     ImGui::NextColumn();
 
     ImGui::Text("Widgets:");
-    ImGui::Checkbox("Toolbar", &data->widgetsContext.showToolbar);
-    ImGui::Checkbox("Layer List", &data->widgetsContext.showLayerList);
-    ImGui::Checkbox("Interactive Design View", &data->widgetsContext.showDesignView);
-    ImGui::Checkbox("Layer Properties", &data->widgetsContext.showLayerProperties);
+    ImGui::Checkbox("Toolbar", &data->context.widgets.showToolbar);
+    ImGui::Checkbox("Layer List", &data->context.widgets.showLayerList);
+    ImGui::Checkbox("Interactive Design View", &data->context.widgets.showDesignView);
+    ImGui::Checkbox("Layer Properties", &data->context.widgets.showLayerProperties);
 
     ImGui::NextColumn();
 
@@ -413,7 +389,7 @@ void DesignEditorWindow::drawControlsWidget() {
 
     ImGui::NextColumn();
 
-    ImGui::Checkbox("ImGui Metrics/Debugger", &data->widgetsContext.showImGuiDebugger);
+    ImGui::Checkbox("ImGui Metrics/Debugger", &data->context.widgets.showImGuiDebugger);
 
     ImGui::End();
 }
@@ -424,13 +400,13 @@ void DesignEditorWindow::handleKeyboardEvents() {
     const float maxZoom = 10.0f;
 
     if (ImGui::IsKeyPressed(ImGuiKey_1)) {
-        data->mode = DesignEditorMode::SELECT;
+        data->context.mode = DesignEditorMode::SELECT;
     } else if (ImGui::IsKeyPressed(ImGuiKey_2)) {
-        data->mode = DesignEditorMode::ADD_RECTANGLE;
+        data->context.mode = DesignEditorMode::ADD_RECTANGLE;
     } else if (ImGui::IsKeyPressed(ImGuiKey_3)) {
-        data->mode = DesignEditorMode::ADD_ELLIPSE;
+        data->context.mode = DesignEditorMode::ADD_ELLIPSE;
     } else if (ImGui::IsKeyPressed(ImGuiKey_4)) {
-        data->mode = DesignEditorMode::ADD_TEXT;
+        data->context.mode = DesignEditorMode::ADD_TEXT;
     }
 
     if (ImGui::IsKeyDown(ImGuiKey_W)) {

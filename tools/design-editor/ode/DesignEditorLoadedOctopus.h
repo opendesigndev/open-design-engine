@@ -16,6 +16,9 @@ struct DesignEditorLoadedOctopus {
 
     ODE_LayerList layerList;
 
+    /// A flag that is true just after a new Octopus file is loaded
+    bool reloaded = false;
+
     void clear();
     bool isLoaded() const;
 };

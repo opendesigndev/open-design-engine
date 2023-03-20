@@ -33,25 +33,27 @@ void drawImGuiWidgetTexture(const GLuint textureHandle, int width, int height, f
 
 }
 
-void drawDesignViewWidget(DesignEditorContext &context, DesignEditorRenderer &renderer) {
+void drawDesignViewWidget(const ODE_Bitmap &bmp,
+                          DesignEditorRenderer &renderer,
+                          DesignEditorContext::Textures &texturesContext,
+                          DesignEditorContext::Canvas &canvasContext) {
     ImGui::Begin("Interactive Design View");
 
-    const ODE_Bitmap &bmp = context.bitmap;
     if (bmp.width > 0 && bmp.height > 0) {
         ode::Bitmap bitmap(PixelFormat::PREMULTIPLIED_RGBA, reinterpret_cast<const void*>(bmp.pixels), bmp.width, bmp.height);
 
         const ScaledBounds placement {0,0,static_cast<double>(bitmap.width()),static_cast<double>(bitmap.height())};
-        context.textures.designImageTexture = renderer.blendImageToTexture(std::move(bitmap), placement, 2);
+        texturesContext.designImageTexture = renderer.blendImageToTexture(std::move(bitmap), placement, 2);
 
-        drawImGuiWidgetTexture(context.textures.designImageTexture->getInternalGLHandle(),
-                               context.textures.designImageTexture->dimensions().x,
-                               context.textures.designImageTexture->dimensions().y,
-                               context.canvas.zoom);
+        drawImGuiWidgetTexture(texturesContext.designImageTexture->getInternalGLHandle(),
+                               texturesContext.designImageTexture->dimensions().x,
+                               texturesContext.designImageTexture->dimensions().y,
+                               canvasContext.zoom);
 
-        context.canvas.isMouseOver = ImGui::IsItemHovered();
-        context.canvas.bbSize = ImGui::GetItemRectSize();
-        context.canvas.bbMin = ImGui::GetItemRectMin();
-        context.canvas.bbMax = ImGui::GetItemRectMax();
+        canvasContext.isMouseOver = ImGui::IsItemHovered();
+        canvasContext.bbSize = ImGui::GetItemRectSize();
+        canvasContext.bbMin = ImGui::GetItemRectMin();
+        canvasContext.bbMax = ImGui::GetItemRectMax();
     }
 
     ImGui::End();
