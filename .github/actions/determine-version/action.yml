@@ -1,0 +1,20 @@
+name: Determine npm version
+
+runs:
+  using: "composite"
+  steps:
+    - id: script
+      shell: bash
+      run: |
+        set -xe
+        BASE_VERSION=`jq .version vcpkg.json -r`
+        if ${{ github.ref_type == 'tag' }}; then
+          if [ "v$BASE_VERSION" != "${{ github.ref_name }}" ]; then
+            echo "vcpkg.json.version and tag name do not match"
+            exit 1
+          fi
+          echo "ODE_VERSION_NPM=${{ github.ref_name }}" >> $GITHUB_ENV
+        else
+          SPEC=`git log -n 1 "--pretty=format:%h_%cs" | sed s/-//g | tr '_' '-'`
+          echo "ODE_VERSION_NPM=$BASE_VERSION-$SPEC" >> $GITHUB_ENV
+        fi
