@@ -18,8 +18,13 @@ void DesignEditorContext::LayerSelection::select(const ODE_String &layerID) {
 }
 
 void DesignEditorContext::LayerSelection::select(const char *layerID) {
+    if (layerID == nullptr) {
+        layerIDs.clear();
+        return;
+    }
+
     const int length = static_cast<int>(strlen(layerID));
-    if (layerID == nullptr || length <= 0) {
+    if (length <= 0) {
         layerIDs.clear();
     } else {
         if (isImGuiMultiselectKeyDown()) {

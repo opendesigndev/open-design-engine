@@ -45,6 +45,58 @@ void fileDropCallback(GLFWwindow* window, int count, const char** paths) {
     }
 }
 
+std::vector<ODE_StringRef> listChildLayers(const ODE_LayerList &layerList, const ODE_StringRef &rootLayerId) {
+    std::vector<ODE_StringRef> childLayerIds;
+
+    const auto areEq = [](const ODE_StringRef &a, const ODE_StringRef &b)->bool {
+        return a.length == b.length && strcmp(a.data, b.data) == 0;
+    };
+
+    for (int i = 0; i < layerList.n; i++) {
+        const ODE_LayerList::Entry &entry = layerList.entries[i];
+        if (areEq(entry.parentId, rootLayerId)) {
+            childLayerIds.emplace_back(entry.id);
+        }
+    }
+
+    return childLayerIds;
+}
+
+ODE_StringRef lastChildLayerId(const ODE_LayerList &layerList, const ODE_StringRef &rootLayerId) {
+    if (layerList.n <= 0) {
+        return ODE_StringRef { nullptr, 0 };
+    }
+
+    const auto areEq = [](const ODE_StringRef &a, const ODE_StringRef &b)->bool {
+        return a.length == b.length && strcmp(a.data, b.data) == 0;
+    };
+
+    for (int i = layerList.n - 1; i >=0; --i) {
+        const ODE_LayerList::Entry &entry = layerList.entries[i];
+        if (areEq(entry.parentId, rootLayerId)) {
+            return entry.id;
+        }
+    }
+
+    return ODE_StringRef { nullptr, 0 };
+}
+
+int loadMissingFonts(const DesignEditorContext::Api &apiContext, const FilePath &fontDir) {
+    ODE_StringList missingFonts;
+    CHECK(ode_design_listMissingFonts(apiContext.design, &missingFonts));
+
+    for (int i = 0; i < missingFonts.n; ++i) {
+        if (missingFonts.entries[i].length <= 0) {
+            continue;
+        }
+        const std::string pathStr = (std::string)fontDir+std::string("/")+std::string(missingFonts.entries[i].data)+std::string(".ttf");
+        const ODE_StringRef path { pathStr.c_str(), static_cast<int>(strlen(path.data)) };
+        CHECK(ode_design_loadFontFile(apiContext.design, missingFonts.entries[i], path, ODE_StringRef()));
+    }
+
+    return 0;
+}
+
 }
 
 struct DesignEditorWindow::Internal {
@@ -94,17 +146,7 @@ struct DesignEditorWindow::Internal {
 
         CHECK(ode_design_addComponentFromOctopusString(apiContext.design, &apiContext.component, apiContext.metadata, stringRef(octopusJson), nullptr));
 
-        ODE_StringList missingFonts;
-        CHECK(ode_design_listMissingFonts(apiContext.design, &missingFonts));
-
-        for (int i = 0; i < missingFonts.n; ++i) {
-            if (missingFonts.entries[i].length <= 0) {
-                continue;
-            }
-            const std::string pathStr = (std::string)fontDir+std::string("/")+std::string(missingFonts.entries[i].data)+std::string(".ttf");
-            const ODE_StringRef path { pathStr.c_str(), static_cast<int>(strlen(path.data)) };
-            ode_design_loadFontFile(apiContext.design, missingFonts.entries[i], path, ODE_StringRef());
-        }
+        CHECK(loadMissingFonts(apiContext, fontDir));
 
         CHECK(ode_component_listLayers(apiContext.component, &loadedOctopus.layerList));
 
@@ -225,10 +267,59 @@ int DesignEditorWindow::display() {
                 mousePosInCanvasSpace.y * topLayerBounds.b.y
             };
 
-            if (data->mode == Internal::Mode::SELECT) {
+            // TODO: For now, always insert to the top layer.
+            const std::vector<ODE_StringRef> &selectedLayerIds = data->context.layerSelection.layerIDs;
+            const ODE_StringRef &insertionLayerId = topLayerID;
+
+            // Layer insertion
+            if (data->context.mode == DesignEditorMode::ADD_RECTANGLE ||
+                data->context.mode == DesignEditorMode::ADD_ELLIPSE ||
+                data->context.mode == DesignEditorMode::ADD_TEXT) {
+                const Vector2f newLayerSize { 100, 50 };
+
+                const octopus::Octopus octopus = [mode = data->context.mode, &newLayerSize]()->octopus::Octopus {
+                    if (mode == DesignEditorMode::ADD_RECTANGLE) {
+                        ode::octopus_builder::ShapeLayer rectangleShape(0, 0, newLayerSize.x, newLayerSize.y);
+                        rectangleShape.setColor(Color(0.5, 0.5, 0.5, 1.0));
+                        return ode::octopus_builder::buildOctopus("Rectangle", rectangleShape);
+
+                    } else if (mode == DesignEditorMode::ADD_ELLIPSE) {
+                        const std::string w = std::to_string(newLayerSize.x);
+                        const std::string ratio = std::to_string(newLayerSize.x / newLayerSize.y);
+                        ode::octopus_builder::ShapeLayer ellipseShape(0, 0, newLayerSize.x, newLayerSize.y);
+                        ellipseShape.setPath("M 0,0 a " + ratio + " 1 0 0 0 " + w + " 0 a " + ratio + " 1 0 0 0 -" + w + " 0");
+                        return ode::octopus_builder::buildOctopus("Ellipse", ellipseShape);
+
+                    } else {
+                        ode::octopus_builder::TextLayer textShape("Text");
+                        textShape.setColor(Color(0.5, 0.5, 0.5, 1.0));
+                        return ode::octopus_builder::buildOctopus("Text", textShape);
+                    }
+                } ();
+
+                std::string octopusLayerJson;
+                octopus::Serializer::serialize(octopusLayerJson, *octopus.content);
+
+                ODE_ParseError parseError;
+                const ODE_Result result = ode_component_addLayer(data->context.api.component, insertionLayerId, {}, stringRef(octopusLayerJson), &parseError);
+
+                if (result == ODE_RESULT_OK) {
+                    loadMissingFonts(data->context.api, fontDirectory);
+
+                    const ODE_Transformation translation { 1, 0, 0, 1, imageSpacePosition.x, imageSpacePosition.y };
+                    ode_component_listLayers(data->context.api.component, &data->loadedOctopus.layerList);
+                    const ODE_StringRef insertedLayerId = lastChildLayerId(data->loadedOctopus.layerList, insertionLayerId);
+                    if (insertedLayerId.data!=nullptr && insertedLayerId.length>=0) {
+                        ode_component_transformLayer(data->context.api.component, insertedLayerId, ODE_TRANSFORMATION_BASIS_LAYER, translation);
+                    }
+
+                    ode_pr1_drawComponent(data->context.api.rc, data->context.api.component, data->context.api.imageBase, &data->context.api.bitmap, &data->context.api.frameView);
+                }
+
+            } else if (data->context.mode == DesignEditorMode::SELECT) {
                 ODE_String selectedLayerId;
-                CHECK(ode_component_identifyLayer(data->context.component, &selectedLayerId, imageSpacePosition, 2.0f));
-                data->selectionContext.select(selectedLayerId);
+                ode_component_identifyLayer(data->context.api.component, &selectedLayerId, imageSpacePosition, 2.0f);
+                data->context.layerSelection.select(selectedLayerId);
             }
         }
 

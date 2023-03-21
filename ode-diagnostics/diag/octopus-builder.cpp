@@ -11,7 +11,7 @@ ShapeLayer::ShapeLayer(double x, double y) : ShapeLayer(x, y, 240, 160) { }
 
 ShapeLayer::ShapeLayer(double x, double y, double w, double h) {
     static int i = 0;
-    id = "SHAPE"+std::to_string(i++);
+    id = "SHAPE_"+std::to_string(i++);
     type = octopus::Layer::Type::SHAPE;
     name = id;
     shape = octopus::Shape();
@@ -97,13 +97,14 @@ ShapeLayer &ShapeLayer::addEffect(const octopus::Effect &effect) {
 }
 
 TextLayer::TextLayer(const std::string &text) {
-    id = text;
+    static int i = 0;
+    id = "TEXT_"+std::to_string(i++);
     type = octopus::Layer::Type::TEXT;
     name = id;
     this->text = octopus::Text();
     this->text->value = text;
     this->text->defaultStyle.font = octopus::Font();
-    this->text->defaultStyle.font->postScriptName = "arial";
+    this->text->defaultStyle.font->postScriptName = "Arial";
     this->text->defaultStyle.fontSize = 20;
     this->text->defaultStyle.fills = std::vector<octopus::Fill>();
     this->text->defaultStyle.fills->emplace_back();
@@ -139,7 +140,7 @@ TextLayer &TextLayer::addEffect(const octopus::Effect &effect) {
 
 GroupLayer::GroupLayer() {
     static int i = 0;
-    id = "GROUP"+std::to_string(i++);
+    id = "GROUP_"+std::to_string(i++);
     type = octopus::Layer::Type::GROUP;
     name = id;
     layers = std::list<octopus::Layer>();
