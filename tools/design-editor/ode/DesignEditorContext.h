@@ -58,22 +58,25 @@ struct DesignEditorContext {
         ode::TexturePtr designImageTexture = nullptr;
     } textures;
 
-    /// State of
+    /// Canvas state
     struct Canvas {
         bool isMouseOver = false;
         ImVec2 bbSize;
         ImVec2 bbMin;
         ImVec2 bbMax;
         float zoom = 1.0f;
+        std::optional<ImVec2> mouseClickPos;
+        std::optional<ImVec2> mouseDragPos;
     } canvas;
 
     /// Layer selection
     struct LayerSelection {
         std::vector<ODE_StringRef> layerIDs {};
 
-        void select(const ODE_StringRef &layerID);
-        void select(const ODE_String &layerID);
         void select(const char *layerID);
+        void add(const char *layerID);
+        void clear();
+
         bool isSelected(const char *layerID);
     } layerSelection;
 

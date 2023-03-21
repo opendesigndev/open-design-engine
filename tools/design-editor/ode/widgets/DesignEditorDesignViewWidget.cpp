@@ -11,8 +11,17 @@
 using namespace ode;
 
 namespace {
+const ImU32 IM_COLOR_LIGHT_BLUE = 4294941081;
+}
 
-void drawImGuiWidgetTexture(const GLuint textureHandle, int width, int height, float &zoom, size_t colsCount = 1, size_t rowsCount = 1) {
+namespace {
+
+void drawImGuiWidgetTexture(GLuint textureHandle,
+                            int width, int height,
+                            float &zoom,
+                            std::optional<ImVec2> &mouseClickPos,
+                            std::optional<ImVec2> &mouseDragPos,
+                            size_t colsCount = 1, size_t rowsCount = 1) {
     const ImVec2 windowSize = ImGui::GetWindowSize();
 
     const int horizontalPadding = 18;
@@ -28,7 +37,23 @@ void drawImGuiWidgetTexture(const GLuint textureHandle, int width, int height, f
     ImGui::Text("Display size:     %d x %d", static_cast<int>(std::round(newImageSize.x)), static_cast<int>(std::round(newImageSize.y)));
     ImGui::SliderFloat("Zoom [-S][+W]", &zoom, 1.0f, 10.0f);
 
-    ImGui::Image((void*)(intptr_t)textureHandle, newImageSize);
+    ImGui::PushStyleColor(ImGuiCol_Button, IM_COLOR_LIGHT_BLUE);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COLOR_LIGHT_BLUE);
+    ImGui::ImageButton((void*)(intptr_t)textureHandle, newImageSize);
+
+    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+        mouseClickPos = ImGui::GetMousePos();
+    } else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+        mouseClickPos = std::nullopt;
+    }
+
+    if (ImGui::IsItemHovered() && ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+        mouseDragPos = ImGui::GetMousePos();
+    } else {
+        mouseDragPos = std::nullopt;
+    }
+
+    ImGui::PopStyleColor(2);
 }
 
 }
@@ -48,7 +73,9 @@ void drawDesignViewWidget(const ODE_Bitmap &bmp,
         drawImGuiWidgetTexture(texturesContext.designImageTexture->getInternalGLHandle(),
                                texturesContext.designImageTexture->dimensions().x,
                                texturesContext.designImageTexture->dimensions().y,
-                               canvasContext.zoom);
+                               canvasContext.zoom,
+                               canvasContext.mouseClickPos,
+                               canvasContext.mouseDragPos);
 
         canvasContext.isMouseOver = ImGui::IsItemHovered();
         canvasContext.bbSize = ImGui::GetItemRectSize();

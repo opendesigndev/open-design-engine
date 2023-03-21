@@ -3,12 +3,16 @@
 
 #include <imgui.h>
 
+#include <ode-diagnostics.h>
+
 namespace {
 const ImU32 IM_COLOR_DARK_RED = 4278190233;
 const ImU32 IM_COLOR_LIGHT_BLUE = 4294941081;
 }
 
-void drawToolbarWidget(DesignEditorMode &mode) {
+void drawToolbarWidget(const ODE_LayerList &layerList,
+                       const DesignEditorContext::LayerSelection &layersSelectionContext,
+                       DesignEditorMode &mode) {
     ImGui::Begin("Toolbar");
 
     ImGui::PushStyleColor(ImGuiCol_Button, mode == DesignEditorMode::SELECT ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);

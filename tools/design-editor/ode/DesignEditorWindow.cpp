@@ -48,13 +48,9 @@ void fileDropCallback(GLFWwindow* window, int count, const char** paths) {
 std::vector<ODE_StringRef> listChildLayers(const ODE_LayerList &layerList, const ODE_StringRef &rootLayerId) {
     std::vector<ODE_StringRef> childLayerIds;
 
-    const auto areEq = [](const ODE_StringRef &a, const ODE_StringRef &b)->bool {
-        return a.length == b.length && strcmp(a.data, b.data) == 0;
-    };
-
     for (int i = 0; i < layerList.n; i++) {
         const ODE_LayerList::Entry &entry = layerList.entries[i];
-        if (areEq(entry.parentId, rootLayerId)) {
+        if (strcmp(entry.parentId.data, rootLayerId.data) == 0) {
             childLayerIds.emplace_back(entry.id);
         }
     }
@@ -67,13 +63,9 @@ ODE_StringRef lastChildLayerId(const ODE_LayerList &layerList, const ODE_StringR
         return ODE_StringRef { nullptr, 0 };
     }
 
-    const auto areEq = [](const ODE_StringRef &a, const ODE_StringRef &b)->bool {
-        return a.length == b.length && strcmp(a.data, b.data) == 0;
-    };
-
     for (int i = layerList.n - 1; i >=0; --i) {
         const ODE_LayerList::Entry &entry = layerList.entries[i];
-        if (areEq(entry.parentId, rootLayerId)) {
+        if (strcmp(entry.parentId.data, rootLayerId.data) == 0) {
             return entry.id;
         }
     }
@@ -250,25 +242,39 @@ int DesignEditorWindow::display() {
             }
         }
 
-        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && data->context.canvas.isMouseOver) {
-            const ImVec2 mousePosInScreenSpace = ImGui::GetMousePos();
-            const ImVec2 mousePosInCanvasSpace = ImVec2 {
-                (mousePosInScreenSpace.x - data->context.canvas.bbMin.x) / data->context.canvas.bbSize.x,
-                (mousePosInScreenSpace.y - data->context.canvas.bbMin.y) / data->context.canvas.bbSize.y,
+        const auto toCanvasSpace = [&canvas = data->context.canvas](const ImVec2 &posInScreenSpace)->ImVec2 {
+            return ImVec2 {
+                (posInScreenSpace.x - canvas.bbMin.x) / canvas.bbSize.x,
+                (posInScreenSpace.y - canvas.bbMin.y) / canvas.bbSize.y,
+            };
+        };
+        const auto toImageSpace = [&canvas = data->context.canvas, this](const ImVec2 &posInScreenSpace)->ODE_Vector2 {
+            const ImVec2 inCanvasSpace = ImVec2 {
+                (posInScreenSpace.x - canvas.bbMin.x) / canvas.bbSize.x,
+                (posInScreenSpace.y - canvas.bbMin.y) / canvas.bbSize.y,
             };
 
             // TODO: Is image space position from top layer bounds correct ?
             const ODE_StringRef &topLayerID = data->loadedOctopus.layerList.entries[0].id;
             ODE_LayerMetrics topLayerMetrics;
             ode_component_getLayerMetrics(data->context.api.component, topLayerID, &topLayerMetrics);
+
             const ODE_Rectangle &topLayerBounds = topLayerMetrics.logicalBounds;
             const ODE_Vector2 imageSpacePosition {
-                mousePosInCanvasSpace.x * topLayerBounds.b.x,
-                mousePosInCanvasSpace.y * topLayerBounds.b.y
+                inCanvasSpace.x * topLayerBounds.b.x,
+                inCanvasSpace.y * topLayerBounds.b.y
             };
 
+            return imageSpacePosition;
+        };
+
+        // Mouse click
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && data->context.canvas.isMouseOver) {
+            const ODE_Vector2 mousePosImageSpace = toImageSpace(ImGui::GetMousePos());
+
             // TODO: For now, always insert to the top layer.
-            const std::vector<ODE_StringRef> &selectedLayerIds = data->context.layerSelection.layerIDs;
+//            const std::vector<ODE_StringRef> &selectedLayerIds = data->context.layerSelection.layerIDs;
+            const ODE_StringRef &topLayerID = data->loadedOctopus.layerList.entries[0].id;
             const ODE_StringRef &insertionLayerId = topLayerID;
 
             // Layer insertion
@@ -306,7 +312,7 @@ int DesignEditorWindow::display() {
                 if (result == ODE_RESULT_OK) {
                     loadMissingFonts(data->context.api, fontDirectory);
 
-                    const ODE_Transformation translation { 1, 0, 0, 1, imageSpacePosition.x, imageSpacePosition.y };
+                    const ODE_Transformation translation { 1, 0, 0, 1, mousePosImageSpace.x, mousePosImageSpace.y };
                     ode_component_listLayers(data->context.api.component, &data->loadedOctopus.layerList);
                     const ODE_StringRef insertedLayerId = lastChildLayerId(data->loadedOctopus.layerList, insertionLayerId);
                     if (insertedLayerId.data!=nullptr && insertedLayerId.length>=0) {
@@ -318,8 +324,39 @@ int DesignEditorWindow::display() {
 
             } else if (data->context.mode == DesignEditorMode::SELECT) {
                 ODE_String selectedLayerId;
-                ode_component_identifyLayer(data->context.api.component, &selectedLayerId, imageSpacePosition, 2.0f);
-                data->context.layerSelection.select(selectedLayerId);
+                ode_component_identifyLayer(data->context.api.component, &selectedLayerId, mousePosImageSpace, 2.0f);
+                data->context.layerSelection.select(selectedLayerId.data);
+            }
+        }
+
+        const auto isRectangleIntersection = [](const ODE_Rectangle &r1, const ODE_Rectangle &r2)->bool {
+            return (!(r1.b.x < r2.a.x || r2.b.x < r1.a.x || r1.b.y < r2.a.y || r2.b.y < r1.a.y));
+        };
+
+        // Mouse rectangle selection
+        if (data->context.mode == DesignEditorMode::SELECT &&
+            data->context.canvas.mouseClickPos.has_value() &&
+            data->context.canvas.mouseDragPos.has_value()) {
+            const ODE_Vector2 rectStartInImageSpace = toImageSpace(*data->context.canvas.mouseClickPos);
+            const ODE_Vector2 rectEndInImageSpace = toImageSpace(*data->context.canvas.mouseDragPos);
+            const ODE_Rectangle selectionRectangle {
+                ODE_Vector2 { std::min(rectStartInImageSpace.x, rectEndInImageSpace.x), std::min(rectStartInImageSpace.y, rectEndInImageSpace.y) },
+                ODE_Vector2 { std::max(rectStartInImageSpace.x, rectEndInImageSpace.x), std::max(rectStartInImageSpace.y, rectEndInImageSpace.y) } };
+
+            std::vector<ODE_StringRef> selectedLayerIds;
+
+            data->context.layerSelection.clear();
+
+            for (int i = 0; i < data->loadedOctopus.layerList.n; ++i) {
+                const ODE_LayerList::Entry &layer = data->loadedOctopus.layerList.entries[i];
+
+                ODE_LayerMetrics layerMetrics;
+                ode_component_getLayerMetrics(data->context.api.component, layer.id, &layerMetrics);
+                const ODE_Rectangle &layerBounds = layerMetrics.transformedGraphicalBounds;
+
+                if (isRectangleIntersection(selectionRectangle, layerBounds)) {
+                    data->context.layerSelection.add(layer.id.data);
+                }
             }
         }
 
@@ -327,7 +364,7 @@ int DesignEditorWindow::display() {
         drawControlsWidget();
 
         if (data->context.widgets.showToolbar) {
-            drawToolbarWidget(data->context.mode);
+            drawToolbarWidget(data->loadedOctopus.layerList, data->context.layerSelection, data->context.mode);
         }
         if (data->context.widgets.showLayerList) {
             drawLayerListWidget(data->loadedOctopus, data->context.layerSelection);
