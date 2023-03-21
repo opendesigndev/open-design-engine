@@ -451,7 +451,10 @@ void DesignEditorWindow::drawControlsWidget() {
             if (ImGuiFileDialog::Instance()->IsOk()) {
                 const std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
 
-                const bool isSaved = writeFile(filePathName, data->loadedOctopus.octopusJson);
+                ODE_String octopusString;
+                ode_component_getOctopus(data->context.api.component, &octopusString);
+
+                const bool isSaved = writeFile(filePathName, octopusString.data, octopusString.length);
                 if (!isSaved) {
                     fprintf(stderr, "Internal error (saving Octopus json to filesystem)\n");
                 }
