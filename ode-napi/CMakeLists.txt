@@ -57,10 +57,10 @@ add_custom_command(
             ${CMAKE_CURRENT_BINARY_DIR}/codegen/gen-renderer-api.h
             ${CMAKE_CURRENT_BINARY_DIR}/codegen/gen.h
         MAIN_DEPENDENCY
-            generate-api-bindings.py
+            ${CMAKE_CURRENT_LIST_DIR}/generate-api-bindings.py
         DEPENDS
             ${ODE_NAPI_CODEGEN_INPUT}
-            generate-api-bindings.py
+            ${CMAKE_CURRENT_LIST_DIR}/generate-api-bindings.py
         COMMAND python3 "${CMAKE_CURRENT_LIST_DIR}/generate-api-bindings.py" "${CMAKE_CURRENT_BINARY_DIR}" ${ODE_NAPI_CODEGEN_INPUT}
         VERBATIM
 )

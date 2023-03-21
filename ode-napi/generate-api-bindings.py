@@ -1,7 +1,7 @@
 
+import sys
 import os
 import re
-import sys
 
 # Data structures for the parsed entities (struct, enum, function etc.)
 class Entity:
@@ -26,6 +26,8 @@ class Member: # a struct member, enum value, or function argument
         return str(self.__dict__)
 
 typesUsedAsPtrInAPI = set()
+
+
 
 ###########################
 #         PARSING         #
@@ -53,16 +55,17 @@ reSkipB = re.compile(r"^\/\*.*?\*\/", re.DOTALL) # Multi-line comment
 reOddBackslashesNL = re.compile(r"([^\\](\\\\)*)\\\n") # An escaped newline
 reMultiLineComment = re.compile(r"\/\*.*?\*\/", re.DOTALL)
 reEnumValue = re.compile(r"(\w+)\s*(=\s*([\w\.\+\-]+))\s*$")
-reFunctionArg = re.compile(r"((?:(?:ODE_IN|ODE_OUT|ODE_IN_OUT|ODE_OUT_RETURN) )?[\w\s\*]+[\s\*])(\w+)\s*$")
+reFunctionArg = re.compile(r"([\w\s\*]+[\s\*])(\w+)\s*$")
 reMixedMember = re.compile(r"(^|[\w\s\*]*[\s\*])\s*(\w+)\s*$", re.DOTALL)
 reMemberVariable = re.compile(r"^(\w[\w\s\*]*\w|\w)([\s\*][\w\s\*,]*\w)\s*(\[[\w\s\[\]]*\])?\s*;")
 reMemberVariableName = re.compile(r"^(|.*[\s\*])(\w+)$")
 reTupleMarker = re.compile(r"^ODE_TUPLE[\s\n]")
-reManualMarker = re.compile(r"^ODE_MANUAL[\s\n]")
 reBindArrayGetter = re.compile(r"^ODE_BIND_ARRAY_GETTER\s*\(\s*(\w+)\s*,\s*(\w+)\s*,\s*(\w+)\s*\)\s*;")
 rePtrType = re.compile(r"([A-Za-z]\w*)(\s+const)?\s*\*")
 reParamDesc = re.compile(r"^param\s*(\w+)\s*\-?\s*")
 reArrayType = re.compile(r"\[\s*([0-9]+)\s*\]\s*$")
+reArgAttrib = re.compile(r"^\s*(ODE_(IN|OUT|INOUT|OUT_RETURN))\s")
+reReturnArg = re.compile(r"^\s*ODE_OUT_RETURN\s")
 
 # Split string but ignore separators within comments
 def safeSplit(s, separator):
@@ -218,10 +221,6 @@ def parseStruct(entities, groups, desc, namespace = []):
             category = "tuple"
             memberDesc = None
             body = body[match.end():]
-
-        # ODE_MANUAL marker
-        elif (match := reManualMarker.search(body)):
-            category = "manual"
             memberDesc = None
             body = body[match.end():]
 
@@ -383,8 +382,9 @@ def parseHeader(header):
     return entities
 
 
+
 ###########################
-#         UTILS           #
+#          UTILS          #
 ###########################
 
 padding = '    '
@@ -448,7 +448,7 @@ def commonEnumPrefixLength(entity):
 
 
 ###########################
-#   N-API BINDINGS        #
+#     N-API BINDINGS      #
 ###########################
 
 def generateNapiFunctionBinding(entity, emName, fullName):
@@ -480,7 +480,7 @@ def generateNapiFunctionBinding(entity, emName, fullName):
             call += ", "
 
         inout_type = "IN"
-        if t.startswith("ODE_IN_OUT"): inout_type = "INOUT"
+        if t.startswith("ODE_INOUT"): inout_type = "INOUT"
         elif t.startswith("ODE_IN"): inout_type = "IN"
         elif t.startswith("ODE_OUT_RETURN"): inout_type = "RETURN"
         elif t.startswith("ODE_OUT"): inout_type = "OUT"
@@ -548,6 +548,11 @@ def generateNapiBindings(entities, apiPath):
     duplicate = set()
 
     for entity in entities:
+
+        # TODO actually solve this normally
+        if entity.name == "ODE_MemoryRef" or entity.name == "ODE_Transformation":
+            continue
+
         fullName = namespacedName(entity.namespace, entity.name)
         emName = jsTypeName(fullName)
 
@@ -743,20 +748,18 @@ tsTypes = []
 def tsType(type):
     type = type.strip()
     wrap = ""
-    if type.startswith("ODE_IN "): type = type[7:]
-    if type.startswith("ODE_OUT "):
-        type = type[8:]
-        # The argument object does not have to contain any values, but it has
-        # to be there for us to be able to write into it.
-        wrap = 'Partial'
-    if type.startswith("ODE_IN_OUT "): type = type[11:]
-    if type.startswith("ODE_OUT_RETURN "): type = type[15:]
+    if (match := reArgAttrib.search(type)):
+        if match.group(1) == 'ODE_OUT_RETURN':
+            # The argument object does not have to contain any values, but it has
+            # to be there for us to be able to write into it.
+            wrap = 'Partial'
+        type = type[match.end():].strip()
     if type:
         type = (' '+type+' ').replace('*', ' ').replace(' const ', '').strip()
         if (jsType := jsTypeName(type)):
             tsType = jsType[0].upper()+jsType[1:]
             if wrap:
-                return f'{wrap}<ode.{tsType}>'
+                return wrap+'<ode.'+tsType+'>'
             return 'ode.'+tsType
     return 'unknown'
 
@@ -823,7 +826,7 @@ def generateTypescriptBindings(entities):
             tsTypes.append(name)
             ts += tsDescription(entity.description)
             ts += 'export type '+name+' = {\n'
-            ts += f'    {name}: number;\n'
+            ts += padding+name+': number;\n'
             ts += '};\n\n'
 
         # Value object struct
@@ -853,7 +856,7 @@ def generateTypescriptBindings(entities):
                     arrayMember, lengthMember = member.value.split(',', 1)
                     arrayElementType = findMemberType(entity.members, arrayMember).strip()[:-1].strip()
                     ts += tsDescription(member.description, '')
-                    ts += f'export function {name}_{member.name}(self: {name}, i: ode.Int): {tsType(arrayElementType)};\n'
+                    ts += 'export function '+name+'_'+member.name+'(self: '+name+', i: ode.Int): '+tsType(arrayElementType)+';\n'
             ts += '\n'
 
         # Tuple struct
@@ -874,15 +877,15 @@ def generateTypescriptBindings(entities):
                 returnType = "void"
             fullDescription = entity.description
             for arg in entity.members:
-                if arg.description and not arg.type.startswith("ODE_OUT_RETURN"):
+                if arg.description and not reReturnArg.search(arg.type):
                     fullDescription += '\n@param '+arg.name+' '+arg.description
             for arg in entity.members:
-                if arg.description and arg.type.startswith("ODE_OUT_RETURN"):
+                if arg.description and reReturnArg.search(arg.type):
                     fullDescription += '\n@returns '+arg.name+' '+arg.description
             ts += tsDescription(fullDescription)
             ts += 'export function '+name+'(\n'
             for arg in entity.members:
-                if arg.type.startswith("ODE_OUT_RETURN"):
+                if reReturnArg.search(arg.type):
                     returnType = tsType(arg.type)
                 else:
                     ts += padding+arg.name+': '+tsType(arg.type)+',\n'
@@ -923,38 +926,38 @@ def relPath(path):
 
 # Make sure not to rewrite the file if not necessary to make recompilation
 # reasonably fast.
-def write(file, contents):
+def writeFile(file, contents):
     dirname = os.path.dirname(file)
     if not os.path.exists(dirname):
         os.makedirs(dirname)
     with open(file, "w") as f:
         f.write(contents)
 
-def generateBindings(headerPath, out_path):
-    napiBindingsPath = os.path.join(out_path, "codegen", "gen-"+os.path.splitext(os.path.basename(headerPath))[0])
-    typescriptBindingsPath = os.path.join(out_path, "codegen", os.path.splitext(os.path.basename(headerPath))[0]+".d.ts")
+def generateBindings(headerPath, outPath):
+    napiBindingsPath = os.path.join(outPath, "codegen", "gen-"+os.path.splitext(os.path.basename(headerPath))[0])
+    typescriptBindingsPath = os.path.join(outPath, "codegen", os.path.splitext(os.path.basename(headerPath))[0]+".d.ts")
     with open(headerPath, "r") as f:
         header = f.read()
     entities = parseHeader(header)
     (napiBindings, napiHeader) = generateNapiBindings(entities, headerPath)
-    write(napiBindingsPath+".cpp", preamble+napiBindings)
-    write(napiBindingsPath+".h", preamble+napiHeader)
+    writeFile(napiBindingsPath+".cpp", preamble+napiBindings)
+    writeFile(napiBindingsPath+".h", preamble+napiHeader)
     typescriptBindings = generateTypescriptBindings(entities)
-    write(typescriptBindingsPath, preamble+typescriptBindings)
+    writeFile(typescriptBindingsPath, preamble+typescriptBindings)
 
-def generateTopLevelBindings(paths, out_path):
-    typescriptBindingsPath = os.path.join(out_path, "codegen", "index.d.ts")
+def generateTopLevelBindings(paths, outPath):
+    typescriptBindingsPath = os.path.join(outPath, "codegen", "index.d.ts")
     typescriptBindings = generateTopLevelTypescriptBindings()
-    write(typescriptBindingsPath, preamble+typescriptBindings)
+    writeFile(typescriptBindingsPath, preamble+typescriptBindings)
     
     includes = ""
     for path in paths:
         basename = os.path.basename(path)
         includes += f'#include "gen-{basename}"\n'
-    write(os.path.join(out_path, "codegen", "gen.h"), "#pragma once\n"+preamble+includes)
+    writeFile(os.path.join(outPath, "codegen", "gen.h"), "#pragma once\n"+preamble+includes)
 
-out_path = sys.argv[1]
+outPath = sys.argv[1]
 paths = sys.argv[2:]
 for path in paths:
-    generateBindings(relPath(path), out_path)
-generateTopLevelBindings(paths, out_path)
+    generateBindings(relPath(path), outPath)
+generateTopLevelBindings(paths, outPath)

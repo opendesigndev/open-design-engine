@@ -15,16 +15,14 @@
 #define ODE_FUTURE_API ODE_API
 /// Structures marked with ODE_TUPLE can be constructed as array objects in JS
 #define ODE_TUPLE
-/// Structures marked with ODE_MANUAL won't have automatic bindings written for them
-#define ODE_MANUAL
 /// Arguments marked with ODE_OUT will be written into, but not read.
 #define ODE_OUT
 /// Arguments marked with ODE_OUT_RETURN will become return value. This only
 /// works for functions with ODE_Result return value, which gets turned into
 /// thrown exception.
 #define ODE_OUT_RETURN
-/// Arguments marked with ODE_IN_OUT will be read and written into
-#define ODE_IN_OUT
+/// Arguments marked with ODE_INOUT will be read and written into
+#define ODE_INOUT
 /// Arguments marked with ODE_IN will be read, but not written into.
 /// Unmarked argument types are treated as ODE_IN.
 #define ODE_IN
@@ -119,7 +117,6 @@ typedef struct {
 
 /// A reference to area of memory. Does not hold ownership of the passed data.
 typedef struct {
-    ODE_MANUAL
     /// Pointer to the beginning of the memory block
     ODE_VarDataPtr data;
     /// Length of the buffer in bytes
@@ -152,10 +149,10 @@ ODE_Result ODE_API ode_allocateMemoryBuffer(ODE_OUT_RETURN ODE_MemoryBuffer *buf
  * @param buffer - the memory buffer to be resized
  * @param length - the desired new length of the buffer in bytes
  */
-ODE_Result ODE_API ode_reallocateMemoryBuffer(ODE_IN_OUT ODE_MemoryBuffer *buffer, size_t length);
+ODE_Result ODE_API ode_reallocateMemoryBuffer(ODE_INOUT ODE_MemoryBuffer *buffer, size_t length);
 
 /// Destroys the memory buffer, freeing its allocated memory
-ODE_Result ODE_API ode_destroyMemoryBuffer(ODE_IN_OUT ODE_MemoryBuffer *buffer);
+ODE_Result ODE_API ode_destroyMemoryBuffer(ODE_INOUT ODE_MemoryBuffer *buffer);
 
 #ifdef __cplusplus
 }

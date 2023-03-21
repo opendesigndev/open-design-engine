@@ -38,7 +38,6 @@ typedef enum {
 
 /// A 3x2 affine transformation matrix in column-major order
 typedef struct {
-    ODE_MANUAL
     ODE_Scalar matrix[6];
 } ODE_Transformation;
 
