@@ -17,8 +17,8 @@ The Open Design Engine processes and renders designs and provides interface to q
 ## Maintainer guidelines
 
 - The version of ODE is defined in [vcpkg.json](vcpkg.json) and automatically parsed from this file for other purposes.
-- Some committed files are machine-generated. They are only in from submodules.
-- All commit messages must be capitalized
+- Some committed files are machine-generated. These are marked as such at the beginning. Do not modify any generated files by hand and make sure they are up-to-date before committing.
+- All commit messages must be capitalized.
 - You may run [repo-check.py](repo-check.py) to check if the repository content is in a state that can be committed.
 
 ## Project module hierarchy

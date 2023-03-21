@@ -25,6 +25,6 @@ protocol. `engine-source` is published directly from root of this repository as
 that is basically a tarball of all source files required for compilation of node.js
 addon.
 
-This setup is similar (but not identical) to how esbuild is packaged and is 
+This setup is similar (but not identical) to how esbuild is packaged and is
 conceptually similar to [Package Distributions npm RFC](https://github.com/npm/rfcs/pull/519).
 We'd like to switch to it once it becomes available.

@@ -38,9 +38,9 @@ target_include_directories(ode-napi PRIVATE
 )
 
 SET(ODE_NAPI_CODEGEN_INPUT
-    ../ode-essentials/ode/api-base.h
-    ../ode-logic/ode/logic-api.h
-    ../ode-renderer/ode/renderer-api.h
+    ${CMAKE_CURRENT_LIST_DIR}/../ode-essentials/ode/api-base.h
+    ${CMAKE_CURRENT_LIST_DIR}/../ode-logic/ode/logic-api.h
+    ${CMAKE_CURRENT_LIST_DIR}/../ode-renderer/ode/renderer-api.h
 )
 
 add_custom_command(
@@ -198,7 +198,7 @@ else()
         copy_codegen_file_to_package("target-specific" target-specific/package.json)
     endif()
     copy_built_file_to_package("target-specific" ode-napi.node)
-    
+
     # configure_file does variable replacement
     configure_file(wrapper-package-test/package.json codegen/package.json)
     configure_file(wrapper-package-test/node.js codegen/node.js)
