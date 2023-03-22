@@ -89,22 +89,9 @@ if(NOT MSVC)
     add_compile_options(-Wno-empty-body)
 endif()
 
-# Fake library to convince cmake that everything is OK
-# TODO get rid of this and find a different solution
-if(EMSCRIPTEN)
-    message(WARNING "TODO get rid of null target!")
-    file(WRITE "${CMAKE_BINARY_DIR}/null.cpp" "")
-    add_library(null "${CMAKE_BINARY_DIR}/null.cpp")
-    target_include_directories(null PUBLIC "${EMSCRIPTEN_SYSROOT}/include")
-endif()
-
 # Third-party packages
 find_package(Freetype REQUIRED)
-if(EMSCRIPTEN)
-    find_package(HarfBuzz REQUIRED)
-else()
-    find_package(harfbuzz REQUIRED)
-endif()
+find_package(harfbuzz REQUIRED)
 find_package(ICU REQUIRED)
 find_package(skia REQUIRED)
 if(ODE_RENDERER_ENABLED)
