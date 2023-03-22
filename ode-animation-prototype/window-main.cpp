@@ -27,20 +27,12 @@ struct ODE_internal_RendererContext {
     inline ODE_internal_RendererContext(GraphicsContext::Offscreen offscreen, const Vector2i &dimensions) : gc(offscreen, dimensions) { }
 };
 
-// TODO move to common API utils
-static ODE_StringRef stringRef(const std::string &str) {
-    ODE_StringRef ref;
-    ref.data = str.c_str();
-    ref.length = int(str.size());
-    return ref;
-}
-
 void onKeyPress(GLFWwindow *window, int key, int scancode, int action, int mods) {
     if (key == GLFW_KEY_F5 && !animationPath.empty()) {
         std::string animationDefJson;
         if (readFile(animationPath, animationDefJson)) {
             if (!animationDefJson.empty())
-                ode_pr1_component_loadAnimation(component, stringRef(animationDefJson), nullptr);
+                ode_pr1_component_loadAnimation(component, ode_stringRef(animationDefJson), nullptr);
         }
     }
 }
@@ -76,13 +68,13 @@ int main(int argc, const char *const *argv) {
 
     ODE_ComponentMetadata metadata = { };
     //ODE_ComponentHandle component; // global
-    CHECK(ode_design_addComponentFromOctopusString(design, &component, metadata, stringRef(octopusJson), nullptr));
+    CHECK(ode_design_addComponentFromOctopusString(design, &component, metadata, ode_stringRef(octopusJson), nullptr));
 
     if (!animationDefJson.empty())
-        CHECK(ode_pr1_component_loadAnimation(component, stringRef(animationDefJson), nullptr));
+        CHECK(ode_pr1_component_loadAnimation(component, ode_stringRef(animationDefJson), nullptr));
 
     ODE_RendererContextHandle rc;
-    CHECK(ode_createRendererContext(engine, &rc, stringRef("Squid")));
+    CHECK(ode_createRendererContext(engine, &rc, ode_stringRef("Squid")));
 
     ODE_DesignImageBaseHandle imageBase;
     CHECK(ode_createDesignImageBase(rc, design, &imageBase));

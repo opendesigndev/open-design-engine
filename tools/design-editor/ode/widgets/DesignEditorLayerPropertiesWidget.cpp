@@ -82,7 +82,7 @@ void drawLayerPropertiesWidget(const ODE_LayerList &layerList,
         const ODE_LayerList::Entry &layer = layerList.entries[i];
         if (layerSelectionContext.isSelected(layer.id.data)) {
             const auto layerPropName = [&layer](const char *invisibleId, const char *visibleLabel = "")->std::string {
-                return std::string(visibleLabel)+std::string("##layer-")+std::string(invisibleId)+std::string("-")+std::string(layer.id.data);
+                return std::string(visibleLabel)+std::string("##layer-")+std::string(invisibleId)+std::string("-")+ode_stringDeref(layer.id);
             };
 
             bool layerVisible = true; // TODO: Get layer visibility
@@ -115,8 +115,8 @@ void drawLayerPropertiesWidget(const ODE_LayerList &layerList,
 
             const std::string layerSectionHeader =
                 std::string("[")+layerTypeToShortString(layer.type)+std::string("] ")+
-                std::string(layer.id.data)+std::string(" ")+
-                std::string("(")+std::string(layer.name.data)+std::string(")");
+                ode_stringDeref(layer.id)+std::string(" ")+
+                std::string("(")+ode_stringDeref(layer.name)+std::string(")");
 
             if (ImGui::CollapsingHeader(layerSectionHeader.c_str())) {
                 ImGui::Text("%s", "ID:");
@@ -167,7 +167,7 @@ void drawLayerPropertiesWidget(const ODE_LayerList &layerList,
 
                 ImGui::Text("Translation:");
                 ImGui::SameLine(100);
-                if (ImGui::DragFloat2((std::string("##translation-")+std::string(layer.id.data)).c_str(), &translation.x, 1.0f)) {
+                if (ImGui::DragFloat2((std::string("##translation-")+ode_stringDeref(layer.id)).c_str(), &translation.x, 1.0f)) {
                     const ODE_Transformation newTransformation { 1,0,0,1,translation.x-origTranslation.x,translation.y-origTranslation.y };
                     CHECK_IMEND(ode_component_transformLayer(apiContext.component, layer.id, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation));
                     CHECK_IMEND(ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView));

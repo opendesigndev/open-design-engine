@@ -29,14 +29,6 @@ namespace {
 
 #define CHECK(x) do { if ((x)) return -1; } while (false)
 
-// TODO move to common API utils
-static ODE_StringRef stringRef(const std::string &str) {
-    ODE_StringRef ref;
-    ref.data = str.c_str();
-    ref.length = int(str.size());
-    return ref;
-}
-
 void fileDropCallback(GLFWwindow* window, int count, const char** paths) {
     glfwFocusWindow(window);
     if (count == 1) {
@@ -84,7 +76,7 @@ int loadMissingFonts(const DesignEditorContext::Api &apiContext,
         if (missingFonts.entries[i].length <= 0) {
             continue;
         }
-        const std::string pathStr = (std::string)fontDir+std::string("/")+std::string(missingFonts.entries[i].data)+std::string(".ttf");
+        const std::string pathStr = (std::string)fontDir+std::string("/")+ode_stringDeref(missingFonts.entries[i])+std::string(".ttf");
         const ODE_StringRef path { pathStr.c_str(), static_cast<int>(strlen(path.data)) };
         CHECK(ode_design_loadFontFile(apiContext.design, missingFonts.entries[i], path, ODE_StringRef()));
     }
@@ -122,7 +114,7 @@ struct DesignEditorWindow::Internal {
     int initialize(DesignEditorContext::Api &apiContext) {
         CHECK(ode_initializeEngineAttributes(&apiContext.engineAttribs));
         CHECK(ode_createEngine(&apiContext.engine, &apiContext.engineAttribs));
-        CHECK(ode_createRendererContext(apiContext.engine, &apiContext.rc, stringRef("Design Editor")));
+        CHECK(ode_createRendererContext(apiContext.engine, &apiContext.rc, ode_stringRef("Design Editor")));
         renderer = std::make_unique<DesignEditorRenderer>();
         return 0;
     }
@@ -142,7 +134,7 @@ struct DesignEditorWindow::Internal {
         CHECK(ode_createDesignImageBase(apiContext.rc, apiContext.design, &apiContext.imageBase));
         reinterpret_cast<ImageBase *>(apiContext.imageBase.ptr)->setImageDirectory(octopusPath.parent());
 
-        CHECK(ode_design_addComponentFromOctopusString(apiContext.design, &apiContext.component, apiContext.metadata, stringRef(octopusJson), nullptr));
+        CHECK(ode_design_addComponentFromOctopusString(apiContext.design, &apiContext.component, apiContext.metadata, ode_stringRef(octopusJson), nullptr));
 
         CHECK(loadMissingFonts(apiContext, fontDir));
 
@@ -307,7 +299,7 @@ int DesignEditorWindow::display() {
                 octopus::Serializer::serialize(octopusLayerJson, *octopus.content);
 
                 ODE_ParseError parseError;
-                const ODE_Result result = ode_component_addLayer(data->context.api.component, insertionLayerId, {}, stringRef(octopusLayerJson), &parseError);
+                const ODE_Result result = ode_component_addLayer(data->context.api.component, insertionLayerId, {}, ode_stringRef(octopusLayerJson), &parseError);
 
                 if (result == ODE_RESULT_OK) {
                     loadMissingFonts(data->context.api, fontDirectory);
