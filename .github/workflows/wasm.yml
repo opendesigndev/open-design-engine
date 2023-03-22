@@ -23,26 +23,18 @@ jobs:
           submodules: true
       - id: version
         uses: ./.github/actions/determine-version
-      - name: Setup emsdk
+      - name: "Emscripten: Setup cache"
+        uses: actions/cache@v3
+        with:
+          path: 'emsdk-cache'
+          key: emscripten-${{env.EMSCRIPTEN_VERSION}}-${{ runner.os }}-${{ env.EMSCRIPTEN_PORTS }}
+      - name: "Emscripten: Setup emsdk"
         uses: mymindstorm/setup-emsdk@v11
         with:
           version: ${{ env.EMSCRIPTEN_VERSION }}
           actions-cache-folder: 'emsdk-cache'
-      - name: "Emscripten ports: Restore cache"
-        id: cache-emports
-        uses: actions/cache/restore@v3
-        with:
-          path: emsdk-cache/emsdk-main/upstream/emscripten/cache
-          key: wasm-emports-${{ env.EMSCRIPTEN_VERSION }}-${{ join(env.EMSCRIPTEN_PORTS) }}
       - name: "Emscripten ports: Build"
-        if: steps.cache-emports.outputs.cache-hit != 'true'
         run: embuilder build ${{ env.EMSCRIPTEN_PORTS }}
-      - name: "Emscripten ports: Save cache"
-        uses: actions/cache/save@v3
-        if: steps.cache-emports.outputs.cache-hit != 'true'
-        with:
-          path: emsdk-cache/emsdk-main/upstream/emscripten/cache
-          key: ${{ steps.cache-emports.outputs.cache-primary-key }}
       - name: "Skia: Restore cache"
         id: cache-skia
         uses: actions/cache/restore@v3
