@@ -1,9 +1,7 @@
 name: WebAssembly build
 on:
-  push:
-    branches: ['main']
-    tags: ['*']
-  pull_request:
+  - push
+  - pull_request
 
 env:
   GITLAB_REGISTRY: registry.avcd.cz
@@ -77,7 +75,7 @@ jobs:
           path: |
             build/wasm-rel/ode-napi
       - uses: ./.github/actions/npm-publish
-        if: contains(github.event.pull_request.labels.*.name, 'ci:npm-publish') || github.event_name == 'push'
+        if: contains(github.event.pull_request.labels.*.name, 'ci:npm-publish') || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')))
         with:
           npm_token: ${{ secrets.NPM_TOKEN }}
           directory: build/wasm-rel/ode-napi/target-specific
