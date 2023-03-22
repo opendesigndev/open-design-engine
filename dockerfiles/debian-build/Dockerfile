@@ -45,8 +45,7 @@ RUN make install SYSTEM=linux-osmesa -C /home/glew-2.2.0
 # Build image
 FROM ode-debian-build-base AS ode-debian-build
 
-ARG ODE_BUILD_COMMIT_SHA
-ARG ODE_BUILD_COMMIT_WITH_DATE
+ARG ODE_BUILD_COMMIT_TAG
 
 RUN mkdir -p /home/ode
 COPY . /home/ode
@@ -57,20 +56,19 @@ COPY ./dockerfiles/debian-build/glx-dummy.cpp /home/ode/ode-graphics/ode/glx-dum
 RUN cmake \
     -S /home/ode \
     -B /home/ode/build \
-    -DCMAKE_MAKE_PROGRAM=make \
+    -DCMAKE_BUILD_TYPE=Release \
     -DOVERRIDE_OPENGL_LIBRARY=ON \
     -DOVERRIDE_GLFW_LIBRARY=ON \
     -DOVERRIDE_GLEW_LIBRARY=ON \
     -DGLEW_USE_STATIC_LIBS=ON \
     -DODE_RENDERER_ENABLED=ON \
-    -DODE_TEST_MODULES=OFF \
     -DODE_SKIA_GPU=OFF \
+    -DODE_TEST_MODULES=OFF \
+    -DODE_BUILD_COMMIT_TAG=$ODE_BUILD_COMMIT_TAG \
     -DCMAKE_CXX_STANDARD_LIBRARIES=-lOSMesa \
-    -DODE_BUILD_COMMIT_SHA=$ODE_BUILD_COMMIT_SHA \
-    -DODE_BUILD_COMMIT_WITH_DATE=$ODE_BUILD_COMMIT_WITH_DATE \
-    -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER=clang \
     -DCMAKE_CXX_COMPILER=clang++ \
+    -DCMAKE_MAKE_PROGRAM=make \
     -DVCPKG_TARGET_TRIPLET=x64-linux-release
 RUN cmake --build /home/ode/build --target ode-renderer-cli --config Release
 
@@ -91,4 +89,4 @@ ENV PATH="${PATH}:/opt/ode-renderer/bin"
 COPY --from=ode-debian-build /opt/ode-renderer /opt/ode-renderer
 
 # Build locally using:
-# bash -c 'docker build . -f dockerfiles/debian-build/Dockerfile --build-arg ODE_BUILD_COMMIT_SHA=`git rev-parse HEAD` --build-arg ODE_BUILD_COMMIT_WITH_DATE=`git log -n 1 "--pretty=format:%h_%cs"` --tag ode --platform linux/amd64'
+# bash -c 'docker build . -f dockerfiles/debian-build/Dockerfile --build-arg ODE_BUILD_COMMIT_TAG=`git describe --tags --always` --tag ode --platform linux/amd64'

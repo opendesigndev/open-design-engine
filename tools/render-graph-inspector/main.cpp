@@ -50,8 +50,8 @@ std::optional<CommandLineInput> parseCommandLineArguments(int argc, const char *
                 input.ignoreValidation = true;
             } else if (curArg == "--version") {
                 puts(
-                    "\nOPEN DESIGN ENGINE" /* " v" ODE_STRINGIZE(ODE_VERSION) */ " by Ceros\n\n" // put in when version is actually used
-                    "      Build version: " ODE_STRINGIZE(ODE_BUILD_COMMIT_SHA) "\n"
+                    "\nOPEN DESIGN ENGINE v" ODE_STRINGIZE(ODE_VERSION) " by Ceros\n\n"
+                    "      Build version: " ODE_STRINGIZE(ODE_BUILD_COMMIT_TAG) "\n"
                     "         Build date: " ODE_STRINGIZE(ODE_BUILD_DATE) "\n"
                     "         Build type: " BUILD_TYPE "\n"
                     "    Octopus version: " OCTOPUS_VERSION ", manifest " OCTOPUS_MANIFEST_VERSION "\n"

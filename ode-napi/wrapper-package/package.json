@@ -1,13 +1,13 @@
 {
     "name": "@opendesign/engine",
-    "version": "${ODE_VERSION_NPM}",
+    "version": "${ODE_NPM_VERSION}",
     "dependencies": {
-        "@opendesign/engine-wasm": "${ODE_VERSION_NPM}"
+        "@opendesign/engine-wasm": "${ODE_NPM_VERSION}"
     },
     "optionalDependencies": {
-        "@opendesign/engine-darwin-arm64": "${ODE_VERSION_NPM}",
-        "@opendesign/engine-darwin-x64": "${ODE_VERSION_NPM}",
-        "@opendesign/engine-source": "${ODE_VERSION_NPM}"
+        "@opendesign/engine-darwin-arm64": "${ODE_NPM_VERSION}",
+        "@opendesign/engine-darwin-x64": "${ODE_NPM_VERSION}",
+        "@opendesign/engine-source": "${ODE_NPM_VERSION}"
     },
     "type": "module",
     "exports": {
