@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include "shaders/SimpleBlitShader.h"
+#include "shaders/CanvasShader.h"
 
 using namespace ode;
 
@@ -13,7 +13,10 @@ public:
     ~DesignEditorRenderer() = default;
 
     /// Blend image on a background by the specified selectedDisplayMode and set to texture
-    TexturePtr blendImageToTexture(Bitmap &&bitmap, const ScaledBounds &placement, int selectedDisplayMode);
+    TexturePtr blendImageToTexture(Bitmap &&bitmap,
+                                   const ScaledBounds &placement,
+                                   int selectedDisplayMode,
+                                   const SelectionRectangleOpt &selectionRectangle);
 
 private:
     void bind();
@@ -21,7 +24,7 @@ private:
 
     TextureFrameBufferManager tfbm;
     DesignEditorShader::SharedVertexShader sharedVertexShader;
-    SimpleBlitShader blitShader;
+    CanvasShader canvasShader;
     Mesh billboard;
 
     GLint prevFbo;

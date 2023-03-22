@@ -68,7 +68,28 @@ void drawDesignViewWidget(const ODE_Bitmap &bmp,
         ode::Bitmap bitmap(PixelFormat::PREMULTIPLIED_RGBA, reinterpret_cast<const void*>(bmp.pixels), bmp.width, bmp.height);
 
         const ScaledBounds placement {0,0,static_cast<double>(bitmap.width()),static_cast<double>(bitmap.height())};
-        texturesContext.designImageTexture = renderer.blendImageToTexture(std::move(bitmap), placement, 2);
+
+        const auto toCanvasSpace = [&canvasContext](const ImVec2 &posInScreenSpace)->ImVec2 {
+            return ImVec2 {
+                (posInScreenSpace.x - canvasContext.bbMin.x) / canvasContext.bbSize.x,
+                (posInScreenSpace.y - canvasContext.bbMin.y) / canvasContext.bbSize.y,
+            };
+        };
+
+        SelectionRectangleOpt selectionRectangle = std::nullopt;
+        if (canvasContext.mouseClickPos.has_value() &&
+            canvasContext.mouseDragPos.has_value()) {
+            const ImVec2 rectStart = toCanvasSpace(*canvasContext.mouseClickPos);
+            const ImVec2 rectEnd = toCanvasSpace(*canvasContext.mouseDragPos);
+
+            selectionRectangle = ode::Rectangle<float> {
+                std::min(rectStart.x, rectEnd.x),
+                std::min(rectStart.y, rectEnd.y),
+                std::max(rectStart.x, rectEnd.x),
+                std::max(rectStart.y, rectEnd.y) };
+        }
+
+        texturesContext.designImageTexture = renderer.blendImageToTexture(std::move(bitmap), placement, 2, selectionRectangle);
 
         drawImGuiWidgetTexture(texturesContext.designImageTexture->getInternalGLHandle(),
                                texturesContext.designImageTexture->dimensions().x,

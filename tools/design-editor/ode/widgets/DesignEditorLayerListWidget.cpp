@@ -25,7 +25,10 @@ std::string layerTypeToShortString(ODE_LayerType layerType) {
     return "-";
 }
 
-void drawLayerListRecursiveStep(const ODE_LayerList &layerList, int idx, int &idxClicked, const std::vector<ODE_StringRef> &selectedLayerIDs) {
+void drawLayerListRecursiveStep(const ODE_LayerList &layerList,
+                                int idx,
+                                int &idxClicked,
+                                const std::vector<ODE_StringRef> &selectedLayerIDs) {
     if (idx >= layerList.n) {
         return;
     }

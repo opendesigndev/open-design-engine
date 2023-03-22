@@ -45,7 +45,8 @@ void fileDropCallback(GLFWwindow* window, int count, const char** paths) {
     }
 }
 
-std::vector<ODE_StringRef> listChildLayers(const ODE_LayerList &layerList, const ODE_StringRef &rootLayerId) {
+std::vector<ODE_StringRef> listChildLayers(const ODE_LayerList &layerList,
+                                           const ODE_StringRef &rootLayerId) {
     std::vector<ODE_StringRef> childLayerIds;
 
     for (int i = 0; i < layerList.n; i++) {
@@ -58,7 +59,8 @@ std::vector<ODE_StringRef> listChildLayers(const ODE_LayerList &layerList, const
     return childLayerIds;
 }
 
-ODE_StringRef lastChildLayerId(const ODE_LayerList &layerList, const ODE_StringRef &rootLayerId) {
+ODE_StringRef lastChildLayerId(const ODE_LayerList &layerList,
+                               const ODE_StringRef &rootLayerId) {
     if (layerList.n <= 0) {
         return ODE_StringRef { nullptr, 0 };
     }
@@ -73,7 +75,8 @@ ODE_StringRef lastChildLayerId(const ODE_LayerList &layerList, const ODE_StringR
     return ODE_StringRef { nullptr, 0 };
 }
 
-int loadMissingFonts(const DesignEditorContext::Api &apiContext, const FilePath &fontDir) {
+int loadMissingFonts(const DesignEditorContext::Api &apiContext,
+                     const FilePath &fontDir) {
     ODE_StringList missingFonts;
     CHECK(ode_design_listMissingFonts(apiContext.design, &missingFonts));
 
@@ -125,7 +128,10 @@ struct DesignEditorWindow::Internal {
     }
 
     // TODO: Move
-    int loadOctopus(const std::string &octopusJson, const FilePath &octopusPath, const FilePath &fontDir, DesignEditorContext::Api &apiContext) {
+    int loadOctopus(const std::string &octopusJson,
+                    const FilePath &octopusPath,
+                    const FilePath &fontDir,
+                    DesignEditorContext::Api &apiContext) {
         if (apiContext.design.ptr) {
             CHECK(ode_destroyDesign(apiContext.design));
         }
@@ -151,7 +157,8 @@ struct DesignEditorWindow::Internal {
     }
 
     // TODO: Move
-    int loadManifest(const std::string &manifestPath, DesignEditorContext::Api &apiContext) {
+    int loadManifest(const std::string &manifestPath,
+                     DesignEditorContext::Api &apiContext) {
         if (apiContext.design.ptr) {
             CHECK(ode_destroyDesign(apiContext.design));
         }
@@ -242,22 +249,15 @@ int DesignEditorWindow::display() {
             }
         }
 
-        const auto toCanvasSpace = [&canvas = data->context.canvas](const ImVec2 &posInScreenSpace)->ImVec2 {
-            return ImVec2 {
-                (posInScreenSpace.x - canvas.bbMin.x) / canvas.bbSize.x,
-                (posInScreenSpace.y - canvas.bbMin.y) / canvas.bbSize.y,
-            };
-        };
-        const auto toImageSpace = [&canvas = data->context.canvas, this](const ImVec2 &posInScreenSpace)->ODE_Vector2 {
+        // TODO: Is image space position from top layer bounds correct ?
+        const auto toImageSpace = [&canvas = data->context.canvas, &component = data->context.api.component, &topLayerID = data->loadedOctopus.layerList.entries[0].id](const ImVec2 &posInScreenSpace)->ODE_Vector2 {
             const ImVec2 inCanvasSpace = ImVec2 {
                 (posInScreenSpace.x - canvas.bbMin.x) / canvas.bbSize.x,
                 (posInScreenSpace.y - canvas.bbMin.y) / canvas.bbSize.y,
             };
 
-            // TODO: Is image space position from top layer bounds correct ?
-            const ODE_StringRef &topLayerID = data->loadedOctopus.layerList.entries[0].id;
             ODE_LayerMetrics topLayerMetrics;
-            ode_component_getLayerMetrics(data->context.api.component, topLayerID, &topLayerMetrics);
+            ode_component_getLayerMetrics(component, topLayerID, &topLayerMetrics);
 
             const ODE_Rectangle &topLayerBounds = topLayerMetrics.logicalBounds;
             const ODE_Vector2 imageSpacePosition {

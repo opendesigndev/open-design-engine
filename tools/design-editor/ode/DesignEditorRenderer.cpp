@@ -24,13 +24,16 @@ DesignEditorRenderer::DesignEditorRenderer() : sharedVertexShader("diagnostics-s
         return;
     }
 
-    blitShader.initialize(sharedVertexShader);
+    canvasShader.initialize(sharedVertexShader);
     const float billboardVertices[] = { 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f };
     int attributeSize = 2;
     billboard.initialize(billboardVertices, &attributeSize, 1, GL_TRIANGLES, 6);
 }
 
-TexturePtr DesignEditorRenderer::blendImageToTexture(Bitmap &&bitmap, const ScaledBounds &placement, int selectedDisplayMode) {
+TexturePtr DesignEditorRenderer::blendImageToTexture(Bitmap &&bitmap,
+                                                     const ScaledBounds &placement,
+                                                     int selectedDisplayMode,
+                                                     const SelectionRectangleOpt &selectionRectangle) {
     const bool ignoreAlpha = selectedDisplayMode == 3;
 
     ImagePtr image = Image::fromBitmap(bitmap, Image::NORMAL);
@@ -49,7 +52,7 @@ TexturePtr DesignEditorRenderer::blendImageToTexture(Bitmap &&bitmap, const Scal
     glViewport(0, 0, bounds.dimensions().x, bounds.dimensions().y);
     clearColorBuffer(selectedDisplayMode);
 
-    blitShader.bind(sBounds, sBounds, 0, ignoreAlpha);
+    canvasShader.bind(sBounds, sBounds, 0, bounds.dimensions(), selectionRectangle, ignoreAlpha);
 
     // Draw the image texture to framebuffer blended on top of the background
     texture->bind(0);
