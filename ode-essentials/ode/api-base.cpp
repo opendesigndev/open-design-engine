@@ -2,6 +2,7 @@
 #include "api-base.h"
 
 #include <cstdlib>
+#include <cstring>
 #include "utils.h"
 
 ODE_Result ODE_API ode_destroyString(ODE_String string) {
@@ -26,18 +27,18 @@ ODE_Result ODE_API ode_reallocateMemoryBuffer(ODE_MemoryBuffer *buffer, size_t l
     return ODE_RESULT_MEMORY_ALLOCATION_ERROR;
 }
 
+ODE_Result ODE_API ode_createMemoryBuffer(ODE_MemoryBuffer *buffer, ODE_MemoryRef data) {
+    ODE_ASSERT(buffer);
+    if (ODE_Result result = ode_allocateMemoryBuffer(buffer, data.length))
+        return result;
+    memcpy(reinterpret_cast<void *>(buffer->data), reinterpret_cast<const void *>(data.data), data.length);
+    return ODE_RESULT_OK;
+}
+
 ODE_Result ODE_API ode_destroyMemoryBuffer(ODE_MemoryBuffer *buffer) {
     ODE_ASSERT(buffer);
     free(reinterpret_cast<void *>(buffer->data));
     buffer->data = ODE_VarDataPtr();
     buffer->length = 0;
-    return ODE_RESULT_OK;
-}
-
-ODE_Result ODE_API ode_makeMemoryBuffer(ODE_MemoryRef ref, ODE_OUT_RETURN ODE_MemoryBuffer *buffer) {
-    ODE_ASSERT(ref.data && ref.length > 0);
-    auto result = ode_allocateMemoryBuffer(buffer, ref.length);
-    if (result != ODE_RESULT_OK) return result;
-    memcpy(buffer->data, ref.data, ref.length);
     return ODE_RESULT_OK;
 }

@@ -86,7 +86,7 @@ ODE_Result ODE_API ode_destroyDesignImageBase(ODE_DesignImageBaseHandle designIm
 }
 
 ODE_Result ODE_API ode_design_loadImagePixels(ODE_DesignImageBaseHandle designImageBase, ODE_StringRef key, ODE_BitmapRef bitmap) {
-    ODE_ASSERT(key.data && bitmap.pixels.data && bitmap.pixels.length >= bitmap.width*bitmap.height*4);
+    ODE_ASSERT(key.data && bitmap.pixels.data && bitmap.pixels.length == 4*bitmap.width*bitmap.height);
     if (!designImageBase.ptr)
         return ODE_RESULT_INVALID_IMAGE_BASE;
     if (!(bitmap.width > 0 && bitmap.height > 0))
@@ -106,11 +106,11 @@ ODE_Result ODE_API ode_design_loadImagePixels(ODE_DesignImageBaseHandle designIm
     return ODE_RESULT_OK;
 }
 
-ODE_Result ODE_API ode_pr1_drawComponent(ODE_RendererContextHandle rendererContext, ODE_ComponentHandle component, ODE_DesignImageBaseHandle designImageBase, ODE_Bitmap *outputBitmap, const ODE_PR1_FrameView *frameView) {
-    ODE_ASSERT(rendererContext.ptr && component.ptr && designImageBase.ptr && outputBitmap && frameView);
+ODE_Result ODE_API ode_pr1_drawComponent(ODE_RendererContextHandle rendererContext, ODE_ComponentHandle component, ODE_DesignImageBaseHandle designImageBase, ODE_Bitmap *outputBitmap, ODE_PR1_FrameView frameView) {
+    ODE_ASSERT(rendererContext.ptr && component.ptr && designImageBase.ptr && outputBitmap);
     if (Result<Rendexptr, DesignError> renderTree = component.ptr->accessor.assemble()) {
-        PixelBounds pixelBounds = outerPixelBounds(ScaledBounds(0, 0, frameView->width, frameView->height)+frameView->scale*Vector2d(frameView->offset.x, frameView->offset.y));
-        if (PlacedImagePtr image = render(*rendererContext.ptr->renderer, designImageBase.ptr->imageBase, *component.ptr->accessor.TEMP_GET_COMPONENT_DELETE_ME_ASAP(), renderTree.value(), frameView->scale, pixelBounds, 0)) {
+        PixelBounds pixelBounds = outerPixelBounds(ScaledBounds(0, 0, frameView.width, frameView.height)+frameView.scale*Vector2d(frameView.offset.x, frameView.offset.y));
+        if (PlacedImagePtr image = render(*rendererContext.ptr->renderer, designImageBase.ptr->imageBase, *component.ptr->accessor.TEMP_GET_COMPONENT_DELETE_ME_ASAP(), renderTree.value(), frameView.scale, pixelBounds, 0)) {
             if (BitmapPtr bitmap = image->asBitmap()) {
                 outputBitmap->format = ODE_PIXEL_FORMAT_RGBA;
                 ODE_ASSERT(bitmap->format() == PixelFormat::RGBA);
@@ -146,8 +146,8 @@ ODE_Result ODE_API ode_pr1_destroyAnimationRenderer(ODE_PR1_AnimationRendererHan
     return ODE_RESULT_OK;
 }
 
-ODE_Result ODE_API ode_pr1_animation_drawFrame(ODE_PR1_AnimationRendererHandle renderer, const ODE_PR1_FrameView *frameView, ODE_Scalar time) {
-    ODE_ASSERT(renderer.ptr && renderer.ptr->renderer && renderer.ptr->imageBase && frameView);
+ODE_Result ODE_API ode_pr1_animation_drawFrame(ODE_PR1_AnimationRendererHandle renderer, ODE_PR1_FrameView frameView, ODE_Scalar time) {
+    ODE_ASSERT(renderer.ptr && renderer.ptr->renderer && renderer.ptr->imageBase);
     if (!renderer.ptr->renderExpression || renderer.ptr->renderRevision != renderer.ptr->component.revision()) {
         if (Result<Rendexptr, DesignError> renderExpr = renderer.ptr->component.assemble())
             renderer.ptr->renderExpression = renderExpr.value();
@@ -155,11 +155,11 @@ ODE_Result ODE_API ode_pr1_animation_drawFrame(ODE_PR1_AnimationRendererHandle r
             return ode_result(renderExpr.error().type());
         renderer.ptr->renderRevision = renderer.ptr->component.revision();
     }
-    PixelBounds pixelBounds = outerPixelBounds(ScaledBounds(0, 0, frameView->width, frameView->height)+frameView->scale*Vector2d(frameView->offset.x, frameView->offset.y));
-    if (PlacedImagePtr frame = render(*renderer.ptr->renderer, *renderer.ptr->imageBase, *renderer.ptr->component.TEMP_GET_COMPONENT_DELETE_ME_ASAP(), renderer.ptr->renderExpression, frameView->scale, pixelBounds, time)) {
+    PixelBounds pixelBounds = outerPixelBounds(ScaledBounds(0, 0, frameView.width, frameView.height)+frameView.scale*Vector2d(frameView.offset.x, frameView.offset.y));
+    if (PlacedImagePtr frame = render(*renderer.ptr->renderer, *renderer.ptr->imageBase, *renderer.ptr->component.TEMP_GET_COMPONENT_DELETE_ME_ASAP(), renderer.ptr->renderExpression, frameView.scale, pixelBounds, time)) {
         renderer.ptr->renderer->screenDraw(
-            PixelBounds(0, 0, frameView->width, frameView->height),
-            PlacedImagePtr(frame, frame.bounds()-frameView->scale*Vector2d(frameView->offset.x, frameView->offset.y)),
+            PixelBounds(0, 0, frameView.width, frameView.height),
+            PlacedImagePtr(frame, frame.bounds()-frameView.scale*Vector2d(frameView.offset.x, frameView.offset.y)),
             Color(1, 1, 1, 1)
         );
     } else

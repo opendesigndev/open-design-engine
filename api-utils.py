@@ -200,6 +200,13 @@ def parseFunction(groups, desc):
             argDesc = parseDescription(rawArg)
             if not argDesc and argName in argDescMap:
                 argDesc = argDescMap[argName]
+            # Check argument attributes
+            if (match := reArgAttrib.search(argType)):
+                if '*' not in argType:
+                    sys.exit("Bad argument attribute in "+name+": "+argType+" "+argName)
+            elif '*' in argType and not argType.startswith('const '):
+                # All pointer arguments must have in/out attribute or const
+                sys.exit("Missing attribute in "+name+": "+argType+" "+argName)
             args.append(Member("argument", argType, argName, None, argDesc))
             updateTypesUsedAsPtrInAPI(argType)
     return Entity("function", returnType, [], name, desc, args)

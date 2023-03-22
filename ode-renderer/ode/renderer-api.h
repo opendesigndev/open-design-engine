@@ -94,9 +94,9 @@ ODE_Result ODE_API ode_design_loadImagePixels(ODE_DesignImageBaseHandle designIm
  * @param component - component to be rendered
  * @param designImageBase - image base of the component's parent design to be used to provide image assets
  * @param outputBitmap - output argument for the newly created bitmap - deallocate with ode_destroyBitmap
- * @param frameView - pointer to frame view object, which specifies the parameters of the render - TODO change to non-pointer
+ * @param frameView - pointer to frame view object, which specifies the parameters of the render
  */
-ODE_Result ODE_API ode_pr1_drawComponent(ODE_RendererContextHandle rendererContext, ODE_ComponentHandle component, ODE_DesignImageBaseHandle designImageBase, ODE_Bitmap *outputBitmap, const ODE_PR1_FrameView *frameView);
+ODE_Result ODE_API ode_pr1_drawComponent(ODE_RendererContextHandle rendererContext, ODE_ComponentHandle component, ODE_DesignImageBaseHandle designImageBase, ODE_OUT_RETURN ODE_Bitmap *outputBitmap, ODE_PR1_FrameView frameView);
 
 /**
  * PROTOTYPE - creates a new animation renderer for a given component - destroy with ode_pr1_destroyAnimationRenderer
@@ -113,24 +113,28 @@ ODE_Result ODE_API ode_pr1_destroyAnimationRenderer(ODE_PR1_AnimationRendererHan
 /**
  * Draw a frame of an animation into the renderer context framebuffer using an animation renderer
  * @param renderer - the animation renderer to be used for this operation
- * @param frameView - pointer to frame view object, which specifies the parameters of the render - TODO change to non-pointer
+ * @param frameView - pointer to frame view object, which specifies the parameters of the render
  * @param time - the timepoint of the animation in seconds
  */
-ODE_Result ODE_API ode_pr1_animation_drawFrame(ODE_PR1_AnimationRendererHandle renderer, const ODE_PR1_FrameView *frameView, ODE_Scalar time);
+ODE_Result ODE_API ode_pr1_animation_drawFrame(ODE_PR1_AnimationRendererHandle renderer, ODE_PR1_FrameView frameView, ODE_Scalar time);
 
 #ifdef __cplusplus
 }
-#endif
+
+#ifndef ODE_MINIMAL_API
 
 /// Creates a reference (ODE_BitmapRef) to an ODE_Bitmap object
 inline ODE_BitmapRef ode_bitmapRef(ODE_Bitmap bitmap) {
     ODE_BitmapRef ref = { };
     ref.format = bitmap.format;
     ref.pixels.data = bitmap.pixels;
-    ref.pixels.length = bitmap.width*bitmap.height*4; // TODO: take format into account
+    ref.pixels.length = 4*bitmap.width*bitmap.height; // TODO: take format into account
     ref.width = bitmap.width;
     ref.height = bitmap.height;
     return ref;
 }
+
+#endif
+#endif
 
 #endif // ODE_RENDERER_API_H

@@ -15,17 +15,14 @@
 #define ODE_FUTURE_API ODE_API
 /// Structures marked with ODE_TUPLE can be constructed as array objects in JS
 #define ODE_TUPLE
-/// Arguments marked with ODE_OUT will be written into, but not read.
+
+// All pointer arguments must be const or marked with one of:
+/// Pointer arguments marked with ODE_OUT will be written into but not read
 #define ODE_OUT
-/// Arguments marked with ODE_OUT_RETURN will become return value. This only
-/// works for functions with ODE_Result return value, which gets turned into
-/// thrown exception.
-#define ODE_OUT_RETURN
-/// Arguments marked with ODE_INOUT will be read and written into
+/// Pointer arguments marked with ODE_INOUT will be read and written into
 #define ODE_INOUT
-/// Arguments marked with ODE_IN will be read, but not written into.
-/// Unmarked argument types are treated as ODE_IN.
-#define ODE_IN
+/// Pointer argument marked with ODE_OUT_RETURN is output that can be considered the return value apart from Result
+#define ODE_OUT_RETURN
 
 #ifndef ODE_BIND_ARRAY_GETTER
 #define ODE_BIND_ARRAY_GETTER(methodName, memberArray, memberCount)
@@ -115,7 +112,7 @@ typedef struct {
     size_t length;
 } ODE_MemoryBuffer;
 
-/// A reference to area of memory. Does not hold ownership of the passed data.
+/// A reference to mutable memory block, does not hold ownership of data
 typedef struct {
     /// Pointer to the beginning of the memory block
     ODE_VarDataPtr data;
@@ -150,6 +147,9 @@ ODE_Result ODE_API ode_allocateMemoryBuffer(ODE_OUT_RETURN ODE_MemoryBuffer *buf
  * @param length - the desired new length of the buffer in bytes
  */
 ODE_Result ODE_API ode_reallocateMemoryBuffer(ODE_INOUT ODE_MemoryBuffer *buffer, size_t length);
+
+/// Creates a memory buffer as a copy of memory reference (TODO CONST CORRECTNESS)
+ODE_Result ODE_API ode_createMemoryBuffer(ODE_OUT_RETURN ODE_MemoryBuffer *buffer, ODE_MemoryRef data);
 
 /// Destroys the memory buffer, freeing its allocated memory
 ODE_Result ODE_API ode_destroyMemoryBuffer(ODE_INOUT ODE_MemoryBuffer *buffer);
@@ -215,11 +215,6 @@ inline ODE_String ode_makeString(const ODE_StringRef &ref) {
     }
     return string;
 }
-
-/// Create na ODE_MemoryBuffer from ODE_MemoryRef by allocating new memory area
-/// and copying the data over.
-/// Deallocate using ode_destroyMemoryBuffer
-ODE_Result ODE_API ode_makeMemoryBuffer(ODE_MemoryRef ref, ODE_OUT_RETURN ODE_MemoryBuffer *buffer);
 
 #endif
 #endif
