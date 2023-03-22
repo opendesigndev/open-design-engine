@@ -1,6 +1,5 @@
 FROM emscripten/emsdk:3.1.12@sha256:9c83e2dbe9b9a76fc7bb9f892df0ca67757c7b04527e8f722eea46c85f6df603 as builder
 RUN apt-get update && apt-get install -y \
-    ninja-build \
     pkg-config \
     autoconf autoconf-archive \
     bison gperf \

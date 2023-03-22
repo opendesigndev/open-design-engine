@@ -40,7 +40,7 @@ jobs:
           then
             echo "ON_BRANCH=true" >> $GITHUB_ENV;
             echo "ON_TAG=false" >> $GITHUB_ENV;
-            { echo -n "ODE_BUILD_COMMIT_TAG="; git describe --tags --always; } >> $GITHUB_ENV
+            { echo -n "ODE_BUILD_COMMIT_TAG="; git describe --tags --always; } >> $GITHUB_ENV;
           else
             echo "ON_BRANCH=false" >> $GITHUB_ENV;
             echo "ON_TAG=true" >> $GITHUB_ENV;

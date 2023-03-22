@@ -13,9 +13,9 @@ jobs:
 
     steps:
       #- name: Install prerequisites
-      #  run: brew install automake autoconf autoconf-archive ninja git
+      #  run: brew install automake autoconf autoconf-archive git
       - name: Setup env
-        # The runner has: brew automake autoconf autoconf-archive ninja git cmake
+        # The runner has: brew automake autoconf autoconf-archive git cmake
         run: echo "PATH=/opt/homebrew/bin:$PATH" >> $GITHUB_ENV
       - uses: actions/checkout@v3
         with:
@@ -39,17 +39,17 @@ jobs:
         uses: lukka/run-cmake@v10
         with:
           configurePreset: osx-${{ env.ARCH_LOWER }}
-          buildPreset: osx-${{ env.ARCH_LOWER }}
+          buildPreset: osx-${{ env.ARCH_LOWER }}-rel
           configurePresetAdditionalArgs: "['-DVCPKG_TARGET_TRIPLET=${{ env.ARCH_LOWER }}-osx-release']"
 
       - name: Gather artifacts
         run: |
           mkdir -p build/artifacts/open-design-engine/$arch
-          cp build/osx-$arch/ode-logic/Release/ode-logic-cli build/artifacts/open-design-engine/$arch
-          cp build/osx-$arch/ode-renderer/Release/ode-renderer-cli build/artifacts/open-design-engine/$arch
-          cp build/osx-$arch/ode-animation-prototype/Release/ode-animation-prototype-window build/artifacts/open-design-engine/$arch
-          cp build/osx-$arch/tests/renderer-unit-tests/Release/renderer-unit-tests build/artifacts/open-design-engine/$arch
-          cp build/osx-$arch/tools/render-graph-inspector/Release/render-graph-inspector build/artifacts/open-design-engine/$arch
+          cp build/osx-$arch/ode-logic/ode-logic-cli build/artifacts/open-design-engine/$arch
+          cp build/osx-$arch/ode-renderer/ode-renderer-cli build/artifacts/open-design-engine/$arch
+          cp build/osx-$arch/ode-animation-prototype/ode-animation-prototype-window build/artifacts/open-design-engine/$arch
+          cp build/osx-$arch/tests/renderer-unit-tests/renderer-unit-tests build/artifacts/open-design-engine/$arch
+          cp build/osx-$arch/tools/render-graph-inspector/render-graph-inspector build/artifacts/open-design-engine/$arch
         env:
           arch: ${{ env.ARCH_LOWER }}
 

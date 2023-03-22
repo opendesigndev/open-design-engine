@@ -24,7 +24,7 @@ ENV VCPKG_DEFAULT_TRIPLET x64-linux-release
 ENV VCPKG_DEFAULT_HOST_TRIPLET x64-linux-release
 
 RUN apt-get update \
-    && apt-get install -y curl zip unzip tar clang make cmake wget git python3 bison automake autoconf autoconf-archive libosmesa6-dev pkg-config python3-distutils patchelf nodejs ninja-build \
+    && apt-get install -y curl zip unzip tar clang make cmake wget git python3 bison automake autoconf autoconf-archive libosmesa6-dev pkg-config python3-distutils patchelf nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 # Vckpg
@@ -43,6 +43,7 @@ RUN wget -c https://github.com/nigels-com/glew/releases/download/glew-2.2.0/glew
 RUN make install SYSTEM=linux-osmesa -C /home/glew-2.2.0
 
 # Build image
+
 FROM ode-debian-build-base AS ode-debian-build
 
 ARG ODE_BUILD_COMMIT_TAG

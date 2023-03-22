@@ -23,8 +23,6 @@ jobs:
           submodules: true
       - id: version
         uses: ./.github/actions/determine-version
-      - name: Setup system dependencies
-        run: sudo apt-get update && sudo apt-get -y install ninja-build
       - name: Setup emsdk
         uses: mymindstorm/setup-emsdk@v11
         with:

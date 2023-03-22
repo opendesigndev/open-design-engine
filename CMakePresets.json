@@ -47,15 +47,9 @@
       "architecture": "Win32",
       "binaryDir": "${sourceDir}/build/win32"
     }, {
-      "name": "osx-arm64",
-      "displayName": "Mac OS arm64 release configuration",
-      "binaryDir": "${sourceDir}/build/osx-arm64",
-      "generator": "Ninja Multi-Config",
-      "cacheVariables": {
-        "CMAKE_DEFAULT_BUILD_TYPE": "Release",
-        "VCPKG_TARGET_TRIPLET": "arm64-osx",
-        "CMAKE_OSX_ARCHITECTURES": "arm64"
-      },
+      "name": "osx",
+      "displayName": "Mac OS default configuration",
+      "binaryDir": "${sourceDir}/build/osx",
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
@@ -63,12 +57,21 @@
       }
     }, {
       "name": "osx-x64",
-      "displayName": "Mac OS x64 release configuration",
-      "inherits": "osx-arm64",
+      "displayName": "Mac OS x64 default configuration",
+      "inherits": "osx",
       "binaryDir": "${sourceDir}/build/osx-x64",
       "cacheVariables": {
-        "VCPKG_TARGET_TRIPLET": "x64-osx",
-        "CMAKE_OSX_ARCHITECTURES": "x86_64"
+        "CMAKE_OSX_ARCHITECTURES": "x86_64",
+        "VCPKG_TARGET_TRIPLET": "x64-osx"
+      }
+    }, {
+      "name": "osx-arm64",
+      "displayName": "Mac OS ARM64 default configuration",
+      "inherits": "osx",
+      "binaryDir": "${sourceDir}/build/osx-arm64",
+      "cacheVariables": {
+        "CMAKE_OSX_ARCHITECTURES": "arm64",
+        "VCPKG_TARGET_TRIPLET": "arm64-osx"
       }
     }, {
       "name": "linux-rel",
@@ -110,8 +113,12 @@
       "displayName": "Windows 32-bit configuration with Skia-GPU disabled",
       "inherits": [ "win32", "without-skia-gpu" ]
     }, {
+      "name": "osx-x64-no-skia-gpu",
+      "displayName": "Mac OS x64 configuration with Skia-GPU disabled",
+      "inherits": [ "osx-x64", "without-skia-gpu" ]
+    }, {
       "name": "osx-arm64-no-skia-gpu",
-      "displayName": "Mac OS release configuration with Skia-GPU disabled",
+      "displayName": "Mac OS ARM64 configuration with Skia-GPU disabled",
       "inherits": [ "osx-arm64", "without-skia-gpu" ]
     }, {
       "name": "win64-github-actions",
@@ -125,14 +132,13 @@
       }
     }, {
       "name": "wasm-rel",
-      "displayName": "WASM build using Emscripten - Release",
-      "binaryDir": "build/wasm-rel",
-      "generator": "Ninja",
+      "displayName": "WebAssembly Emscripten release build",
+      "binaryDir": "${sourceDir}/build/wasm-rel",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
+        "EMSCRIPTEN": "ON",
         "ODE_TEST_MODULES": "OFF",
         "ODE_USE_WEBGL2": "ON",
-        "EMSCRIPTEN": "ON",
         "CMAKE_TOOLCHAIN_FILE": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
         "CMAKE_CROSSCOMPILING_EMULATOR": "$env{EMSDK_NODE}"
       },
@@ -143,9 +149,9 @@
       }
     }, {
       "name": "wasm-dbg",
-      "displayName": "WASM build using Emscripten - Debug",
-      "binaryDir": "build/wasm-dbg",
+      "displayName": "WebAssembly Emscripten debug build",
       "inherits": "wasm-rel",
+      "binaryDir": "${sourceDir}/build/wasm-dbg",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       }
@@ -169,11 +175,24 @@
       "configurePreset": "win32",
       "configuration": "Debug"
     }, {
-      "name": "osx-arm64",
-      "configurePreset": "osx-arm64"
+      "name": "osx-x64-rel",
+      "configurePreset": "osx-x64",
+      "configuration": "Release"
     }, {
-      "name": "osx-x64",
-      "configurePreset": "osx-x64"
+      "name": "osx-x64-dbg",
+      "configurePreset": "osx-x64",
+      "configuration": "Debug"
+    }, {
+      "name": "osx-arm64-rel",
+      "configurePreset": "osx-arm64",
+      "configuration": "Release"
+    }, {
+      "name": "osx-arm64-dbg",
+      "configurePreset": "osx-arm64",
+      "configuration": "Debug"
+    }, {
+      "name": "linux-rel",
+      "configurePreset": "linux-rel"
     }, {
       "name": "linux-dbg",
       "configurePreset": "linux-dbg"
@@ -210,8 +229,21 @@
       "configurePreset": "win32-no-skia-gpu",
       "configuration": "Debug"
     }, {
-      "name": "osx-arm64-no-skia-gpu",
-      "configurePreset": "osx-arm64-no-skia-gpu"
+      "name": "osx-x64-no-skia-gpu-rel",
+      "configurePreset": "osx-x64-no-skia-gpu",
+      "configuration": "Release"
+    }, {
+      "name": "osx-x64-no-skia-gpu-dbg",
+      "configurePreset": "osx-x64-no-skia-gpu",
+      "configuration": "Debug"
+    }, {
+      "name": "osx-arm64-no-skia-gpu-rel",
+      "configurePreset": "osx-arm64-no-skia-gpu",
+      "configuration": "Release"
+    }, {
+      "name": "osx-arm64-no-skia-gpu-dbg",
+      "configurePreset": "osx-arm64-no-skia-gpu",
+      "configuration": "Debug"
     }, {
       "name": "win64-github-actions",
       "configurePreset": "win64-github-actions",
