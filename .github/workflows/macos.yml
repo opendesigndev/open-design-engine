@@ -1,18 +1,5 @@
 name: Mac OS build
-on:
-  pull_request:
-    types:
-      - opened
-      - edited
-      - reopened
-      - synchronize
-      - review_requested
-      - ready_for_review
-  push:
-    branches:
-      - main
-    tags:
-      - '*'
+on: push
 
 jobs:
   macos:
@@ -47,8 +34,8 @@ jobs:
       - name: Configure and build ODE
         uses: lukka/run-cmake@v10
         with:
-          configurePreset: osx-rel
-          buildPreset: osx-rel
+          configurePreset: osx-no-skia-gpu-rel
+          buildPreset: osx-no-skia-gpu-rel
 
       - name: Gather artifacts
         run: |
