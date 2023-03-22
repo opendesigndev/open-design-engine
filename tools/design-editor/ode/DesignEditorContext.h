@@ -80,12 +80,6 @@ struct DesignEditorContext {
         bool isSelected(const char *layerID);
     } layerSelection;
 
-    // TODO: Remove and read from the selected layers
-    struct LayerProperties {
-        std::string strokeFillText;
-        std::vector<std::string> effects;
-    } layerProperties;
-
     struct Icons {
         ode::TexturePtr cursorTexture = nullptr;
         ode::TexturePtr addRectangleTexture = nullptr;
