@@ -3,12 +3,14 @@
 
 #include <imgui.h>
 
+#include <octopus/layer-change.h>
 #include <ode-essentials.h>
 
 using namespace ode;
 
 namespace {
 
+#define CHECK(x) do { if ((x)) return -1; } while (false)
 #define CHECK_IMEND(x) do { if ((x)) { ImGui::End(); return; } } while (false)
 
 const ImU32 IM_COLOR_DARK_RED = 4278190233;
@@ -70,6 +72,49 @@ std::string layerTypeToString(ODE_LayerType layerType) {
     return "-";
 }
 
+const octopus::Layer *findLayer(const octopus::Layer &layer, const std::string &layerId) {
+    if (layer.id == layerId) {
+        return &layer;
+    }
+    if (layer.mask.has_value()) {
+        const octopus::Layer *l = findLayer(*layer.mask, layerId);
+        if (l != nullptr) {
+            return l;
+        }
+    }
+    if (layer.layers.has_value()) {
+        for (const octopus::Layer &childLayer : *layer.layers) {
+            const octopus::Layer *l = findLayer(childLayer, layerId);
+            if (l != nullptr) {
+                return l;
+            }
+        }
+    }
+    return nullptr;
+}
+
+int changeLayerProperty(DesignEditorContext::Api &apiContext,
+                        const ODE_StringRef &layerId,
+                        const std::function<void(octopus::LayerChange::Values &)> changeFunction) {
+    octopus::LayerChange layerChange;
+    layerChange.subject = octopus::LayerChange::Subject::LAYER;
+    layerChange.op = octopus::LayerChange::Op::PROPERTY_CHANGE;
+    changeFunction(layerChange.values);
+
+    std::string layerChangeStr;
+    octopus::Serializer::serialize(layerChangeStr, layerChange);
+
+    ODE_ParseError parseError { ODE_ParseError::Type::OK, 0 };
+    CHECK(ode_component_modifyLayer(apiContext.component, layerId, ode_stringRef(layerChangeStr), &parseError));
+
+    if (parseError.type == ODE_ParseError::OK) {
+        CHECK(ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView));
+        return 0;
+    }
+
+    return -1;
+}
+
 }
 
 void drawLayerPropertiesWidget(const ODE_LayerList &layerList,
@@ -78,6 +123,22 @@ void drawLayerPropertiesWidget(const ODE_LayerList &layerList,
                                DesignEditorContext::LayerProperties &layerPropertiesContext) {
     ImGui::Begin("Selected Layer Properties");
 
+    if (apiContext.component.ptr == nullptr) {
+        ImGui::End();
+        return;
+    }
+
+    ODE_String octopusString;
+    ode_component_getOctopus(apiContext.component, &octopusString);
+
+    octopus::Octopus componentOctopus;
+    octopus::Parser::parse(componentOctopus, octopusString.data);
+
+    if (!componentOctopus.content.has_value()) {
+        ImGui::End();
+        return;
+    }
+
     for (int i = 0; i < layerList.n; ++i) {
         const ODE_LayerList::Entry &layer = layerList.entries[i];
         if (layerSelectionContext.isSelected(layer.id.data)) {
@@ -85,9 +146,15 @@ void drawLayerPropertiesWidget(const ODE_LayerList &layerList,
                 return std::string(visibleLabel)+std::string("##layer-")+std::string(invisibleId)+std::string("-")+ode_stringDeref(layer.id);
             };
 
-            bool layerVisible = true; // TODO: Get layer visibility
-            float layerOpacity = 1.0f; // TODO: Get layer opacity
-            const char *blendModeStr = "NORMAL"; // TODO: Get layer blend mode as string
+            const octopus::Layer *octopusLayer = findLayer(*componentOctopus.content, ode_stringDeref(layer.id));
+            if (octopusLayer == nullptr) {
+                continue;
+            }
+
+            bool layerVisible = octopusLayer->visible;
+            float layerOpacity = octopusLayer->opacity;
+            const octopus::BlendMode blendMode = octopusLayer->blendMode;
+            const int blendModeI = static_cast<int>(blendMode);
 
             ODE_LayerMetrics layerMetrics;
             CHECK_IMEND(ode_component_getLayerMetrics(apiContext.component, layer.id, &layerMetrics));
@@ -136,25 +203,28 @@ void drawLayerPropertiesWidget(const ODE_LayerList &layerList,
                 ImGui::Text("Visible:");
                 ImGui::SameLine(100);
                 if (ImGui::Checkbox(layerPropName("visibility").c_str(), &layerVisible)) {
-                    // TODO: Update layer visiblity
-                    CHECK_IMEND(ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView));
+                    CHECK_IMEND(changeLayerProperty(apiContext, layer.id, [layerVisible](octopus::LayerChange::Values &values) {
+                        values.visible = layerVisible;
+                    }));
                 }
 
                 ImGui::Text("Opacity:");
                 ImGui::SameLine(100);
-                if (ImGui::DragFloat(layerPropName("opacity").c_str(), &layerOpacity)) {
-                    // TODO: Update layer opacity
-                    CHECK_IMEND(ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView));
+                if (ImGui::SliderFloat(layerPropName("opacity").c_str(), &layerOpacity, 0.0f, 1.0f)) {
+                    CHECK_IMEND(changeLayerProperty(apiContext, layer.id, [layerOpacity](octopus::LayerChange::Values &values) {
+                        values.opacity = layerOpacity;
+                    }));
                 }
 
                 ImGui::Text("Bend mode:");
                 ImGui::SameLine(100);
-                if (ImGui::BeginCombo(layerPropName("blend-mode").c_str(), blendModeStr)) {
-                    for (int n = 0; n < IM_ARRAYSIZE(blendModes); n++) {
-                        bool isSelected = (blendModeStr == blendModes[n]);
-                        if (ImGui::Selectable(blendModes[n], isSelected)) {
-                            // TODO: Update layer blend mode
-                            blendModeStr = blendModes[n];
+                if (ImGui::BeginCombo(layerPropName("blend-mode").c_str(), blendModes[blendModeI])) {
+                    for (int bmI = 0; bmI < IM_ARRAYSIZE(blendModes); bmI++) {
+                        const bool isSelected = (blendModeI == bmI);
+                        if (ImGui::Selectable(blendModes[bmI], isSelected)) {
+                            CHECK_IMEND(changeLayerProperty(apiContext, layer.id, [bmI](octopus::LayerChange::Values &values) {
+                                values.blendMode = static_cast<octopus::BlendMode>(bmI);
+                            }));
                         }
                         if (isSelected) {
                             ImGui::SetItemDefaultFocus();
