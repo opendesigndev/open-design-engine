@@ -22,8 +22,8 @@ if(NOT CMAKE_TOOLCHAIN_FILE AND NOT EMSCRIPTEN)
     else()
         include(FetchContent)
         FetchContent_Declare(vcpkg
-            GIT_REPOSITORY https://github.com/microsoft/vcpkg/
-            GIT_TAG a7b6122f6b6504d16d96117336a0562693579933
+            GIT_REPOSITORY https://github.com/microsoft/vcpkg
+            GIT_TAG ${ODE_VCPKG_BUILTIN_BASELINE}
         )
         FetchContent_MakeAvailable(vcpkg)
         set(CMAKE_TOOLCHAIN_FILE "${vcpkg_SOURCE_DIR}/scripts/buildsystems/vcpkg.cmake" CACHE FILEPATH "")
