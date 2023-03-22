@@ -98,15 +98,18 @@ def generateNapiFunctionBinding(entity, emName, fullName):
 def generateNapiBindings(entities, apiPath):
     name = os.path.basename(apiPath)
     header = (
+        "\n"
         "#pragma once\n"
+        "\n"
         "#include <napi.h>\n"
         f"#include <ode/{name}>\n"
         "\n"
     )
     src_head = (
+        '\n'
         '#include <string>\n'
-        '#include "addon.h"\n'
-        '#include "napi-wrap.h"\n'
+        '#include <addon.h>\n'
+        '#include <napi-wrap.h>\n'
         '#include "gen.h"\n'
         '\n'
     )
@@ -496,27 +499,27 @@ def writeFile(file, contents):
         f.write(contents)
 
 def generateBindings(headerPath, outPath):
-    napiBindingsPath = os.path.join(outPath, "codegen", "gen-"+os.path.splitext(os.path.basename(headerPath))[0])
-    typescriptBindingsPath = os.path.join(outPath, "codegen", os.path.splitext(os.path.basename(headerPath))[0]+".d.ts")
+    napiBindingsPath = os.path.join(outPath, "generated", "gen-"+os.path.splitext(os.path.basename(headerPath))[0])
+    typescriptBindingsPath = os.path.join(outPath, "generated", os.path.splitext(os.path.basename(headerPath))[0]+".d.ts")
     with open(headerPath, "r") as f:
         header = f.read()
     entities = parseHeader(header)
     (napiBindings, napiHeader) = generateNapiBindings(entities, headerPath)
-    writeFile(napiBindingsPath+".cpp", preamble+napiBindings)
-    writeFile(napiBindingsPath+".h", preamble+napiHeader)
+    writeFile(napiBindingsPath+".cpp", preamble()+napiBindings)
+    writeFile(napiBindingsPath+".h", preamble()+napiHeader)
     typescriptBindings = generateTypescriptBindings(entities)
-    writeFile(typescriptBindingsPath, preamble+typescriptBindings)
+    writeFile(typescriptBindingsPath, preamble()+typescriptBindings)
 
 def generateTopLevelBindings(paths, outPath):
-    typescriptBindingsPath = os.path.join(outPath, "codegen", "index.d.ts")
+    typescriptBindingsPath = os.path.join(outPath, "generated", "index.d.ts")
     typescriptBindings = generateTopLevelTypescriptBindings()
-    writeFile(typescriptBindingsPath, preamble+typescriptBindings)
+    writeFile(typescriptBindingsPath, preamble()+typescriptBindings)
 
     includes = ""
     for path in paths:
         basename = os.path.basename(path)
         includes += f'#include "gen-{basename}"\n'
-    writeFile(os.path.join(outPath, "codegen", "gen.h"), "#pragma once\n"+preamble+includes)
+    writeFile(os.path.join(outPath, "generated", "gen.h"), "#pragma once\n"+preamble()+includes)
 
 outPath = sys.argv[1]
 paths = sys.argv[2:]
