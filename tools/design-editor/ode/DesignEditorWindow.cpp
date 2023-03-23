@@ -522,14 +522,16 @@ void DesignEditorWindow::handleKeyboardEvents() {
     const float minZoom = 1.0f;
     const float maxZoom = 10.0f;
 
-    if (ImGui::IsKeyPressed(ImGuiKey_1)) {
-        data->context.mode = DesignEditorMode::SELECT;
-    } else if (ImGui::IsKeyPressed(ImGuiKey_2)) {
-        data->context.mode = DesignEditorMode::ADD_RECTANGLE;
-    } else if (ImGui::IsKeyPressed(ImGuiKey_3)) {
-        data->context.mode = DesignEditorMode::ADD_ELLIPSE;
-    } else if (ImGui::IsKeyPressed(ImGuiKey_4)) {
-        data->context.mode = DesignEditorMode::ADD_TEXT;
+    if (ImGui::IsKeyPressed(ImGuiKey_LeftSuper)) {
+        if (ImGui::IsKeyPressed(ImGuiKey_1)) {
+            data->context.mode = DesignEditorMode::SELECT;
+        } else if (ImGui::IsKeyPressed(ImGuiKey_2)) {
+            data->context.mode = DesignEditorMode::ADD_RECTANGLE;
+        } else if (ImGui::IsKeyPressed(ImGuiKey_3)) {
+            data->context.mode = DesignEditorMode::ADD_ELLIPSE;
+        } else if (ImGui::IsKeyPressed(ImGuiKey_4)) {
+            data->context.mode = DesignEditorMode::ADD_TEXT;
+        }
     }
 
     if (ImGui::IsKeyDown(ImGuiKey_W)) {
