@@ -12,8 +12,7 @@ namespace {
 
 const ImU32 IM_COLOR_DARK_RED = 4278190233;
 
-// TODO: Cleanup:
-const char *blendModesStr[] = {
+const char *BLEND_MODES_STR[] = {
     "NORMAL",
     "PASS_THROUGH",
     "COLOR",
@@ -43,23 +42,43 @@ const char *blendModesStr[] = {
     "VIVID_LIGHT",
 };
 
-const char *strokePositionsStr[] = {
+const char *STROKE_POSITIONS_STR[] = {
     "OUTSIDE",
     "CENTER",
     "INSIDE",
 };
 
-const char *strokeStylesStr[] = {
+const char *STROKE_STYLES_STR[] = {
     "SOLID",
     "DASHED",
     "DOTTED",
 };
 
-const char *fillGradientTypesStr[] = {
+const char *FILL_TYPES_STR[] = {
+    "COLOR",
+    "GRADIENT",
+    "IMAGE",
+};
+
+const char *FILL_GRADIENTS_STR[] = {
     "LINEAR",
     "RADIAL",
     "ANGULAR",
     "DIAMOND",
+};
+
+const char *FILL_POSITIONING_LAYOUTS_STR[] = {
+    "STRETCH",
+    "FILL",
+    "FIT",
+    "TILE"
+};
+
+const char *FILL_POSITIONING_ORIGINS_STR[] = {
+    "LAYER",
+    "PARENT",
+    "COMPONENT",
+    "ARTBOARD"
 };
 
 std::string layerTypeToShortString(ODE_LayerType layerType) {
@@ -274,10 +293,10 @@ void drawLayerPropertiesWidget(const ODE_LayerList &layerList,
                     ImGui::Text("Blend mode:");
                     ImGui::SameLine(100);
                     const int blendModeI = static_cast<int>(octopusLayer.blendMode);
-                    if (ImGui::BeginCombo(layerPropName("blend-mode").c_str(), blendModesStr[blendModeI])) {
-                        for (int bmI = 0; bmI < IM_ARRAYSIZE(blendModesStr); bmI++) {
+                    if (ImGui::BeginCombo(layerPropName("blend-mode").c_str(), BLEND_MODES_STR[blendModeI])) {
+                        for (int bmI = 0; bmI < IM_ARRAYSIZE(BLEND_MODES_STR); bmI++) {
                             const bool isSelected = (blendModeI == bmI);
-                            if (ImGui::Selectable(blendModesStr[bmI], isSelected)) {
+                            if (ImGui::Selectable(BLEND_MODES_STR[bmI], isSelected)) {
                                 changeProperty(octopus::LayerChange::Subject::LAYER, apiContext, layer.id, [bmI](octopus::LayerChange::Values &values) {
                                     values.blendMode = static_cast<octopus::BlendMode>(bmI);
                                 });
@@ -457,10 +476,10 @@ void drawLayerPropertiesWidget(const ODE_LayerList &layerList,
                         ImGui::Text("Position:");
                         ImGui::SameLine(100);
                         const int strokePositionI = static_cast<int>(octopusShapeStroke.position);
-                        if (ImGui::BeginCombo(layerPropName("shape-stroke-position").c_str(), strokePositionsStr[strokePositionI])) {
-                            for (int spI = 0; spI < IM_ARRAYSIZE(strokePositionsStr); spI++) {
+                        if (ImGui::BeginCombo(layerPropName("shape-stroke-position").c_str(), STROKE_POSITIONS_STR[strokePositionI])) {
+                            for (int spI = 0; spI < IM_ARRAYSIZE(STROKE_POSITIONS_STR); spI++) {
                                 const bool isSelected = (strokePositionI == spI);
-                                if (ImGui::Selectable(strokePositionsStr[spI], isSelected)) {
+                                if (ImGui::Selectable(STROKE_POSITIONS_STR[spI], isSelected)) {
                                     changeProperty(octopus::LayerChange::Subject::STROKE, apiContext, layer.id, [spI, &octopusShapeStroke](octopus::LayerChange::Values &values) {
                                         values.stroke = octopusShapeStroke;
                                         values.stroke->position = static_cast<octopus::Stroke::Position>(spI);
@@ -478,10 +497,10 @@ void drawLayerPropertiesWidget(const ODE_LayerList &layerList,
                         ImGui::SameLine(100);
                         // TODO: What if shape stroke style is nullopt?
                         const int strokeStyleI = static_cast<int>(octopusShapeStroke.style.has_value() ? *octopusShapeStroke.style : octopus::VectorStroke::Style::SOLID);
-                        if (ImGui::BeginCombo(layerPropName("shape-stroke-style").c_str(), strokeStylesStr[strokeStyleI])) {
-                            for (int ssI = 0; ssI < IM_ARRAYSIZE(strokeStylesStr); ssI++) {
+                        if (ImGui::BeginCombo(layerPropName("shape-stroke-style").c_str(), STROKE_STYLES_STR[strokeStyleI])) {
+                            for (int ssI = 0; ssI < IM_ARRAYSIZE(STROKE_STYLES_STR); ssI++) {
                                 const bool isSelected = (strokeStyleI == ssI);
-                                if (ImGui::Selectable(strokeStylesStr[ssI], isSelected)) {
+                                if (ImGui::Selectable(STROKE_STYLES_STR[ssI], isSelected)) {
                                     changeProperty(octopus::LayerChange::Subject::STROKE, apiContext, layer.id, [ssI, &octopusShapeStroke](octopus::LayerChange::Values &values) {
                                         values.stroke = octopusShapeStroke;
                                         values.stroke->style = static_cast<octopus::VectorStroke::Style>(ssI);
@@ -495,9 +514,10 @@ void drawLayerPropertiesWidget(const ODE_LayerList &layerList,
                         }
 
                         // Color
+                        // TODO: What if shape stroke type other than COLOR?
                         ImVec4 imColor = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
-                        if (octopusShapeStroke.fill.type == octopus::Fill::Type::COLOR && octopusShapeStroke.fill.color.has_value()) {
-                            imColor = toImColor(*octopusShapeStroke.fill.color);
+                        if (octopusShapeStrokeFill.type == octopus::Fill::Type::COLOR && octopusShapeStrokeFill.color.has_value()) {
+                            imColor = toImColor(*octopusShapeStrokeFill.color);
                         }
                         ImGui::Text("Color:");
                         ImGui::SameLine(100);
@@ -533,10 +553,10 @@ void drawLayerPropertiesWidget(const ODE_LayerList &layerList,
                         ImGui::Text("Blend mode:");
                         ImGui::SameLine(100);
                         const int blendModeI = static_cast<int>(octopusFill.blendMode);
-                        if (ImGui::BeginCombo(layerPropName("fill-blend-mode").c_str(), blendModesStr[blendModeI])) {
-                            for (int bmI = 0; bmI < IM_ARRAYSIZE(blendModesStr); bmI++) {
+                        if (ImGui::BeginCombo(layerPropName("fill-blend-mode").c_str(), BLEND_MODES_STR[blendModeI])) {
+                            for (int bmI = 0; bmI < IM_ARRAYSIZE(BLEND_MODES_STR); bmI++) {
                                 const bool isSelected = (blendModeI == bmI);
-                                if (ImGui::Selectable(blendModesStr[bmI], isSelected)) {
+                                if (ImGui::Selectable(BLEND_MODES_STR[bmI], isSelected)) {
                                     changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layer.id, [&octopusFill, bmI](octopus::LayerChange::Values &values) {
                                         values.fill = octopusFill;
                                         values.fill->blendMode = static_cast<octopus::BlendMode>(bmI);
@@ -549,40 +569,17 @@ void drawLayerPropertiesWidget(const ODE_LayerList &layerList,
                             ImGui::EndCombo();
                         }
 
-                        // Color
-                        ImVec4 imColor = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
-                        if (octopusFill.type == octopus::Fill::Type::COLOR && octopusFill.color.has_value()) {
-                            imColor = toImColor(*octopusFill.color);
-                        }
-                        ImGui::Text("Color:");
+                        // Type
+                        ImGui::Text("Type:");
                         ImGui::SameLine(100);
-                        if (ImGui::ColorPicker4("shape-fill-color", (float*)&imColor, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview)) {
-                            changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layer.id, [&imColor, &octopusFill](octopus::LayerChange::Values &values) {
-                                values.fill = octopusFill;
-                                values.fill->type = octopus::Fill::Type::COLOR;
-                                values.fill->color = toOctopusColor(imColor);
-                            });
-                        }
-
-                        // Gradient
-                        // TODO: Gradient stops?
-                        ImGui::Text("Gradient type:");
-                        ImGui::SameLine(100);
-                        // TODO: What if fill gradient does not have a value?
-                        const int gradientTypeI = static_cast<int>(octopusFill.gradient.has_value() ? octopusFill.gradient->type : octopus::Gradient::Type::LINEAR);
-                        if (ImGui::BeginCombo(layerPropName("fill-gradient-type").c_str(), fillGradientTypesStr[gradientTypeI])) {
-                            for (int gtI = 0; gtI < IM_ARRAYSIZE(fillGradientTypesStr); gtI++) {
-                                const bool isSelected = (gradientTypeI == gtI);
-                                if (ImGui::Selectable(fillGradientTypesStr[gtI], isSelected)) {
-                                    changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layer.id, [&octopusFill, gtI](octopus::LayerChange::Values &values) {
+                        const int fillTypeI = static_cast<int>(octopusFill.type);
+                        if (ImGui::BeginCombo(layerPropName("fill-type").c_str(), FILL_TYPES_STR[fillTypeI])) {
+                            for (int ftI = 0; ftI < IM_ARRAYSIZE(FILL_TYPES_STR); ftI++) {
+                                const bool isSelected = (fillTypeI == ftI);
+                                if (ImGui::Selectable(FILL_TYPES_STR[ftI], isSelected)) {
+                                    changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layer.id, [&octopusFill, ftI](octopus::LayerChange::Values &values) {
                                         values.fill = octopusFill;
-                                        if (values.fill->gradient.has_value()) {
-                                            values.fill->gradient->type = static_cast<octopus::Gradient::Type>(gtI);
-                                        } else {
-                                            values.fill->gradient = octopus::Gradient { static_cast<octopus::Gradient::Type>(gtI),
-                                                std::vector<octopus::Gradient::ColorStop> {}
-                                            };
-                                        }
+                                        values.fill->type = static_cast<octopus::Fill::Type>(ftI);
                                     });
                                 }
                                 if (isSelected) {
@@ -592,15 +589,71 @@ void drawLayerPropertiesWidget(const ODE_LayerList &layerList,
                             ImGui::EndCombo();
                         }
 
-                        // TODO: Image + positioning
-                        ImGui::Text("Image (TODO):");
-                        ImGui::SameLine(100);
-                        ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
+                        switch (octopusFill.type) {
+                            case octopus::Fill::Type::COLOR:
+                            {
+                                // Color
+                                ImVec4 imColor = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+                                if (octopusFill.color.has_value()) {
+                                    imColor = toImColor(*octopusFill.color);
+                                }
+                                ImGui::Text("Color:");
+                                ImGui::SameLine(100);
+                                if (ImGui::ColorPicker4("shape-fill-color", (float*)&imColor, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview)) {
+                                    changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layer.id, [&imColor, &octopusFill](octopus::LayerChange::Values &values) {
+                                        values.fill = octopusFill;
+                                        values.fill->type = octopus::Fill::Type::COLOR;
+                                        values.fill->color = toOctopusColor(imColor);
+                                    });
+                                }
+                                break;
+                            }
+                            case octopus::Fill::Type::GRADIENT:
+                            {
+                                // Gradient
+                                // TODO: Gradient stops?
+                                ImGui::Text("Gradient:");
+                                ImGui::SameLine(100);
+                                // TODO: What if fill gradient does not have a value?
+                                const int gradientTypeI = static_cast<int>(octopusFill.gradient.has_value() ? octopusFill.gradient->type : octopus::Gradient::Type::LINEAR);
+                                if (ImGui::BeginCombo(layerPropName("fill-gradient-type").c_str(), FILL_GRADIENTS_STR[gradientTypeI])) {
+                                    for (int gtI = 0; gtI < IM_ARRAYSIZE(FILL_GRADIENTS_STR); gtI++) {
+                                        const bool isSelected = (gradientTypeI == gtI);
+                                        if (ImGui::Selectable(FILL_GRADIENTS_STR[gtI], isSelected)) {
+                                            changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layer.id, [&octopusFill, gtI](octopus::LayerChange::Values &values) {
+                                                values.fill = octopusFill;
+                                                if (values.fill->gradient.has_value()) {
+                                                    values.fill->gradient->type = static_cast<octopus::Gradient::Type>(gtI);
+                                                } else {
+                                                    values.fill->gradient = octopus::Gradient { static_cast<octopus::Gradient::Type>(gtI),
+                                                        std::vector<octopus::Gradient::ColorStop> {}
+                                                    };
+                                                }
+                                            });
+                                        }
+                                        if (isSelected) {
+                                            ImGui::SetItemDefaultFocus();
+                                        }
+                                    }
+                                    ImGui::EndCombo();
+                                }
+                                break;
+                            }
+                            case octopus::Fill::Type::IMAGE:
+                            {
+                                // TODO: Image + positioning
+                                ImGui::Text("Image (TODO):");
+                                ImGui::SameLine(100);
+                                ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
 
-                        // TODO: Fill filters
-                        ImGui::Text("Filters (TODO):");
-                        ImGui::SameLine(100);
-                        ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
+                                // TODO: Fill filters
+                                ImGui::Text("Filters (TODO):");
+                                ImGui::SameLine(100);
+                                ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
+
+                                break;
+                            }
+                        }
 
                         ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
                     }
