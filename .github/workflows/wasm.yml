@@ -53,7 +53,10 @@ jobs:
           key: wasm-skia-${{ hashFiles('third-party/skia/**/*') }}
       - name: "Skia: Build"
         if: steps.cache-skia.outputs.cache-hit != 'true'
-        run: ./third-party/skia/build.sh
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install ninja-build
+          ./third-party/skia/build.sh
       - name: "Skia: Save cache"
         uses: actions/cache/save@v3
         if: steps.cache-skia.outputs.cache-hit != 'true'
