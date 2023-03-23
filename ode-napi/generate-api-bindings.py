@@ -16,106 +16,127 @@ exec(compile(open(apiUtilsPath, "rb").read(), apiUtilsPath, 'exec'), globals())
 __name__ = globalName
 __file__ = globalFile
 
+
+
 ###########################
 #     N-API BINDINGS      #
 ###########################
 
 def generateNapiFunctionBinding(entity, emName, fullName):
-    is_result = entity.type == 'ODE_Result'
-    return_type = 'void' if is_result else 'Napi::Value'
-    empty_return = 'return;' if is_result else 'return Napi::Value();'
-    signature = f'{return_type} node_napi_{emName}(const Napi::CallbackInfo& info)'
-    definition = ""
+    hasResult = entity.type == 'ODE_Result'
+    returnType = 'void' if hasResult else 'Napi::Value'
+    emptyReturn = 'return;' if hasResult else 'return Napi::Value();'
+    signature = f'{returnType} node_napi_{emName}(const Napi::CallbackInfo& info)'
+    body = ""
 
-    definition += (
+    body += (
         f'    Napi::Env env = info.Env();\n'
     )
     call = ""
     i = 0
     outputs = ""
     return_arg = ""
-    for mem in entity.members:
-        if mem.type.startswith("ODE_OUT_RETURN"):
-            if not is_result:
+    for member in entity.members:
+        if reReturnArg.search(member.type):
+            if not hasResult:
                 raise Exception("ODE_OUT_RETURN is only supported on functions returning ODE_Result")
             signature = f'Napi::Value node_napi_{emName}(const Napi::CallbackInfo& info)'
-            return_arg = f'    return ode_napi_serialize(env, {mem.name});\n'
-            empty_return = 'return Napi::Value();'
+            return_arg = f'    return wrap(env, {member.name});\n'
+            emptyReturn = 'return Napi::Value();'
 
-    for mem in entity.members:
+    for member in entity.members:
         i += 1
-        t = mem.type
+        t = member.type
         if call != "":
             call += ", "
 
         inout_type = "IN"
-        if t.startswith("ODE_INOUT"): inout_type = "INOUT"
-        elif t.startswith("ODE_IN"): inout_type = "IN"
-        elif t.startswith("ODE_OUT_RETURN"): inout_type = "RETURN"
-        elif t.startswith("ODE_OUT"): inout_type = "OUT"
+        if (match := reArgAttrib.search(t)):
+            inout_type = match.group(2)
 
         if t.startswith("const") and t.endswith("*"):
             t = t[6:-1].strip()
-            call += f"&{mem.name}"
+            call += f"&{member.name}"
         elif t.endswith("*"):
             t = t[:-1].strip()
-            call += f"&{mem.name}"
+            call += f"&{member.name}"
         else:
-            call += mem.name
+            call += member.name
 
-        definition += f'    {t} {mem.name};\n'
+        body += f'    {t} {member.name};\n'
         if inout_type == "INOUT" or inout_type == "IN":
-            definition += (
-                f'    if (!ode_napi_read_into(info[{i-1}], {mem.name})) {{\n'
+            body += (
+                f'    if (!unwrap({member.name}, info[{i-1}])) {{\n'
                 f'        auto ex = env.GetAndClearPendingException();\n'
-                f'        Napi::Error::New(env, "Failed to parse argument{i} {mem.name} in {emName} ("+ ex.Message() +")").ThrowAsJavaScriptException();\n'
-                f'        {empty_return}\n'
+                f'        Napi::Error::New(env, "Failed to parse argument{i} {member.name} in {emName} ("+ ex.Message() +")").ThrowAsJavaScriptException();\n'
+                f'        {emptyReturn}\n'
                 f'    }}\n'
             )
         if inout_type == "INOUT" or inout_type == "OUT":
-            outputs += f'    ode_napi_write_from(info[{i-1}], {mem.name});\n'
-        if inout_type == "RETURN":
+            outputs += f'    copyWrapped(info[{i-1}], {member.name});\n'
+        if inout_type == "OUT_RETURN":
             i -= 1
 
-    if is_result:
-        definition += (
+    if hasResult:
+        body += (
             f'    auto result = {fullName}({call});\n'
             f'{outputs}'
-            f'    if (!check_result(env,result)) {empty_return}\n'
+            f'    if (!checkResult(env,result)) {emptyReturn}\n'
             f'{return_arg}'
         )
     else:
-        definition += (
+        body += (
             f'    auto result = {fullName}({call});\n'
             f'{outputs}'
-            f'    return ode_napi_serialize(env, result);\n'
+            f'    return wrap(env, result);\n'
         )
     return [
         signature + ';\n',
-        f'{signature} {{\n{definition}}}\n\n'
+        f'{signature} {{\n{body}}}\n\n'
     ]
 
-def generateNapiBindings(entities, apiPath):
+def generateNapiBindings(entities, apiPath, donePaths):
     name = os.path.basename(apiPath)
     header = (
         "\n"
         "#pragma once\n"
         "\n"
-        "#include <napi.h>\n"
+        "#include <napi-base.h>\n"
         f"#include <ode/{name}>\n"
         "\n"
+        'namespace ode {\n'
+        'namespace napi {\n'
+        '\n'
     )
     src_head = (
         '\n'
+        f'#include "napi-{name}"\n'
+        '\n'
         '#include <string>\n'
-        '#include <addon.h>\n'
+    )
+    for donePath in donePaths:
+        src_head += f'#include "napi-{os.path.basename(donePath)}"\n'
+    src_head += (
+        '#include <napi-utils.h>\n'
+        # napi-wrap must be included last!
         '#include <napi-wrap.h>\n'
-        '#include "gen.h"\n'
+        '\n'
+        'namespace ode {\n'
+        'namespace napi {\n'
         '\n'
     )
     name = os.path.splitext(name)[0].replace("-", "_")
+    header += f"Napi::Object {name}_initialize(Napi::Env env, Napi::Object exports);\n"
+    header += f"void {name}_export(const Napi::Env &env, Napi::Object &exports);\n\n"
     src_tail = ""
-    src_body = f"Napi::Object init_gen_{name}(Napi::Env env, Napi::Object exports) {{\n"
+    src_real_tail_many_underscores_or_maybe_just_s_r_t_would_be_better = "}\n" f'}}\n'
+    src_body = (
+        f"Napi::Object {name}_initialize(Napi::Env env, Napi::Object exports) {{\n"
+        f"    {name}_export(env, exports);\n"
+        "    return exports;\n"
+        "}\n\n"
+        f"void {name}_export(const Napi::Env &env, Napi::Object &exports) {{\n"
+    )
 
     duplicate = set()
 
@@ -149,12 +170,14 @@ def generateNapiBindings(entities, apiPath):
                 src_body += f"        {emName}.Set(\"{k}\", uint32_t({v}));\n"
             src_body += f"        exports.Set(\"{emName}\", {emName});\n"
             src_body += "    }\n"
+            serialize_signature = f'Napi::Value wrap(const Napi::Env &env, const {fullName} &source)'
             header += (
-                f'std::string ode_napi_enum_to_string({fullName} value);\n'
-                f'bool ode_napi_read_into(const Napi::Value& value, {fullName}& parsed);\n'
+                f'std::string enumString({fullName} value);\n'
+                f'{serialize_signature};\n'
+                f'bool unwrap({fullName} &parsed, const Napi::Value &value);\n\n'
             )
             src_tail += (
-                f'bool ode_napi_read_into(const Napi::Value& value, {fullName}& parsed) {{\n'
+                f'bool unwrap({fullName} &parsed, const Napi::Value& value) {{\n'
                 f'    std::string text = value.As<Napi::String>();\n'
             )
             for value in entity.members:
@@ -164,51 +187,49 @@ def generateNapiBindings(entities, apiPath):
             src_tail += (
                 f'    return false;\n'
                 f'}}\n'
-                f"std::string ode_napi_enum_to_string({fullName} value) {{\n"
+                f"std::string enumString({fullName} value) {{\n"
                 "    switch(value) {\n"
             )
             for value in entity.members:
                 k = value.name[commonPrefixLen:]
                 full = namespacedName(entity.namespace, value.name)
                 src_tail += f'        case {full}: return "{k}";\n'
-            serialize_signature = f'Napi::Value ode_napi_serialize(Napi::Env env, const {fullName}& source)'
-            header += f'{serialize_signature};\n'
             src_tail += (
                 f'        default: return "UNKNOWN_{emName}_"+std::to_string(uint32_t(value));\n'
                 "    }\n"
                 "}\n"
                 f'{serialize_signature} {{\n'
-                f'    return Napi::String::New(env, ode_napi_enum_to_string(source));\n'
+                f'    return Napi::String::New(env, enumString(source));\n'
                 f'}}\n'
                 "\n"
             )
         # Handle
         elif entity.category == 'handle':
-            serialize_signature = f'Napi::Value ode_napi_serialize(Napi::Env env, const {fullName}& source)'
-            read_into_signature = f'bool ode_napi_read_into(const Napi::Value& value, {fullName}& target)'
-            header += f'{serialize_signature};\n{read_into_signature};\n'
+            serialize_signature = f'Napi::Value wrap(const Napi::Env &env, const {fullName} &source)'
+            read_into_signature = f'bool unwrap({fullName} &target, const Napi::Value &value)'
+            header += f'{serialize_signature};\n{read_into_signature};\n\n'
             src_tail += (
                 f'{read_into_signature} {{\n'
-                f'    return ode_napi_handle_read_into(value, "{emName}", target);\n'
+                f'    return unwrapHandle(target, "{emName}", value);\n'
                 '}\n'
                 f'{serialize_signature} {{\n'
-                f'    return ode_napi_handle_serialize(env, "{emName}", source);\n'
+                f'    return wrapHandle(env, "{emName}", source);\n'
                 '}\n'
                 "\n"
             )
 
         # Function
         elif entity.category == 'function':
-            [declaration,definition] = generateNapiFunctionBinding(entity, emName, fullName)
-            src_tail += definition
+            [declaration,body] = generateNapiFunctionBinding(entity, emName, fullName)
+            src_tail += body
             src_head += declaration
             src_body += f'    exports.Set("{emName}", Napi::Function::New<node_napi_{emName}>(env, "{emName}"));'
         elif entity.category == 'array_instance':
             src_body += f"    // TODO: {entity.category} {emName}\n"
         elif entity.category == 'struct':
-            serialize_signature = f'Napi::Value ode_napi_serialize(Napi::Env env, const {fullName}& source)'
-            read_into_signature = f'bool ode_napi_read_into(const Napi::Value& value, {fullName}& parsed)'
-            header += f'{serialize_signature};\n{read_into_signature};\n'
+            serialize_signature = f'Napi::Value wrap(const Napi::Env &env, const {fullName} &source)'
+            read_into_signature = f'bool unwrap({fullName} &parsed, const Napi::Value &value)'
+            header += f'{serialize_signature};\n{read_into_signature};\n\n'
             read_into = (
                 f'{read_into_signature} {{\n'
                 f'    Napi::Env env = value.Env();\n'
@@ -221,13 +242,13 @@ def generateNapiBindings(entities, apiPath):
             for member in entity.members:
                 if member.category == 'member_variable':
                     read_into += (
-                        f'    if (!ode_napi_read_into(obj.Get("{member.name}"), parsed.{member.name})) {{\n'
+                        f'    if (!unwrap(parsed.{member.name}, obj.Get("{member.name}"))) {{\n'
                         f'        auto ex = env.GetAndClearPendingException();\n'
                         f'        Napi::Error::New(env, "Invalid value for field {member.name} of {fullName} ("+ex.Message()+")").ThrowAsJavaScriptException();\n'
                         f'        return false;\n'
                         f'    }}\n'
                     )
-                    serialize += f'    Napi::Value {member.name} = ode_napi_serialize(env, source.{member.name});\n'
+                    serialize += f'    Napi::Value {member.name} = wrap(env, source.{member.name});\n'
                 elif member.category == 'array_getter_bind':
                     [entries,n] = member.value.split(',')
                     fn_name = f'{emName}_{member.name}'
@@ -237,10 +258,10 @@ def generateNapiBindings(entities, apiPath):
                         f'{signature} {{\n'
                         f'    {fullName} self;\n'
                         f'    Napi::Env env = info.Env();\n'
-                        f'    if (!ode_napi_read_into(info[0], self)) {{ return Napi::Value(); }};\n'
+                        f'    if (!unwrap(self, info[0])) {{ return Napi::Value(); }};\n'
                         f'    int i = info[1].As<Napi::Number>().Uint32Value();\n'
                         f'    if (i < 0 || i >= self.{n}) {{ Napi::Error::New(env, "Index out of range").ThrowAsJavaScriptException(); return Napi::Value(); }}\n'
-                        f'    return ode_napi_serialize(info.Env(), self.{entries}[i]);\n'
+                        f'    return wrap(info.Env(), self.{entries}[i]);\n'
                         f'}}\n'
                     )
                     src_body += f'    exports.Set("{fn_name}", Napi::Function::New<node_napi_{fn_name}>(env, "{fn_name}"));\n'
@@ -264,9 +285,9 @@ def generateNapiBindings(entities, apiPath):
 
         # Tuple
         elif entity.category == 'tuple':
-            serialize_signature = f'Napi::Value ode_napi_serialize(Napi::Env env, const {fullName}& source)'
-            read_into_signature = f'bool ode_napi_read_into(const Napi::Value& value, {fullName}& parsed)'
-            header += f'{serialize_signature};\n{read_into_signature};\n'
+            serialize_signature = f'Napi::Value wrap(const Napi::Env &env, const {fullName} &source)'
+            read_into_signature = f'bool unwrap({fullName} &parsed, const Napi::Value &value)'
+            header += f'{serialize_signature};\n{read_into_signature};\n\n'
             read_into = (
                 f'{read_into_signature} {{\n'
                 f'    Napi::Env env = value.Env();\n'
@@ -279,13 +300,13 @@ def generateNapiBindings(entities, apiPath):
             i = 0
             for member in entity.members:
                 read_into += (
-                    f'    if (!ode_napi_read_into(obj.Get(uint32_t({i})), parsed.{member.name})) {{\n'
+                    f'    if (!unwrap(parsed.{member.name}, obj.Get(uint32_t({i})))) {{\n'
                     f'        auto ex = env.GetAndClearPendingException();\n'
                     f'        Napi::Error::New(env, "Invalid value for field {member.name} of {fullName} ("+ex.Message()+") got: "+(std::string)obj.Get(uint32_t({i})).Unwrap().ToString().Unwrap()).ThrowAsJavaScriptException();\n'
                     f'        return false;\n'
                     f'    }}\n'
                 )
-                serialize += f'    Napi::Value {member.name} = ode_napi_serialize(env, source.{member.name});\n'
+                serialize += f'    Napi::Value {member.name} = wrap(env, source.{member.name});\n'
 
 
                 serialize += (
@@ -306,8 +327,8 @@ def generateNapiBindings(entities, apiPath):
         else:
             src_body += f"    // TODO: {entity.category} {emName}\n"
 
-    src_body += "    return exports;\n}\n\n"
-    return (src_head + "\n" + src_body + src_tail, header)
+    src_body += "\n}\n\n"
+    return (src_head + "\n" + src_body + src_tail + src_real_tail_many_underscores_or_maybe_just_s_r_t_would_be_better, header + src_real_tail_many_underscores_or_maybe_just_s_r_t_would_be_better)
 
 
 
@@ -498,13 +519,13 @@ def writeFile(file, contents):
     with open(file, "w") as f:
         f.write(contents)
 
-def generateBindings(headerPath, outPath):
-    napiBindingsPath = os.path.join(outPath, "generated", "gen-"+os.path.splitext(os.path.basename(headerPath))[0])
+def generateBindings(headerPath, outPath, donePaths):
+    napiBindingsPath = os.path.join(outPath, "generated", "napi-"+os.path.splitext(os.path.basename(headerPath))[0])
     typescriptBindingsPath = os.path.join(outPath, "generated", os.path.splitext(os.path.basename(headerPath))[0]+".d.ts")
     with open(headerPath, "r") as f:
         header = f.read()
     entities = parseHeader(header)
-    (napiBindings, napiHeader) = generateNapiBindings(entities, headerPath)
+    (napiBindings, napiHeader) = generateNapiBindings(entities, headerPath, donePaths)
     writeFile(napiBindingsPath+".cpp", preamble()+napiBindings)
     writeFile(napiBindingsPath+".h", preamble()+napiHeader)
     typescriptBindings = generateTypescriptBindings(entities)
@@ -515,14 +536,10 @@ def generateTopLevelBindings(paths, outPath):
     typescriptBindings = generateTopLevelTypescriptBindings()
     writeFile(typescriptBindingsPath, preamble()+typescriptBindings)
 
-    includes = ""
-    for path in paths:
-        basename = os.path.basename(path)
-        includes += f'#include "gen-{basename}"\n'
-    writeFile(os.path.join(outPath, "generated", "gen.h"), "#pragma once\n"+preamble()+includes)
-
 outPath = sys.argv[1]
 paths = sys.argv[2:]
+donePaths = []
 for path in paths:
-    generateBindings(path, outPath)
-generateTopLevelBindings(paths, outPath)
+    generateBindings(path, outPath, donePaths)
+    donePaths.append(path)
+generateTopLevelBindings(donePaths, outPath)

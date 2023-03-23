@@ -5,16 +5,15 @@ file(GLOB ODE_NAPI_HEADERS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "*.h" "*.hpp")
 file(GLOB ODE_NAPI_SOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "*.cpp")
 
 set(ODE_NAPI_GENERATED_HEADERS
-    ${CMAKE_CURRENT_BINARY_DIR}/generated/gen.h
-    ${CMAKE_CURRENT_BINARY_DIR}/generated/gen-api-base.h
-    ${CMAKE_CURRENT_BINARY_DIR}/generated/gen-logic-api.h
-    ${CMAKE_CURRENT_BINARY_DIR}/generated/gen-renderer-api.h
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/napi-api-base.h
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/napi-logic-api.h
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/napi-renderer-api.h
 )
 
 set(ODE_NAPI_GENERATED_SOURCES
-    ${CMAKE_CURRENT_BINARY_DIR}/generated/gen-api-base.cpp
-    ${CMAKE_CURRENT_BINARY_DIR}/generated/gen-logic-api.cpp
-    ${CMAKE_CURRENT_BINARY_DIR}/generated/gen-renderer-api.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/napi-api-base.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/napi-logic-api.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/napi-renderer-api.cpp
 )
 
 # LIBRARY / Emscripten module
@@ -51,17 +50,16 @@ set(ODE_NAPI_BINDING_GENERATOR_INPUT
 
 add_custom_command(
     OUTPUT
-        ${CMAKE_CURRENT_BINARY_DIR}/generated/api-base.d.ts
         ${CMAKE_CURRENT_BINARY_DIR}/generated/index.d.ts
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/api-base.d.ts
         ${CMAKE_CURRENT_BINARY_DIR}/generated/logic-api.d.ts
         ${CMAKE_CURRENT_BINARY_DIR}/generated/renderer-api.d.ts
-        ${CMAKE_CURRENT_BINARY_DIR}/generated/gen-api-base.cpp
-        ${CMAKE_CURRENT_BINARY_DIR}/generated/gen-api-base.h
-        ${CMAKE_CURRENT_BINARY_DIR}/generated/gen-logic-api.cpp
-        ${CMAKE_CURRENT_BINARY_DIR}/generated/gen-logic-api.h
-        ${CMAKE_CURRENT_BINARY_DIR}/generated/gen-renderer-api.cpp
-        ${CMAKE_CURRENT_BINARY_DIR}/generated/gen-renderer-api.h
-        ${CMAKE_CURRENT_BINARY_DIR}/generated/gen.h
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/napi-api-base.h
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/napi-api-base.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/napi-logic-api.h
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/napi-logic-api.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/napi-renderer-api.h
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/napi-renderer-api.cpp
     MAIN_DEPENDENCY
         ${CMAKE_CURRENT_LIST_DIR}/generate-api-bindings.py
     DEPENDS
