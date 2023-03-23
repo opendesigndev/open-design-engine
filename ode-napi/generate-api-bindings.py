@@ -4,15 +4,15 @@ import os
 import re
 
 def relPath(path):
-    return os.path.join(os.path.dirname(__file__), path.replace("/", os.sep))
+    return os.path.join(os.path.dirname(__file__), path.replace('/', os.sep))
 
 # This is apparently how you do an include in Python ......
-apiUtilsPath = relPath("../api-utils.py")
+apiUtilsPath = relPath('../api-utils.py')
 globalName = __name__
 globalFile = __file__
-__name__ = "generateApiBindings"
+__name__ = 'generateApiBindings'
 __file__ = apiUtilsPath
-exec(compile(open(apiUtilsPath, "rb").read(), apiUtilsPath, 'exec'), globals())
+exec(compile(open(apiUtilsPath, 'rb').read(), apiUtilsPath, 'exec'), globals())
 __name__ = globalName
 __file__ = globalFile
 
@@ -22,313 +22,307 @@ __file__ = globalFile
 #     N-API BINDINGS      #
 ###########################
 
+reConstModifier = re.compile(r'\bconst\b')
+
 def generateNapiFunctionBinding(entity, emName, fullName):
     hasResult = entity.type == 'ODE_Result'
     returnType = 'void' if hasResult else 'Napi::Value'
-    emptyReturn = 'return;' if hasResult else 'return Napi::Value();'
-    signature = f'{returnType} node_napi_{emName}(const Napi::CallbackInfo& info)'
-    body = ""
+    emptyReturn = 'return' if hasResult else 'return Napi::Value()'
+    signature = f'{returnType} call_{emName}(const Napi::CallbackInfo &info)'
 
-    body += (
-        f'    Napi::Env env = info.Env();\n'
-    )
-    call = ""
+    body = '    Napi::Env env = info.Env();\n'
+    callArgs = ''
     i = 0
-    outputs = ""
-    return_arg = ""
+    outputs = ''
+    returnArg = ''
     for member in entity.members:
         if reReturnArg.search(member.type):
             if not hasResult:
-                raise Exception("ODE_OUT_RETURN is only supported on functions returning ODE_Result")
-            signature = f'Napi::Value node_napi_{emName}(const Napi::CallbackInfo& info)'
-            return_arg = f'    return wrap(env, {member.name});\n'
-            emptyReturn = 'return Napi::Value();'
+                raise Exception('ODE_OUT_RETURN is only supported on functions returning ODE_Result')
+            signature = f'Napi::Value call_{emName}(const Napi::CallbackInfo &info)'
+            returnArg = f'    return wrap(env, {member.name});\n'
+            emptyReturn = 'return Napi::Value()'
 
     for member in entity.members:
-        i += 1
-        t = member.type
-        if call != "":
-            call += ", "
+        argType = member.type
+        if callArgs != '':
+            callArgs += ', '
 
-        inout_type = "IN"
-        if (match := reArgAttrib.search(t)):
-            inout_type = match.group(2)
+        argAttrib = 'IN'
+        if (match := reArgAttrib.search(argType)):
+            argAttrib = match.group(2)
 
-        if t.startswith("const") and t.endswith("*"):
-            t = t[6:-1].strip()
-            call += f"&{member.name}"
-        elif t.endswith("*"):
-            t = t[:-1].strip()
-            call += f"&{member.name}"
+        # Remove pointer & const
+        if argType.endswith('*'):
+            argType = argType[:-1].strip()
+            argTypeCParts = reConstModifier.split(argType)
+            argType = 'const'.join(argTypeCParts[:-1]).strip()+argTypeCParts[-1].strip()
+            callArgs += f'&{member.name}'
         else:
-            call += member.name
+            callArgs += member.name
 
-        body += f'    {t} {member.name};\n'
-        if inout_type == "INOUT" or inout_type == "IN":
+        body += f'    {argType} {member.name};\n'
+        if argAttrib == 'IN' or argAttrib == 'INOUT':
             body += (
-                f'    if (!unwrap({member.name}, info[{i-1}])) {{\n'
-                f'        auto ex = env.GetAndClearPendingException();\n'
-                f'        Napi::Error::New(env, "Failed to parse argument{i} {member.name} in {emName} ("+ ex.Message() +")").ThrowAsJavaScriptException();\n'
-                f'        {emptyReturn}\n'
-                f'    }}\n'
+                f'    if (!unwrap({member.name}, info[{i}])) ' '{\n'
+                f'        Napi::Error error = env.GetAndClearPendingException();\n'
+                f'        Napi::Error::New(env, "Failed to parse argument {i} {member.name} in {emName} ("+ error.Message() +")").ThrowAsJavaScriptException();\n'
+                f'        {emptyReturn};\n'
+                 '    }\n'
             )
-        if inout_type == "INOUT" or inout_type == "OUT":
-            outputs += f'    copyWrapped(info[{i-1}], {member.name});\n'
-        if inout_type == "OUT_RETURN":
-            i -= 1
+        if argAttrib == 'INOUT' or argAttrib == 'OUT':
+            outputs += f'    copyWrapped(info[{i}], {member.name});\n'
+        if argAttrib != 'OUT_RETURN':
+            i += 1
 
     if hasResult:
         body += (
-            f'    auto result = {fullName}({call});\n'
+            f'    ODE_Result result = {fullName}({callArgs});\n'
             f'{outputs}'
-            f'    if (!checkResult(env,result)) {emptyReturn}\n'
-            f'{return_arg}'
+            f'    if (!checkResult(env, result))\n'
+            f'        {emptyReturn};\n'
+            f'{returnArg}'
         )
     else:
         body += (
-            f'    auto result = {fullName}({call});\n'
+            f'    {entity.type} result = {fullName}({callArgs});\n'
             f'{outputs}'
             f'    return wrap(env, result);\n'
         )
     return [
-        signature + ';\n',
-        f'{signature} {{\n{body}}}\n\n'
+        f'{signature};\n',
+        f'{signature} ' '{\n'
+        f'{body}'
+        '}\n\n'
     ]
 
 def generateNapiBindings(entities, apiPath, donePaths):
-    name = os.path.basename(apiPath)
+    fileName = os.path.basename(apiPath)
     header = (
-        "\n"
-        "#pragma once\n"
-        "\n"
-        "#include <napi-base.h>\n"
-        f"#include <ode/{name}>\n"
-        "\n"
-        'namespace ode {\n'
-        'namespace napi {\n'
-        '\n'
+        f'\n#pragma once\n\n'
+        f'#include <napi-base.h>\n'
+        f'#include <ode/{fileName}>\n\n'
+         'namespace ode {\n'
+         'namespace napi {\n\n'
     )
-    src_head = (
-        '\n'
-        f'#include "napi-{name}"\n'
-        '\n'
-        '#include <string>\n'
+    src = (
+        f'\n#include "napi-{fileName}"\n\n'
+        f'#include <string>\n'
     )
     for donePath in donePaths:
-        src_head += f'#include "napi-{os.path.basename(donePath)}"\n'
-    src_head += (
+        src += f'#include "napi-{os.path.basename(donePath)}"\n'
+    src += (
         '#include <napi-utils.h>\n'
-        # napi-wrap must be included last!
-        '#include <napi-wrap.h>\n'
-        '\n'
+        # napi-wrap.h must be included last!
+        '#include <napi-wrap.h>\n\n'
         'namespace ode {\n'
-        'namespace napi {\n'
-        '\n'
+        'namespace napi {\n\n'
     )
-    name = os.path.splitext(name)[0].replace("-", "_")
-    header += f"Napi::Object {name}_initialize(Napi::Env env, Napi::Object exports);\n"
-    header += f"void {name}_export(const Napi::Env &env, Napi::Object &exports);\n\n"
-    src_tail = ""
-    src_real_tail_many_underscores_or_maybe_just_s_r_t_would_be_better = "}\n" f'}}\n'
-    src_body = (
-        f"Napi::Object {name}_initialize(Napi::Env env, Napi::Object exports) {{\n"
-        f"    {name}_export(env, exports);\n"
-        "    return exports;\n"
-        "}\n\n"
-        f"void {name}_export(const Napi::Env &env, Napi::Object &exports) {{\n"
+    namespaceEnd = '}\n}\n'
+    name = os.path.splitext(fileName)[0].replace('-', '_')
+    header += f'Napi::Object {name}_initialize(Napi::Env env, Napi::Object exports);\n'
+    header += f'void {name}_export(const Napi::Env &env, Napi::Object &exports);\n\n'
+    src += (
+        f'Napi::Object {name}_initialize(Napi::Env env, Napi::Object exports)' ' {\n'
+        f'    {name}_export(env, exports);\n'
+         '    return exports;\n'
+         '}\n\n'
     )
-
-    duplicate = set()
+    srcExports = ''
 
     for entity in entities:
 
         # TODO actually solve this normally
-        if entity.name == "ODE_MemoryRef" or entity.name == "ODE_Transformation":
+        if entity.name == 'ODE_MemoryRef' or entity.name == 'ODE_Transformation':
             continue
 
         fullName = namespacedName(entity.namespace, entity.name)
         emName = jsTypeName(fullName)
 
-        if fullName in duplicate:
-            continue
-        duplicate.add(fullName)
-
-        src_body += "\n"
-
         # Define or constant
         if entity.category == 'define' or entity.category == 'const':
-            src_body += f"    exports.Set(\"{emName}\", uint32_t({fullName}));\n"
+            srcExports += f'    exports.Set("{emName}", uint32_t({fullName}));\n'
 
         # Enumeration
         elif entity.category == 'enum':
             commonPrefixLen = commonEnumPrefixLength(entity)
-            src_body += "    {\n"
-            src_body += f"        auto {emName} = Napi::Object::New(env);\n"
+            srcExports += '    {\n'
+            srcExports += f'        Napi::Object obj{emName} = Napi::Object::New(env);\n'
             for value in entity.members:
                 k = value.name[commonPrefixLen:]
                 v = namespacedName(entity.namespace, value.name)
-                src_body += f"        {emName}.Set(\"{k}\", uint32_t({v}));\n"
-            src_body += f"        exports.Set(\"{emName}\", {emName});\n"
-            src_body += "    }\n"
-            serialize_signature = f'Napi::Value wrap(const Napi::Env &env, const {fullName} &source)'
+                srcExports += f'        obj{emName}.Set("{k}", int32_t({v}));\n'
+            srcExports += f'        exports.Set("{emName}", (Napi::Object &&) obj{emName});\n'
+            srcExports += '    }\n'
+            wrapSignature = f'Napi::Value wrap(const Napi::Env &env, const {fullName} &src)'
             header += (
                 f'std::string enumString({fullName} value);\n'
-                f'{serialize_signature};\n'
-                f'bool unwrap({fullName} &parsed, const Napi::Value &value);\n\n'
+                f'{wrapSignature};\n'
+                f'bool unwrap({fullName} &dst, const Napi::Value &src);\n\n'
             )
-            src_tail += (
-                f'bool unwrap({fullName} &parsed, const Napi::Value& value) {{\n'
-                f'    std::string text = value.As<Napi::String>();\n'
+            src += (
+                f'std::string enumString({fullName} value)' ' {\n'
+                 '    switch(value) {\n'
             )
             for value in entity.members:
                 k = value.name[commonPrefixLen:]
                 full = namespacedName(entity.namespace, value.name)
-                src_tail += f'    if (text == "{k}") {{ parsed = {full}; return true; }}'
-            src_tail += (
+                src += f'        case {full}: return "{k}";\n'
+            src += (
+                f'        default: return "!UNKNOWN_{emName}_"+std::to_string(int32_t(value));\n'
+                 '    }\n'
+                 '}\n\n'
+                f'{wrapSignature}' ' {\n'
+                f'    return Napi::String::New(env, enumString(src));\n'
+                 '}\n\n'
+                f'bool unwrap({fullName} &dst, const Napi::Value &src)' '{\n'
+                f'    std::string text = src.As<Napi::String>();\n'
+            )
+            for value in entity.members:
+                k = value.name[commonPrefixLen:]
+                full = namespacedName(entity.namespace, value.name)
+                src += f'    if (text == "{k}") return dst = {full}, true;\n'
+            src += (
                 f'    return false;\n'
-                f'}}\n'
-                f"std::string enumString({fullName} value) {{\n"
-                "    switch(value) {\n"
+                 '}\n\n'
             )
-            for value in entity.members:
-                k = value.name[commonPrefixLen:]
-                full = namespacedName(entity.namespace, value.name)
-                src_tail += f'        case {full}: return "{k}";\n'
-            src_tail += (
-                f'        default: return "UNKNOWN_{emName}_"+std::to_string(uint32_t(value));\n'
-                "    }\n"
-                "}\n"
-                f'{serialize_signature} {{\n'
-                f'    return Napi::String::New(env, enumString(source));\n'
-                f'}}\n'
-                "\n"
-            )
+
         # Handle
         elif entity.category == 'handle':
-            serialize_signature = f'Napi::Value wrap(const Napi::Env &env, const {fullName} &source)'
-            read_into_signature = f'bool unwrap({fullName} &target, const Napi::Value &value)'
-            header += f'{serialize_signature};\n{read_into_signature};\n\n'
-            src_tail += (
-                f'{read_into_signature} {{\n'
-                f'    return unwrapHandle(target, "{emName}", value);\n'
-                '}\n'
-                f'{serialize_signature} {{\n'
-                f'    return wrapHandle(env, "{emName}", source);\n'
-                '}\n'
-                "\n"
+            wrapSignature = f'Napi::Value wrap(const Napi::Env &env, const {fullName} &src)'
+            unwrapSignature = f'bool unwrap({fullName} &dst, const Napi::Value &src)'
+            header += f'{wrapSignature};\n{unwrapSignature};\n\n'
+            src += (
+                f'{wrapSignature} {{\n'
+                f'    return wrapHandle(env, "{emName}", src);\n'
+                 '}\n\n'
+                f'{unwrapSignature} {{\n'
+                f'    return unwrapHandle(dst, "{emName}", src);\n'
+                 '}\n\n'
             )
 
         # Function
         elif entity.category == 'function':
-            [declaration,body] = generateNapiFunctionBinding(entity, emName, fullName)
-            src_tail += body
-            src_head += declaration
-            src_body += f'    exports.Set("{emName}", Napi::Function::New<node_napi_{emName}>(env, "{emName}"));'
+            [declaration, body] = generateNapiFunctionBinding(entity, emName, fullName)
+            src += body
+            srcExports += f'    exports.Set("{emName}", Napi::Function::New<call_{emName}>(env, "{emName}"));\n'
+
+        # Array instance
         elif entity.category == 'array_instance':
-            src_body += f"    // TODO: {entity.category} {emName}\n"
+            srcExports += f'    // TODO: {entity.category} {emName}\n'
+
+        # Struct
         elif entity.category == 'struct':
-            serialize_signature = f'Napi::Value wrap(const Napi::Env &env, const {fullName} &source)'
-            read_into_signature = f'bool unwrap({fullName} &parsed, const Napi::Value &value)'
-            header += f'{serialize_signature};\n{read_into_signature};\n\n'
-            read_into = (
-                f'{read_into_signature} {{\n'
+            wrapSignature = f'Napi::Value wrap(const Napi::Env &env, const {fullName} &src)'
+            unwrapSignature = f'bool unwrap({fullName} &dst, const Napi::Value &value)'
+            header += f'{wrapSignature};\n{unwrapSignature};\n\n'
+            wrap = (
+                f'{wrapSignature} {{\n'
+                f'    Napi::Object obj = Napi::Object::New(env);\n'
+            )
+            unwrap = (
+                f'{unwrapSignature} {{\n'
                 f'    Napi::Env env = value.Env();\n'
                 f'    Napi::Object obj = value.As<Napi::Object>();\n'
             )
-            serialize = (
-                f'{serialize_signature} {{\n'
-                f'    Napi::Object obj = Napi::Object::New(env);\n'
-            )
             for member in entity.members:
                 if member.category == 'member_variable':
-                    read_into += (
-                        f'    if (!unwrap(parsed.{member.name}, obj.Get("{member.name}"))) {{\n'
-                        f'        auto ex = env.GetAndClearPendingException();\n'
-                        f'        Napi::Error::New(env, "Invalid value for field {member.name} of {fullName} ("+ex.Message()+")").ThrowAsJavaScriptException();\n'
+                    wrap += f'    Napi::Value {member.name} = wrap(env, src.{member.name});\n'
+                    unwrap += (
+                        f'    if (!unwrap(dst.{member.name}, obj.Get("{member.name}")))' ' {\n'
+                        f'        Napi::Error error = env.GetAndClearPendingException();\n'
+                        f'        Napi::Error::New(env, "Invalid value for field {member.name} of {fullName} ("+error.Message()+")").ThrowAsJavaScriptException();\n'
                         f'        return false;\n'
-                        f'    }}\n'
+                         '    }\n'
                     )
-                    serialize += f'    Napi::Value {member.name} = wrap(env, source.{member.name});\n'
                 elif member.category == 'array_getter_bind':
-                    [entries,n] = member.value.split(',')
-                    fn_name = f'{emName}_{member.name}'
-                    signature = f'Napi::Value node_napi_{fn_name}(const Napi::CallbackInfo& info)'
-                    src_head += f'{signature};\n'
-                    src_tail += (
-                        f'{signature} {{\n'
+                    [entries, n] = member.value.split(',')
+                    fnName = f'{emName}_{member.name}'
+                    signature = f'Napi::Value call_{fnName}(const Napi::CallbackInfo &info)'
+                    src += (
+                        f'{signature}' ' {\n'
                         f'    {fullName} self;\n'
                         f'    Napi::Env env = info.Env();\n'
-                        f'    if (!unwrap(self, info[0])) {{ return Napi::Value(); }};\n'
-                        f'    int i = info[1].As<Napi::Number>().Uint32Value();\n'
-                        f'    if (i < 0 || i >= self.{n}) {{ Napi::Error::New(env, "Index out of range").ThrowAsJavaScriptException(); return Napi::Value(); }}\n'
+                        f'    if (!unwrap(self, info[0]))\n'
+                        f'        return Napi::Value();\n'
+                        f'    int i = info[1].As<Napi::Number>().Int32Value();\n'
+                        f'    if (i < 0 || i >= self.{n})' ' {\n'
+                        f'        Napi::Error::New(env, "Index out of range").ThrowAsJavaScriptException();\n'
+                        f'        return Napi::Value();\n'
+                         '    }\n'
                         f'    return wrap(info.Env(), self.{entries}[i]);\n'
-                        f'}}\n'
+                         '}\n\n'
                     )
-                    src_body += f'    exports.Set("{fn_name}", Napi::Function::New<node_napi_{fn_name}>(env, "{fn_name}"));\n'
+                    srcExports += f'    exports.Set("{fnName}", Napi::Function::New<call_{fnName}>(env, "{fnName}"));\n'
                 else:
-                    read_into += f"    // TODO: {member.category}\n"
+                    unwrap += f'    // TODO: {member.category}\n'
 
                 if member.category == 'member_variable':
-                    serialize += (
-                        f'    if ({member.name}.IsEmpty()) return Napi::Value();\n'
+                    wrap += (
+                        f'    if ({member.name}.IsEmpty())\n'
+                        f'        return Napi::Value();\n'
                         f'    obj.Set("{member.name}", {member.name});\n'
                     )
-            read_into += (
-                f'    return true;\n'
-                f'}}\n'
-            )
-            serialize += (
+            wrap += (
                 f'    return obj;\n'
-                f'}}\n\n'
+                 '}\n\n'
             )
-            src_tail += read_into + serialize
+            unwrap += (
+                f'    return true;\n'
+                 '}\n\n'
+            )
+            src += wrap+unwrap
 
-        # Tuple
+        # Tuple struct
         elif entity.category == 'tuple':
-            serialize_signature = f'Napi::Value wrap(const Napi::Env &env, const {fullName} &source)'
-            read_into_signature = f'bool unwrap({fullName} &parsed, const Napi::Value &value)'
-            header += f'{serialize_signature};\n{read_into_signature};\n\n'
-            read_into = (
-                f'{read_into_signature} {{\n'
+            wrapSignature = f'Napi::Value wrap(const Napi::Env &env, const {fullName} &src)'
+            unwrapSignature = f'bool unwrap({fullName} &dst, const Napi::Value &value)'
+            header += f'{wrapSignature};\n{unwrapSignature};\n\n'
+            wrap = (
+                f'{wrapSignature}' ' {\n'
+                f'    Napi::Array obj = Napi::Array::New(env);\n'
+            )
+            unwrap = (
+                f'{unwrapSignature}' ' {\n'
                 f'    Napi::Env env = value.Env();\n'
                 f'    Napi::Array obj = value.As<Napi::Array>();\n'
             )
-            serialize = (
-                f'{serialize_signature} {{\n'
-                f'    Napi::Array obj = Napi::Array::New(env);\n'
-            )
             i = 0
             for member in entity.members:
-                read_into += (
-                    f'    if (!unwrap(parsed.{member.name}, obj.Get(uint32_t({i})))) {{\n'
-                    f'        auto ex = env.GetAndClearPendingException();\n'
-                    f'        Napi::Error::New(env, "Invalid value for field {member.name} of {fullName} ("+ex.Message()+") got: "+(std::string)obj.Get(uint32_t({i})).Unwrap().ToString().Unwrap()).ThrowAsJavaScriptException();\n'
-                    f'        return false;\n'
-                    f'    }}\n'
-                )
-                serialize += f'    Napi::Value {member.name} = wrap(env, source.{member.name});\n'
-
-
-                serialize += (
+                wrap += (
+                    f'    Napi::Value {member.name} = wrap(env, src.{member.name});\n'
                     f'    if ({member.name}.IsEmpty()) return Napi::Value();\n'
                     f'    obj.Set(uint32_t({i}), {member.name});\n'
                 )
+                unwrap += (
+                    f'    if (!unwrap(dst.{member.name}, obj.Get(uint32_t({i}))))' ' {\n'
+                    f'        Napi::Error error = env.GetAndClearPendingException();\n'
+                    f'        Napi::Error::New(env, "Invalid value for field {member.name} of {fullName} ("+error.Message()+") got: "+(std::string)obj.Get(uint32_t({i})).Unwrap().ToString().Unwrap()).ThrowAsJavaScriptException();\n'
+                    f'        return false;\n'
+                     '    }\n'
+                )
                 i += 1
-            read_into += (
-                f'    return true;\n'
-                f'}}\n'
-            )
-            serialize += (
+            wrap += (
                 f'    return obj;\n'
-                f'}}\n\n'
+                 '}\n\n'
             )
-            src_tail += read_into + serialize
+            unwrap += (
+                f'    return true;\n'
+                 '}\n\n'
+            )
+            src += wrap+unwrap
 
         else:
-            src_body += f"    // TODO: {entity.category} {emName}\n"
+            srcExports += f'    // TODO: {entity.category} {emName}\n'
 
-    src_body += "\n}\n\n"
-    return (src_head + "\n" + src_body + src_tail + src_real_tail_many_underscores_or_maybe_just_s_r_t_would_be_better, header + src_real_tail_many_underscores_or_maybe_just_s_r_t_would_be_better)
+    header += namespaceEnd
+    src += (
+        f'void {name}_export(const Napi::Env &env, Napi::Object &exports)' ' {\n'
+        f'{srcExports}'
+         '}\n\n'
+        f'{namespaceEnd}'
+    )
+    return (src, header)
 
 
 
@@ -340,7 +334,7 @@ tsTypes = []
 
 def tsType(type):
     type = type.strip()
-    wrap = ""
+    wrap = ''
     if (match := reArgAttrib.search(type)):
         if match.group(1) == 'ODE_OUT_RETURN':
             # The argument object does not have to contain any values, but it has
@@ -466,8 +460,8 @@ def generateTypescriptBindings(entities):
         # Function
         elif entity.category == 'function':
             returnType = tsType(entity.type)
-            if entity.type == "ODE_Result":
-                returnType = "void"
+            if entity.type == 'ODE_Result':
+                returnType = 'void'
             fullDescription = entity.description
             for arg in entity.members:
                 if arg.description and not reReturnArg.search(arg.type):
@@ -510,36 +504,31 @@ def generateTopLevelTypescriptBindings():
     ts += '} from "./exports.js";\n'
     return ts
 
-# Make sure not to rewrite the file if not necessary to make recompilation
-# reasonably fast.
-def writeFile(file, contents):
-    dirname = os.path.dirname(file)
-    if not os.path.exists(dirname):
-        os.makedirs(dirname)
-    with open(file, "w") as f:
-        f.write(contents)
-
 def generateBindings(headerPath, outPath, donePaths):
-    napiBindingsPath = os.path.join(outPath, "generated", "napi-"+os.path.splitext(os.path.basename(headerPath))[0])
-    typescriptBindingsPath = os.path.join(outPath, "generated", os.path.splitext(os.path.basename(headerPath))[0]+".d.ts")
-    with open(headerPath, "r") as f:
+    napiBindingsPath = os.path.join(outPath, 'generated', 'napi-'+os.path.splitext(os.path.basename(headerPath))[0])
+    typescriptBindingsPath = os.path.join(outPath, 'generated', os.path.splitext(os.path.basename(headerPath))[0]+'.d.ts')
+    with open(headerPath, 'r') as f:
         header = f.read()
     entities = parseHeader(header)
     (napiBindings, napiHeader) = generateNapiBindings(entities, headerPath, donePaths)
-    writeFile(napiBindingsPath+".cpp", preamble()+napiBindings)
-    writeFile(napiBindingsPath+".h", preamble()+napiHeader)
+    writeFile(napiBindingsPath+'.cpp', preamble()+napiBindings)
+    writeFile(napiBindingsPath+'.h', preamble()+napiHeader)
     typescriptBindings = generateTypescriptBindings(entities)
     writeFile(typescriptBindingsPath, preamble()+typescriptBindings)
 
 def generateTopLevelBindings(paths, outPath):
-    typescriptBindingsPath = os.path.join(outPath, "generated", "index.d.ts")
+    typescriptBindingsPath = os.path.join(outPath, 'generated', 'index.d.ts')
     typescriptBindings = generateTopLevelTypescriptBindings()
     writeFile(typescriptBindingsPath, preamble()+typescriptBindings)
 
-outPath = sys.argv[1]
-paths = sys.argv[2:]
-donePaths = []
-for path in paths:
-    generateBindings(path, outPath, donePaths)
-    donePaths.append(path)
-generateTopLevelBindings(donePaths, outPath)
+if len(sys.argv) >= 2:
+    outPath = sys.argv[1]
+    paths = sys.argv[2:]
+    donePaths = []
+    for path in paths:
+        generateBindings(path, outPath, donePaths)
+        donePaths.append(path)
+    generateTopLevelBindings(donePaths, outPath)
+
+else:
+    print("Usage: python generate-api-bindings.py <output path> <api headers ...>", file=sys.stderr)
