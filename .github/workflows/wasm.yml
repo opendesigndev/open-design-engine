@@ -60,7 +60,7 @@ jobs:
       - name: Configure WASM
         run: cmake --preset wasm-rel
       - name: Build WASM
-        run: cmake --build --preset wasm-rel
+        run: cmake --build --preset wasm-rel --parallel
       - name: WASM artifacts
         uses: actions/upload-artifact@v3
         with:
