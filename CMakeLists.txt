@@ -15,6 +15,13 @@ if(EMSCRIPTEN)
     option(ODE_USE_WEBGL2 "Use WebGL version 2 (otherwise WebGL 1 is used)" OFF)
 endif()
 
+# Default to release if not multi-config
+get_property(ODE_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if(NOT ODE_MULTI_CONFIG AND NOT CMAKE_BUILD_TYPE)
+    message(STATUS "CMAKE_BUILD_TYPE not set, defaulting to Release")
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
 # Make sure that vcpkg toolchain file is set
 if(NOT CMAKE_TOOLCHAIN_FILE AND NOT EMSCRIPTEN)
     if(DEFINED ENV{VCPKG_ROOT})
