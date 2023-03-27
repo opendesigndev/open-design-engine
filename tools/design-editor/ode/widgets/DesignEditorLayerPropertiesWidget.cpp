@@ -60,11 +60,17 @@ const char *FILL_TYPES_STR[] = {
     "IMAGE",
 };
 
-const char *FILL_GRADIENTS_STR[] = {
+const char *FILL_GRADIENT_TYPES_STR[] = {
     "LINEAR",
     "RADIAL",
     "ANGULAR",
     "DIAMOND",
+};
+
+const char *FILL_GRADIENT_INTERPOLATIONS_STR[] = {
+    "LINEAR",
+    "POWER",
+    "REVERSE_POWER",
 };
 
 const char *FILL_POSITIONING_LAYOUTS_STR[] = {
@@ -79,6 +85,11 @@ const char *FILL_POSITIONING_ORIGINS_STR[] = {
     "PARENT",
     "COMPONENT",
     "ARTBOARD"
+};
+
+const char *IMAGE_REF_TYPES_STR[] = {
+    "PATH",
+    "RESOURCE_REF",
 };
 
 std::string layerTypeToShortString(ODE_LayerType layerType) {
@@ -208,6 +219,583 @@ octopus::Color toOctopusColor(const ImVec4 &color) {
 
 }
 
+std::string layerPropName(const ODE_StringRef &layerId, const char *invisibleId, const char *visibleLabel = "") {
+    return std::string(visibleLabel)+std::string("##layer-")+std::string(invisibleId)+std::string("-")+ode_stringDeref(layerId);
+};
+
+void drawLayerInfo(const ODE_LayerList::Entry &layer) {
+    ImGui::Text("%s", "ID:");
+    ImGui::SameLine(100);
+    ImGui::Text("%s", layer.id.data);
+
+    ImGui::Text("%s", "Name:");
+    ImGui::SameLine(100);
+    ImGui::Text("%s", layer.name.data);
+
+    ImGui::Text("%s", "Type:");
+    ImGui::SameLine(100);
+    ImGui::Text("%s", layerTypeToString(layer.type).c_str());
+
+    ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
+}
+
+void drawLayerCommonProperties(const ODE_StringRef &layerId,
+                               const octopus::Layer &octopusLayer,
+                               DesignEditorContext::Api &apiContext) {
+    ImGui::Text("Visible:");
+    ImGui::SameLine(100);
+    bool layerVisible = octopusLayer.visible;
+    if (ImGui::Checkbox(layerPropName(layerId, "visibility").c_str(), &layerVisible)) {
+        changeProperty(octopus::LayerChange::Subject::LAYER, apiContext, layerId, [layerVisible](octopus::LayerChange::Values &values) {
+            values.visible = layerVisible;
+        });
+    }
+
+    ImGui::Text("Opacity:");
+    ImGui::SameLine(100);
+    float layerOpacity = octopusLayer.opacity;
+    if (ImGui::SliderFloat(layerPropName(layerId, "opacity").c_str(), &layerOpacity, 0.0f, 1.0f)) {
+        changeProperty(octopus::LayerChange::Subject::LAYER, apiContext, layerId, [layerOpacity](octopus::LayerChange::Values &values) {
+            values.opacity = layerOpacity;
+        });
+    }
+
+    ImGui::Text("Blend mode:");
+    ImGui::SameLine(100);
+    const int blendModeI = static_cast<int>(octopusLayer.blendMode);
+    if (ImGui::BeginCombo(layerPropName(layerId, "blend-mode").c_str(), BLEND_MODES_STR[blendModeI])) {
+        for (int bmI = 0; bmI < IM_ARRAYSIZE(BLEND_MODES_STR); bmI++) {
+            const bool isSelected = (blendModeI == bmI);
+            if (ImGui::Selectable(BLEND_MODES_STR[bmI], isSelected)) {
+                changeProperty(octopus::LayerChange::Subject::LAYER, apiContext, layerId, [bmI](octopus::LayerChange::Values &values) {
+                    values.blendMode = static_cast<octopus::BlendMode>(bmI);
+                });
+            }
+            if (isSelected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+
+    ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
+}
+
+void drawLayerTransformation(const ODE_StringRef &layerId,
+                             DesignEditorContext::Api &apiContext,
+                             const ODE_LayerMetrics &layerMetrics) {
+    const float a = static_cast<float>(layerMetrics.transformation.matrix[0]);
+    const float b = static_cast<float>(layerMetrics.transformation.matrix[2]);
+    const float c = static_cast<float>(layerMetrics.transformation.matrix[1]);
+    const float d = static_cast<float>(layerMetrics.transformation.matrix[3]);
+    const float trX = static_cast<float>(layerMetrics.transformation.matrix[4]);
+    const float trY = static_cast<float>(layerMetrics.transformation.matrix[5]);
+
+    Vector2f translation {
+        trX,
+        trY,
+    };
+    Vector2f scale {
+        sqrt(a*a+b*b),
+        sqrt(c*c+d*d),
+    };
+    float rotation = atan(c/d) * (180.0f/M_PI);
+
+    const Vector2f origTranslation = translation;
+    const Vector2f origScale = scale;
+    const float origRotation = rotation;
+
+    ImGui::Text("Translation:");
+    ImGui::SameLine(100);
+    if (ImGui::DragFloat2((std::string("##translation-")+ode_stringDeref(layerId)).c_str(), &translation.x, 1.0f)) {
+        const ODE_Transformation newTransformation { 1,0,0,1,translation.x-origTranslation.x,translation.y-origTranslation.y };
+        if (ode_component_transformLayer(apiContext.component, layerId, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation) == ODE_RESULT_OK) {
+            ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView);
+        }
+    }
+
+    ImGui::Text("Scale:");
+    ImGui::SameLine(100);
+    if (ImGui::DragFloat2(layerPropName(layerId, "blend-scale").c_str(), &scale.x, 0.05f, 0.0f, 100.0f)) {
+        const ODE_Transformation newTransformation { scale.x/origScale.x,0,0,scale.y/origScale.y,0,0 };
+        if (ode_component_transformLayer(apiContext.component, layerId, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation) == ODE_RESULT_OK) {
+            ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView);
+        }
+    }
+
+    ImGui::Text("Rotation:");
+    ImGui::SameLine(100);
+    if (ImGui::DragFloat(layerPropName(layerId, "blend-rotation").c_str(), &rotation)) {
+        const float rotationChangeRad = -(rotation-origRotation)*M_PI/180.0f;
+        const ODE_Transformation newTransformation { cos(rotationChangeRad),-sin(rotationChangeRad),sin(rotationChangeRad),cos(rotationChangeRad),0,0 };
+        if (ode_component_transformLayer(apiContext.component, layerId, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation) == ODE_RESULT_OK) {
+            ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView);
+        }
+    }
+
+    ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
+}
+
+// TODO: Unsupported Subject TEXT
+void drawLayerText(const ODE_StringRef &layerId,
+                   DesignEditorContext::Api &apiContext,
+                   const octopus::Text &octopusText) {
+    const octopus::TextStyle &defaultTextStyle = octopusText.defaultStyle;
+
+    // Text value
+    char textBuffer[50] {};
+    strncpy(textBuffer, octopusText.value.c_str(), sizeof(textBuffer)-1);
+    ImGui::Text("Text value:");
+    ImGui::SameLine(100);
+    ImGui::InputText(layerPropName(layerId, "text-value").c_str(), textBuffer, 50);
+    if (ImGui::IsItemEdited()) {
+        changeProperty(octopus::LayerChange::Subject::TEXT, apiContext, layerId, [&textBuffer](octopus::LayerChange::Values &values) {
+            values.value = textBuffer;
+        });
+    }
+
+    // Font size
+    float fontSize = defaultTextStyle.fontSize.has_value() ? *defaultTextStyle.fontSize : 0.0;
+    ImGui::Text("Font size:");
+    ImGui::SameLine(100);
+    if (ImGui::DragFloat(layerPropName(layerId, "text-font-size").c_str(), &fontSize, 0.1f, 0.0f, 100.0f)) {
+        changeProperty(octopus::LayerChange::Subject::LAYER, apiContext, layerId, [&fontSize, &defaultTextStyle](octopus::LayerChange::Values &values) {
+            values.defaultStyle = defaultTextStyle;
+            values.defaultStyle->fontSize = fontSize;
+        });
+    }
+
+    // Color
+    ImVec4 imColor = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (defaultTextStyle.fills.has_value() &&
+        defaultTextStyle.fills->size() == 1 &&
+        defaultTextStyle.fills->front().type == octopus::Fill::Type::COLOR &&
+        defaultTextStyle.fills->front().color.has_value()) {
+        imColor = toImColor(*defaultTextStyle.fills->front().color);
+    }
+    ImGui::Text("Color:");
+    ImGui::SameLine(100);
+    if (ImGui::ColorPicker4(layerPropName(layerId, "text-color").c_str(), (float*)&imColor, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview)) {
+        changeProperty(octopus::LayerChange::Subject::TEXT, apiContext, layerId, [&imColor, &defaultTextStyle](octopus::LayerChange::Values &values) {
+            octopus::Fill newFill;
+            newFill.type = octopus::Fill::Type::COLOR;
+            newFill.color = toOctopusColor(imColor);
+            values.defaultStyle = defaultTextStyle;
+            values.defaultStyle->fills = std::vector<octopus::Fill> { newFill };
+        });
+    }
+
+    ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
+}
+
+void drawLayerShapeStroke(const ODE_StringRef &layerId,
+                          DesignEditorContext::Api &apiContext,
+                          const octopus::Shape::Stroke &octopusShapeStroke) {
+    const octopus::Fill &octopusShapeStrokeFill = octopusShapeStroke.fill;
+
+    // Visibility
+    ImGui::Text("Visible:");
+    ImGui::SameLine(100);
+    bool strokeVisible = octopusShapeStroke.visible;
+    if (ImGui::Checkbox(layerPropName(layerId, "stroke-visibility").c_str(), &strokeVisible)) {
+        changeProperty(octopus::LayerChange::Subject::STROKE, apiContext, layerId, [&octopusShapeStroke, strokeVisible](octopus::LayerChange::Values &values) {
+            values.stroke = octopusShapeStroke;
+            values.stroke->visible = strokeVisible;
+        });
+    }
+
+    // Thickness
+    ImGui::Text("Thickess:");
+    ImGui::SameLine(100);
+    float strokeThickness = octopusShapeStroke.thickness;
+    if (ImGui::DragFloat(layerPropName(layerId, "shape-stroke-thickness").c_str(), &strokeThickness, 0.1f, 0.0f, 100.0f)) {
+        changeProperty(octopus::LayerChange::Subject::STROKE, apiContext, layerId, [&strokeThickness, &octopusShapeStroke](octopus::LayerChange::Values &values) {
+            values.stroke = octopusShapeStroke;
+            values.stroke->thickness = strokeThickness;
+        });
+    }
+
+    // Position
+    ImGui::Text("Position:");
+    ImGui::SameLine(100);
+    const int strokePositionI = static_cast<int>(octopusShapeStroke.position);
+    if (ImGui::BeginCombo(layerPropName(layerId, "shape-stroke-position").c_str(), STROKE_POSITIONS_STR[strokePositionI])) {
+        for (int spI = 0; spI < IM_ARRAYSIZE(STROKE_POSITIONS_STR); spI++) {
+            const bool isSelected = (strokePositionI == spI);
+            if (ImGui::Selectable(STROKE_POSITIONS_STR[spI], isSelected)) {
+                changeProperty(octopus::LayerChange::Subject::STROKE, apiContext, layerId, [spI, &octopusShapeStroke](octopus::LayerChange::Values &values) {
+                    values.stroke = octopusShapeStroke;
+                    values.stroke->position = static_cast<octopus::Stroke::Position>(spI);
+                });
+            }
+            if (isSelected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+
+    // Style (dashing)
+    ImGui::Text("Dashing:");
+    ImGui::SameLine(100);
+    // TODO: What if shape stroke style is nullopt?
+    const int strokeStyleI = static_cast<int>(octopusShapeStroke.style.has_value() ? *octopusShapeStroke.style : octopus::VectorStroke::Style::SOLID);
+    if (ImGui::BeginCombo(layerPropName(layerId, "shape-stroke-style").c_str(), STROKE_STYLES_STR[strokeStyleI])) {
+        for (int ssI = 0; ssI < IM_ARRAYSIZE(STROKE_STYLES_STR); ssI++) {
+            const bool isSelected = (strokeStyleI == ssI);
+            if (ImGui::Selectable(STROKE_STYLES_STR[ssI], isSelected)) {
+                changeProperty(octopus::LayerChange::Subject::STROKE, apiContext, layerId, [ssI, &octopusShapeStroke](octopus::LayerChange::Values &values) {
+                    values.stroke = octopusShapeStroke;
+                    values.stroke->style = static_cast<octopus::VectorStroke::Style>(ssI);
+                });
+            }
+            if (isSelected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+
+    // Color
+    // TODO: What if shape stroke type other than COLOR?
+    ImVec4 imColor = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (octopusShapeStrokeFill.type == octopus::Fill::Type::COLOR && octopusShapeStrokeFill.color.has_value()) {
+        imColor = toImColor(*octopusShapeStrokeFill.color);
+    }
+    ImGui::Text("Color:");
+    ImGui::SameLine(100);
+    if (ImGui::ColorPicker4(layerPropName(layerId, "shape-stroke-color").c_str(), (float*)&imColor, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview)) {
+        changeProperty(octopus::LayerChange::Subject::STROKE_FILL, apiContext, layerId, [&imColor, &octopusShapeStrokeFill](octopus::LayerChange::Values &values) {
+            values.fill = octopusShapeStrokeFill;
+            values.fill->type = octopus::Fill::Type::COLOR;
+            values.fill->color = toOctopusColor(imColor);
+        });
+    }
+
+    ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
+}
+
+void drawLayerShapeFill(const ODE_StringRef &layerId,
+                        DesignEditorContext::Api &apiContext,
+                        const octopus::Fill &octopusFill) {
+    // Visibility
+    ImGui::Text("Visible:");
+    ImGui::SameLine(100);
+    bool fillVisible = octopusFill.visible;
+    if (ImGui::Checkbox(layerPropName(layerId, "fill-visibility").c_str(), &fillVisible)) {
+        // TODO: Subject SHAPE or FILL ?
+        changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layerId, [&octopusFill, fillVisible](octopus::LayerChange::Values &values) {
+            values.fill = octopusFill;
+            values.fill->visible = fillVisible;
+        });
+    }
+
+    // Blend mode
+    ImGui::Text("Blend mode:");
+    ImGui::SameLine(100);
+    const int blendModeI = static_cast<int>(octopusFill.blendMode);
+    if (ImGui::BeginCombo(layerPropName(layerId, "fill-blend-mode").c_str(), BLEND_MODES_STR[blendModeI])) {
+        for (int bmI = 0; bmI < IM_ARRAYSIZE(BLEND_MODES_STR); bmI++) {
+            const bool isSelected = (blendModeI == bmI);
+            if (ImGui::Selectable(BLEND_MODES_STR[bmI], isSelected)) {
+                changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layerId, [&octopusFill, bmI](octopus::LayerChange::Values &values) {
+                    values.fill = octopusFill;
+                    values.fill->blendMode = static_cast<octopus::BlendMode>(bmI);
+                });
+            }
+            if (isSelected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+
+    // Type
+    ImGui::Text("Type:");
+    ImGui::SameLine(100);
+    const int fillTypeI = static_cast<int>(octopusFill.type);
+    if (ImGui::BeginCombo(layerPropName(layerId, "fill-type").c_str(), FILL_TYPES_STR[fillTypeI])) {
+        for (int ftI = 0; ftI < IM_ARRAYSIZE(FILL_TYPES_STR); ftI++) {
+            const bool isSelected = (fillTypeI == ftI);
+            if (ImGui::Selectable(FILL_TYPES_STR[ftI], isSelected)) {
+                changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layerId, [&octopusFill, ftI](octopus::LayerChange::Values &values) {
+                    values.fill = octopusFill;
+                    values.fill->type = static_cast<octopus::Fill::Type>(ftI);
+                });
+            }
+            if (isSelected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+
+    switch (octopusFill.type) {
+        case octopus::Fill::Type::COLOR:
+        {
+            // Color
+            ImVec4 imColor = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+            if (octopusFill.color.has_value()) {
+                imColor = toImColor(*octopusFill.color);
+            }
+            ImGui::Text("Color:");
+            ImGui::SameLine(100);
+            if (ImGui::ColorPicker4(layerPropName(layerId, "shape-fill-color").c_str(), (float*)&imColor, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview)) {
+                changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layerId, [&imColor, &octopusFill](octopus::LayerChange::Values &values) {
+                    values.fill = octopusFill;
+                    values.fill->type = octopus::Fill::Type::COLOR;
+                    values.fill->color = toOctopusColor(imColor);
+                });
+            }
+            break;
+        }
+        case octopus::Fill::Type::GRADIENT:
+        {
+            // Gradient
+            // TODO: Gradient stops?
+            ImGui::Text("Gradient:");
+            ImGui::SameLine(100);
+
+            // TODO: What if fill gradient does not have a value?
+            const int gradientTypeI = static_cast<int>(octopusFill.gradient.has_value() ? octopusFill.gradient->type : octopus::Gradient::Type::LINEAR);
+            if (ImGui::BeginCombo(layerPropName(layerId, "fill-gradient-type").c_str(), FILL_GRADIENT_TYPES_STR[gradientTypeI])) {
+                for (int gtI = 0; gtI < IM_ARRAYSIZE(FILL_GRADIENT_TYPES_STR); gtI++) {
+                    const bool isSelected = (gradientTypeI == gtI);
+                    if (ImGui::Selectable(FILL_GRADIENT_TYPES_STR[gtI], isSelected)) {
+                        changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layerId, [&octopusFill, gtI](octopus::LayerChange::Values &values) {
+                            values.fill = octopusFill;
+                            if (values.fill->gradient.has_value()) {
+                                values.fill->gradient->type = static_cast<octopus::Gradient::Type>(gtI);
+                            } else {
+                                values.fill->gradient = octopus::Gradient { static_cast<octopus::Gradient::Type>(gtI),
+                                    std::vector<octopus::Gradient::ColorStop> {}
+                                };
+                            }
+                        });
+                    }
+                    if (isSelected) {
+                        ImGui::SetItemDefaultFocus();
+                    }
+                }
+                ImGui::EndCombo();
+            }
+
+            // TODO: Gradient Color stops?
+            break;
+        }
+        case octopus::Fill::Type::IMAGE:
+        {
+            // TODO: Image + positioning
+            ImGui::Text("Image:");
+
+            // Image ref value
+            ImGui::Text("  Ref type:");
+            ImGui::SameLine(100);
+
+            const int imageRefTypeI = static_cast<int>(octopusFill.image.has_value() ? octopusFill.image->ref.type : octopus::ImageRef::Type::PATH);
+            if (ImGui::BeginCombo(layerPropName(layerId, "fill-image-ref-type").c_str(), IMAGE_REF_TYPES_STR[imageRefTypeI])) {
+                for (int irI = 0; irI < IM_ARRAYSIZE(IMAGE_REF_TYPES_STR); irI++) {
+                    const bool isSelected = (imageRefTypeI == irI);
+                    if (ImGui::Selectable(IMAGE_REF_TYPES_STR[irI], isSelected)) {
+                        changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layerId, [&octopusFill, irI](octopus::LayerChange::Values &values) {
+                            values.fill = octopusFill;
+                            if (values.fill->image.has_value()) {
+                                values.fill->image->ref.type = static_cast<octopus::ImageRef::Type>(irI);
+                            } else {
+                                values.fill->image = octopus::Image {
+                                    octopus::ImageRef { static_cast<octopus::ImageRef::Type>(irI), "" },
+                                    nonstd::nullopt
+                                };
+                            }
+                        });
+                    }
+                    if (isSelected) {
+                        ImGui::SetItemDefaultFocus();
+                    }
+                }
+                ImGui::EndCombo();
+            }
+
+            // Image ref value
+            const std::string &imageRefValue = octopusFill.image.has_value() ? octopusFill.image->ref.value : "";
+            char textBuffer[50] {};
+            strncpy(textBuffer, imageRefValue.c_str(), sizeof(textBuffer)-1);
+            ImGui::Text("  Ref value:");
+            ImGui::SameLine(100);
+            ImGui::InputText(layerPropName(layerId, "fill-image-ref-value").c_str(), textBuffer, 50);
+            if (ImGui::IsItemEdited()) {
+                changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layerId, [&octopusFill, &textBuffer](octopus::LayerChange::Values &values) {
+                    values.fill = octopusFill;
+                    if (values.fill->image.has_value()) {
+                        values.fill->image->ref.value = textBuffer;
+                    } else {
+                        values.fill->image = octopus::Image {
+                            octopus::ImageRef { octopus::ImageRef::Type::PATH,  textBuffer},
+                            nonstd::nullopt
+                        };
+                    }
+                });
+            }
+
+            // TODO: Image ref subsection?
+
+            // Image positioning layout
+            ImGui::Text("  Pos. Layout:");
+            ImGui::SameLine(100);
+
+            const int positioningLayoutI = static_cast<int>(octopusFill.positioning.has_value() ? octopusFill.positioning->layout : octopus::Fill::Positioning::Layout::STRETCH);
+            if (ImGui::BeginCombo(layerPropName(layerId, "fill-positioning-layout").c_str(), FILL_POSITIONING_LAYOUTS_STR[positioningLayoutI])) {
+                for (int plI = 0; plI < IM_ARRAYSIZE(FILL_POSITIONING_LAYOUTS_STR); plI++) {
+                    const bool isSelected = (positioningLayoutI == plI);
+                    if (ImGui::Selectable(FILL_POSITIONING_LAYOUTS_STR[plI], isSelected)) {
+                        changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layerId, [&octopusFill, plI](octopus::LayerChange::Values &values) {
+                            values.fill = octopusFill;
+                            if (values.fill->positioning.has_value()) {
+                                values.fill->positioning->layout = static_cast<octopus::Fill::Positioning::Layout>(plI);
+                            } else {
+                                values.fill->positioning = octopus::Fill::Positioning { static_cast<octopus::Fill::Positioning::Layout>(plI), octopus::Fill::Positioning::Origin::LAYER,
+                                };
+                            }
+                        });
+                    }
+                    if (isSelected) {
+                        ImGui::SetItemDefaultFocus();
+                    }
+                }
+                ImGui::EndCombo();
+            }
+
+            // Image positioning origin
+            ImGui::Text("  Pos. Orig.:");
+            ImGui::SameLine(100);
+
+            const int positioningOriginI = static_cast<int>(octopusFill.positioning.has_value() ? octopusFill.positioning->origin : octopus::Fill::Positioning::Origin::LAYER);
+            if (ImGui::BeginCombo(layerPropName(layerId, "fill-positioning-origin").c_str(), FILL_POSITIONING_ORIGINS_STR[positioningOriginI])) {
+                for (int poI = 0; poI < IM_ARRAYSIZE(FILL_POSITIONING_ORIGINS_STR); poI++) {
+                    const bool isSelected = (positioningOriginI == poI);
+                    if (ImGui::Selectable(FILL_POSITIONING_ORIGINS_STR[poI], isSelected)) {
+                        changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layerId, [&octopusFill, poI](octopus::LayerChange::Values &values) {
+                            values.fill = octopusFill;
+                            if (values.fill->positioning.has_value()) {
+                                values.fill->positioning->origin = static_cast<octopus::Fill::Positioning::Origin>(poI);
+                            } else {
+                                values.fill->positioning = octopus::Fill::Positioning { octopus::Fill::Positioning::Layout::STRETCH, static_cast<octopus::Fill::Positioning::Origin>(poI),
+                                };
+                            }
+                        });
+                    }
+                    if (isSelected) {
+                        ImGui::SetItemDefaultFocus();
+                    }
+                }
+                ImGui::EndCombo();
+            }
+
+            // TODO: Positioning transform?
+
+            break;
+        }
+    }
+
+    // TODO: Fill filters - only turn on / off ?
+    if (octopusFill.filters.has_value()) {
+        ImGui::Text("Filters:");
+        for (int ffI = 0; ffI < static_cast<int>(octopusFill.filters->size()); ffI++) {
+            const octopus::Filter &fillFilter = (*octopusFill.filters)[ffI];
+
+            ImGui::Text("  Filter #%i:", ffI);
+            ImGui::SameLine(100);
+
+            bool filterVisible = (*octopusFill.filters)[ffI].visible;
+            if (ImGui::Checkbox(layerPropName(layerId, (std::string("fill-filter-")+std::to_string(ffI)+"-visibility").c_str()).c_str(), &filterVisible)) {
+                changeReplace(octopus::LayerChange::Subject::FILL_FILTER, apiContext, layerId, ffI, [fillFilter, filterVisible](octopus::LayerChange::Values &values) {
+                    values.filter = fillFilter;
+                    values.filter->visible = filterVisible;
+                });
+            }
+        }
+    }
+
+    ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
+}
+
+// TODO: Unsupported Subject SHAPE
+void drawLayerShape(const ODE_StringRef &layerId,
+                    DesignEditorContext::Api &apiContext,
+                    const octopus::Shape &octopusShape) {
+    // Rounded corner radius (for rectangles)
+    {
+        const bool isRectangle = (octopusShape.path.has_value() && octopusShape.path->type == octopus::Path::Type::RECTANGLE);
+        if (isRectangle) {
+            const octopus::Path &octopusShapePath = *octopusShape.path;
+            float cornerRadius = octopusShape.path->cornerRadius.has_value() ? *octopusShape.path->cornerRadius : 0.0f;
+            ImGui::Text("Corner radius:");
+            ImGui::SameLine(100);
+            if (ImGui::DragFloat(layerPropName(layerId, "shape-rectangle-corner-radius").c_str(), &cornerRadius, 0.1f, 0.0f, 1000.0f)) {
+                changeProperty(octopus::LayerChange::Subject::SHAPE, apiContext, layerId, [&cornerRadius, &octopusShapePath](octopus::LayerChange::Values &values) {
+                    values.path = octopusShapePath;
+                    values.path->cornerRadius = cornerRadius;
+                });
+            }
+        }
+
+        ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
+    }
+
+    // Shape stroke
+    // TODO: What about multiple or no strokes ? -> INSERT / REPLACE / REMOVE
+    if (octopusShape.strokes.size() == 1 && ImGui::CollapsingHeader("Shape stroke (TODO)")) {
+        drawLayerShapeStroke(layerId, apiContext, octopusShape.strokes.front());
+    }
+
+    // Shape Fill
+    // TODO: What about multiple or no fills ? -> INSERT / REPLACE / REMOVE
+    if (octopusShape.fills.size() == 1 && ImGui::CollapsingHeader("Shape fill (TODO)")) {
+        drawLayerShapeFill(layerId, apiContext, octopusShape.fills.front());
+    }
+}
+
+
+// TODO: Unsupported subject EFFECT
+void drawLayerEffects(const ODE_StringRef &layerId,
+                      DesignEditorContext::Api &apiContext,
+                      const std::vector<octopus::Effect> &octopusEffects) {
+    ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
+    ImGui::SameLine(415);
+    if (ImGui::SmallButton(layerPropName(layerId, "effect-add", "+").c_str())) {
+        changeInsertBack(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, [](octopus::LayerChange::Values &values) {
+            // TODO: Default effect values?
+            octopus::Effect newEffect;
+            values.effect = newEffect;
+        });
+    }
+    int effectToRemove = -1;
+    for (size_t ei = 0; ei < octopusEffects.size(); ++ei) {
+        ImGui::Dummy(ImVec2(20.0f, 0.0f));
+        ImGui::SameLine(50);
+
+        bool effectVisible = octopusEffects[ei].visible;
+        if (ImGui::Checkbox(layerPropName(layerId, "effect-visibility").c_str(), &effectVisible)) {
+            changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&effect = octopusEffects[ei], effectVisible](octopus::LayerChange::Values &values) {
+                values.effect = effect;
+                values.effect->visible = effectVisible;
+            });
+        }
+
+        ImGui::SameLine(415);
+        if (ImGui::SmallButton(layerPropName(layerId, (std::string("-##layer-effect-remove")+std::to_string(ei)).c_str()).c_str())) {
+            effectToRemove = static_cast<int>(ei);
+        }
+
+        // TODO: remaining effect parameters
+    }
+    if (effectToRemove >= 0 && effectToRemove < static_cast<int>(octopusEffects.size())) {
+        changeRemove(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, effectToRemove);
+    }
+
+    ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
+}
+
 void drawLayerPropertiesWidget(const ODE_LayerList &layerList,
                                DesignEditorContext::Api &apiContext,
                                DesignEditorContext::LayerSelection &layerSelectionContext) {
@@ -232,10 +820,6 @@ void drawLayerPropertiesWidget(const ODE_LayerList &layerList,
     for (int i = 0; i < layerList.n; ++i) {
         const ODE_LayerList::Entry &layer = layerList.entries[i];
         if (layerSelectionContext.isSelected(layer.id.data)) {
-            const auto layerPropName = [&layer](const char *invisibleId, const char *visibleLabel = "")->std::string {
-                return std::string(visibleLabel)+std::string("##layer-")+std::string(invisibleId)+std::string("-")+ode_stringDeref(layer.id);
-            };
-
             const octopus::Layer *octopusLayerPtr = findLayer(*componentOctopus.content, ode_stringDeref(layer.id));
             if (octopusLayerPtr == nullptr) {
                 continue;
@@ -254,456 +838,35 @@ void drawLayerPropertiesWidget(const ODE_LayerList &layerList,
 
             if (ImGui::CollapsingHeader(layerSectionHeader.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
                 // Layer info
-                {
-                    ImGui::Text("%s", "ID:");
-                    ImGui::SameLine(100);
-                    ImGui::Text("%s", layer.id.data);
-
-                    ImGui::Text("%s", "Name:");
-                    ImGui::SameLine(100);
-                    ImGui::Text("%s", layer.name.data);
-
-                    ImGui::Text("%s", "Type:");
-                    ImGui::SameLine(100);
-                    ImGui::Text("%s", layerTypeToString(layer.type).c_str());
-
-                    ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
-                }
+                drawLayerInfo(layer);
 
                 // Common layer properties
-                {
-                    ImGui::Text("Visible:");
-                    ImGui::SameLine(100);
-                    bool layerVisible = octopusLayer.visible;
-                    if (ImGui::Checkbox(layerPropName("visibility").c_str(), &layerVisible)) {
-                        changeProperty(octopus::LayerChange::Subject::LAYER, apiContext, layer.id, [layerVisible](octopus::LayerChange::Values &values) {
-                            values.visible = layerVisible;
-                        });
-                    }
-
-                    ImGui::Text("Opacity:");
-                    ImGui::SameLine(100);
-                    float layerOpacity = octopusLayer.opacity;
-                    if (ImGui::SliderFloat(layerPropName("opacity").c_str(), &layerOpacity, 0.0f, 1.0f)) {
-                        changeProperty(octopus::LayerChange::Subject::LAYER, apiContext, layer.id, [layerOpacity](octopus::LayerChange::Values &values) {
-                            values.opacity = layerOpacity;
-                        });
-                    }
-
-                    ImGui::Text("Blend mode:");
-                    ImGui::SameLine(100);
-                    const int blendModeI = static_cast<int>(octopusLayer.blendMode);
-                    if (ImGui::BeginCombo(layerPropName("blend-mode").c_str(), BLEND_MODES_STR[blendModeI])) {
-                        for (int bmI = 0; bmI < IM_ARRAYSIZE(BLEND_MODES_STR); bmI++) {
-                            const bool isSelected = (blendModeI == bmI);
-                            if (ImGui::Selectable(BLEND_MODES_STR[bmI], isSelected)) {
-                                changeProperty(octopus::LayerChange::Subject::LAYER, apiContext, layer.id, [bmI](octopus::LayerChange::Values &values) {
-                                    values.blendMode = static_cast<octopus::BlendMode>(bmI);
-                                });
-                            }
-                            if (isSelected) {
-                                ImGui::SetItemDefaultFocus();
-                            }
-                        }
-                        ImGui::EndCombo();
-                    }
-
-                    ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
-                }
+                drawLayerCommonProperties(layer.id, octopusLayer, apiContext);
 
                 // Transformation
-                {
-                    const float a = static_cast<float>(layerMetrics.transformation.matrix[0]);
-                    const float b = static_cast<float>(layerMetrics.transformation.matrix[2]);
-                    const float c = static_cast<float>(layerMetrics.transformation.matrix[1]);
-                    const float d = static_cast<float>(layerMetrics.transformation.matrix[3]);
-                    const float trX = static_cast<float>(layerMetrics.transformation.matrix[4]);
-                    const float trY = static_cast<float>(layerMetrics.transformation.matrix[5]);
-
-                    Vector2f translation {
-                        trX,
-                        trY,
-                    };
-                    Vector2f scale {
-                        sqrt(a*a+b*b),
-                        sqrt(c*c+d*d),
-                    };
-                    float rotation = atan(c/d) * (180.0f/M_PI);
-
-                    const Vector2f origTranslation = translation;
-                    const Vector2f origScale = scale;
-                    const float origRotation = rotation;
-
-                    ImGui::Text("Translation:");
-                    ImGui::SameLine(100);
-                    if (ImGui::DragFloat2((std::string("##translation-")+ode_stringDeref(layer.id)).c_str(), &translation.x, 1.0f)) {
-                        const ODE_Transformation newTransformation { 1,0,0,1,translation.x-origTranslation.x,translation.y-origTranslation.y };
-                        if (ode_component_transformLayer(apiContext.component, layer.id, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation) == ODE_RESULT_OK) {
-                            ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView);
-                        }
-                    }
-
-                    ImGui::Text("Scale:");
-                    ImGui::SameLine(100);
-                    if (ImGui::DragFloat2(layerPropName("blend-scale").c_str(), &scale.x, 0.05f, 0.0f, 100.0f)) {
-                        const ODE_Transformation newTransformation { scale.x/origScale.x,0,0,scale.y/origScale.y,0,0 };
-                        if (ode_component_transformLayer(apiContext.component, layer.id, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation) == ODE_RESULT_OK) {
-                            ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView);
-                        }
-                    }
-
-                    ImGui::Text("Rotation:");
-                    ImGui::SameLine(100);
-                    if (ImGui::DragFloat(layerPropName("blend-rotation").c_str(), &rotation)) {
-                        const float rotationChangeRad = -(rotation-origRotation)*M_PI/180.0f;
-                        const ODE_Transformation newTransformation { cos(rotationChangeRad),-sin(rotationChangeRad),sin(rotationChangeRad),cos(rotationChangeRad),0,0 };
-                        if (ode_component_transformLayer(apiContext.component, layer.id, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation) == ODE_RESULT_OK) {
-                            ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView);
-                        }
-                    }
-
-                    ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
-                }
+                drawLayerTransformation(layer.id, apiContext, layerMetrics);
 
                 // Text
-                // TODO: Unsupported Subject TEXT
                 const bool isTextLayer = (layer.type == ODE_LAYER_TYPE_TEXT && octopusLayer.type == octopus::Layer::Type::TEXT && octopusLayer.text.has_value());
                 if (isTextLayer && ImGui::CollapsingHeader("Text")) {
-                    const octopus::Text &octopusText = *octopusLayer.text;
-                    const octopus::TextStyle &defaultTextStyle = octopusText.defaultStyle;
-
-                    // Text value
-                    char textBuffer[50] {};
-                    strncpy(textBuffer, octopusText.value.c_str(), sizeof(textBuffer)-1);
-                    ImGui::Text("Text value:");
-                    ImGui::SameLine(100);
-                    ImGui::InputText(layerPropName("text-value").c_str(), textBuffer, 50);
-                    if (ImGui::IsItemEdited()) {
-                        changeProperty(octopus::LayerChange::Subject::TEXT, apiContext, layer.id, [&textBuffer](octopus::LayerChange::Values &values) {
-                            values.value = textBuffer;
-                        });
-                    }
-
-                    // Font size
-                    float fontSize = defaultTextStyle.fontSize.has_value() ? *defaultTextStyle.fontSize : 0.0;
-                    ImGui::Text("Font size:");
-                    ImGui::SameLine(100);
-                    if (ImGui::DragFloat(layerPropName("text-font-size").c_str(), &fontSize, 0.1f, 0.0f, 100.0f)) {
-                        changeProperty(octopus::LayerChange::Subject::LAYER, apiContext, layer.id, [&fontSize, &defaultTextStyle](octopus::LayerChange::Values &values) {
-                            values.defaultStyle = defaultTextStyle;
-                            values.defaultStyle->fontSize = fontSize;
-                        });
-                    }
-
-                    // Color
-                    ImVec4 imColor = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
-                    if (defaultTextStyle.fills.has_value() &&
-                        defaultTextStyle.fills->size() == 1 &&
-                        defaultTextStyle.fills->front().type == octopus::Fill::Type::COLOR &&
-                        defaultTextStyle.fills->front().color.has_value()) {
-                        imColor = toImColor(*defaultTextStyle.fills->front().color);
-                    }
-                    ImGui::Text("Color:");
-                    ImGui::SameLine(100);
-                    if (ImGui::ColorPicker4("text-color", (float*)&imColor, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview)) {
-                        changeProperty(octopus::LayerChange::Subject::TEXT, apiContext, layer.id, [&imColor, &defaultTextStyle](octopus::LayerChange::Values &values) {
-                            octopus::Fill newFill;
-                            newFill.type = octopus::Fill::Type::COLOR;
-                            newFill.color = toOctopusColor(imColor);
-                            values.defaultStyle = defaultTextStyle;
-                            values.defaultStyle->fills = std::vector<octopus::Fill> { newFill };
-                        });
-                    }
-
-                    ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
+                    drawLayerText(layer.id, apiContext, *octopusLayer.text);
                 }
 
                 // Shape
-                // TODO: unsupported Subject SHAPE
                 const bool isShapeLayer = (layer.type == ODE_LAYER_TYPE_SHAPE && octopusLayer.type == octopus::Layer::Type::SHAPE && octopusLayer.shape.has_value());
                 if (isShapeLayer) {
-                    const octopus::Shape &octopusShape = *octopusLayer.shape;
-
-                    // Rounded corner radius (for rectangles)
-                    // TODO: Unsupported subject SHAPE
-                    {
-                        const bool isRectangle = (octopusShape.path.has_value() && octopusShape.path->type == octopus::Path::Type::RECTANGLE);
-                        if (isRectangle) {
-                            const octopus::Path &octopusShapePath = *octopusShape.path;
-                            float cornerRadius = octopusShape.path->cornerRadius.has_value() ? *octopusShape.path->cornerRadius : 0.0f;
-                            ImGui::Text("Corner radius:");
-                            ImGui::SameLine(100);
-                            if (ImGui::DragFloat(layerPropName("shape-rectangle-corner-radius").c_str(), &cornerRadius, 0.1f, 0.0f, 1000.0f)) {
-                                changeProperty(octopus::LayerChange::Subject::SHAPE, apiContext, layer.id, [&cornerRadius, &octopusShapePath](octopus::LayerChange::Values &values) {
-                                    values.path = octopusShapePath;
-                                    values.path->cornerRadius = cornerRadius;
-                                });
-                            }
-                        }
-
-                        ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
-                    }
-
-                    // Shape stroke
-                    // TODO: What about multiple or no strokes ? -> INSERT / REPLACE / REMOVE
-                    if (octopusShape.strokes.size() == 1 && ImGui::CollapsingHeader("Shape stroke (TODO)")) {
-                        const octopus::Shape::Stroke &octopusShapeStroke = octopusShape.strokes.front();
-                        const octopus::Fill &octopusShapeStrokeFill = octopusShapeStroke.fill;
-
-                        // Visibility
-                        ImGui::Text("Visible:");
-                        ImGui::SameLine(100);
-                        bool strokeVisible = octopusShapeStroke.visible;
-                        if (ImGui::Checkbox(layerPropName("stroke-visibility").c_str(), &strokeVisible)) {
-                            changeProperty(octopus::LayerChange::Subject::STROKE, apiContext, layer.id, [&octopusShapeStroke, strokeVisible](octopus::LayerChange::Values &values) {
-                                values.stroke = octopusShapeStroke;
-                                values.stroke->visible = strokeVisible;
-                            });
-                        }
-
-                        // Thickness
-                        ImGui::Text("Thickess:");
-                        ImGui::SameLine(100);
-                        float strokeThickness = octopusShapeStroke.thickness;
-                        if (ImGui::DragFloat(layerPropName("shape-stroke-thickness").c_str(), &strokeThickness, 0.1f, 0.0f, 100.0f)) {
-                            changeProperty(octopus::LayerChange::Subject::STROKE, apiContext, layer.id, [&strokeThickness, &octopusShapeStroke](octopus::LayerChange::Values &values) {
-                                values.stroke = octopusShapeStroke;
-                                values.stroke->thickness = strokeThickness;
-                            });
-                        }
-
-                        // Position
-                        ImGui::Text("Position:");
-                        ImGui::SameLine(100);
-                        const int strokePositionI = static_cast<int>(octopusShapeStroke.position);
-                        if (ImGui::BeginCombo(layerPropName("shape-stroke-position").c_str(), STROKE_POSITIONS_STR[strokePositionI])) {
-                            for (int spI = 0; spI < IM_ARRAYSIZE(STROKE_POSITIONS_STR); spI++) {
-                                const bool isSelected = (strokePositionI == spI);
-                                if (ImGui::Selectable(STROKE_POSITIONS_STR[spI], isSelected)) {
-                                    changeProperty(octopus::LayerChange::Subject::STROKE, apiContext, layer.id, [spI, &octopusShapeStroke](octopus::LayerChange::Values &values) {
-                                        values.stroke = octopusShapeStroke;
-                                        values.stroke->position = static_cast<octopus::Stroke::Position>(spI);
-                                    });
-                                }
-                                if (isSelected) {
-                                    ImGui::SetItemDefaultFocus();
-                                }
-                            }
-                            ImGui::EndCombo();
-                        }
-
-                        // Style (dashing)
-                        ImGui::Text("Dashing:");
-                        ImGui::SameLine(100);
-                        // TODO: What if shape stroke style is nullopt?
-                        const int strokeStyleI = static_cast<int>(octopusShapeStroke.style.has_value() ? *octopusShapeStroke.style : octopus::VectorStroke::Style::SOLID);
-                        if (ImGui::BeginCombo(layerPropName("shape-stroke-style").c_str(), STROKE_STYLES_STR[strokeStyleI])) {
-                            for (int ssI = 0; ssI < IM_ARRAYSIZE(STROKE_STYLES_STR); ssI++) {
-                                const bool isSelected = (strokeStyleI == ssI);
-                                if (ImGui::Selectable(STROKE_STYLES_STR[ssI], isSelected)) {
-                                    changeProperty(octopus::LayerChange::Subject::STROKE, apiContext, layer.id, [ssI, &octopusShapeStroke](octopus::LayerChange::Values &values) {
-                                        values.stroke = octopusShapeStroke;
-                                        values.stroke->style = static_cast<octopus::VectorStroke::Style>(ssI);
-                                    });
-                                }
-                                if (isSelected) {
-                                    ImGui::SetItemDefaultFocus();
-                                }
-                            }
-                            ImGui::EndCombo();
-                        }
-
-                        // Color
-                        // TODO: What if shape stroke type other than COLOR?
-                        ImVec4 imColor = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
-                        if (octopusShapeStrokeFill.type == octopus::Fill::Type::COLOR && octopusShapeStrokeFill.color.has_value()) {
-                            imColor = toImColor(*octopusShapeStrokeFill.color);
-                        }
-                        ImGui::Text("Color:");
-                        ImGui::SameLine(100);
-                        if (ImGui::ColorPicker4("shape-stroke-color", (float*)&imColor, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview)) {
-                            changeProperty(octopus::LayerChange::Subject::STROKE_FILL, apiContext, layer.id, [&imColor, &octopusShapeStrokeFill](octopus::LayerChange::Values &values) {
-                                values.fill = octopusShapeStrokeFill;
-                                values.fill->type = octopus::Fill::Type::COLOR;
-                                values.fill->color = toOctopusColor(imColor);
-                            });
-                        }
-
-                        ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
-                    }
-
-                    // Shape Fill
-                    // TODO: What about multiple or no fills ? -> INSERT / REPLACE / REMOVE
-                    if (octopusShape.fills.size() == 1 && ImGui::CollapsingHeader("Shape fill (TODO)")) {
-                        const octopus::Fill &octopusFill = octopusShape.fills.front();
-
-                        // Visibility
-                        ImGui::Text("Visible:");
-                        ImGui::SameLine(100);
-                        bool fillVisible = octopusFill.visible;
-                        if (ImGui::Checkbox(layerPropName("fill-visibility").c_str(), &fillVisible)) {
-                            // TODO: Subject SHAPE or FILL ?
-                            changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layer.id, [&octopusFill, fillVisible](octopus::LayerChange::Values &values) {
-                                values.fill = octopusFill;
-                                values.fill->visible = fillVisible;
-                            });
-                        }
-
-                        // Blend mode
-                        ImGui::Text("Blend mode:");
-                        ImGui::SameLine(100);
-                        const int blendModeI = static_cast<int>(octopusFill.blendMode);
-                        if (ImGui::BeginCombo(layerPropName("fill-blend-mode").c_str(), BLEND_MODES_STR[blendModeI])) {
-                            for (int bmI = 0; bmI < IM_ARRAYSIZE(BLEND_MODES_STR); bmI++) {
-                                const bool isSelected = (blendModeI == bmI);
-                                if (ImGui::Selectable(BLEND_MODES_STR[bmI], isSelected)) {
-                                    changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layer.id, [&octopusFill, bmI](octopus::LayerChange::Values &values) {
-                                        values.fill = octopusFill;
-                                        values.fill->blendMode = static_cast<octopus::BlendMode>(bmI);
-                                    });
-                                }
-                                if (isSelected) {
-                                    ImGui::SetItemDefaultFocus();
-                                }
-                            }
-                            ImGui::EndCombo();
-                        }
-
-                        // Type
-                        ImGui::Text("Type:");
-                        ImGui::SameLine(100);
-                        const int fillTypeI = static_cast<int>(octopusFill.type);
-                        if (ImGui::BeginCombo(layerPropName("fill-type").c_str(), FILL_TYPES_STR[fillTypeI])) {
-                            for (int ftI = 0; ftI < IM_ARRAYSIZE(FILL_TYPES_STR); ftI++) {
-                                const bool isSelected = (fillTypeI == ftI);
-                                if (ImGui::Selectable(FILL_TYPES_STR[ftI], isSelected)) {
-                                    changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layer.id, [&octopusFill, ftI](octopus::LayerChange::Values &values) {
-                                        values.fill = octopusFill;
-                                        values.fill->type = static_cast<octopus::Fill::Type>(ftI);
-                                    });
-                                }
-                                if (isSelected) {
-                                    ImGui::SetItemDefaultFocus();
-                                }
-                            }
-                            ImGui::EndCombo();
-                        }
-
-                        switch (octopusFill.type) {
-                            case octopus::Fill::Type::COLOR:
-                            {
-                                // Color
-                                ImVec4 imColor = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
-                                if (octopusFill.color.has_value()) {
-                                    imColor = toImColor(*octopusFill.color);
-                                }
-                                ImGui::Text("Color:");
-                                ImGui::SameLine(100);
-                                if (ImGui::ColorPicker4("shape-fill-color", (float*)&imColor, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview)) {
-                                    changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layer.id, [&imColor, &octopusFill](octopus::LayerChange::Values &values) {
-                                        values.fill = octopusFill;
-                                        values.fill->type = octopus::Fill::Type::COLOR;
-                                        values.fill->color = toOctopusColor(imColor);
-                                    });
-                                }
-                                break;
-                            }
-                            case octopus::Fill::Type::GRADIENT:
-                            {
-                                // Gradient
-                                // TODO: Gradient stops?
-                                ImGui::Text("Gradient:");
-                                ImGui::SameLine(100);
-                                // TODO: What if fill gradient does not have a value?
-                                const int gradientTypeI = static_cast<int>(octopusFill.gradient.has_value() ? octopusFill.gradient->type : octopus::Gradient::Type::LINEAR);
-                                if (ImGui::BeginCombo(layerPropName("fill-gradient-type").c_str(), FILL_GRADIENTS_STR[gradientTypeI])) {
-                                    for (int gtI = 0; gtI < IM_ARRAYSIZE(FILL_GRADIENTS_STR); gtI++) {
-                                        const bool isSelected = (gradientTypeI == gtI);
-                                        if (ImGui::Selectable(FILL_GRADIENTS_STR[gtI], isSelected)) {
-                                            changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layer.id, [&octopusFill, gtI](octopus::LayerChange::Values &values) {
-                                                values.fill = octopusFill;
-                                                if (values.fill->gradient.has_value()) {
-                                                    values.fill->gradient->type = static_cast<octopus::Gradient::Type>(gtI);
-                                                } else {
-                                                    values.fill->gradient = octopus::Gradient { static_cast<octopus::Gradient::Type>(gtI),
-                                                        std::vector<octopus::Gradient::ColorStop> {}
-                                                    };
-                                                }
-                                            });
-                                        }
-                                        if (isSelected) {
-                                            ImGui::SetItemDefaultFocus();
-                                        }
-                                    }
-                                    ImGui::EndCombo();
-                                }
-                                break;
-                            }
-                            case octopus::Fill::Type::IMAGE:
-                            {
-                                // TODO: Image + positioning
-                                ImGui::Text("Image (TODO):");
-                                ImGui::SameLine(100);
-                                ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
-
-                                // TODO: Fill filters
-                                ImGui::Text("Filters (TODO):");
-                                ImGui::SameLine(100);
-                                ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
-
-                                break;
-                            }
-                        }
-
-                        ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
-                    }
+                    drawLayerShape(layer.id, apiContext, *octopusLayer.shape);
                 }
 
                 // Effects
-                // TODO: Unsupported subject EFFECT
                 if (ImGui::CollapsingHeader("Effects (TODO)")) {
-                    const std::vector<octopus::Effect> &octopusEffects = octopusLayer.effects;
-
-                    ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
-                    ImGui::SameLine(415);
-                    if (ImGui::SmallButton(layerPropName("effect-add", "+").c_str())) {
-                        changeInsertBack(octopus::LayerChange::Subject::EFFECT, apiContext, layer.id, [](octopus::LayerChange::Values &values) {
-                            // TODO: Default effect values?
-                            octopus::Effect newEffect;
-                            values.effect = newEffect;
-                        });
-                    }
-                    int effectToRemove = -1;
-                    for (size_t ei = 0; ei < octopusEffects.size(); ++ei) {
-                        ImGui::Dummy(ImVec2(20.0f, 0.0f));
-                        ImGui::SameLine(50);
-
-                        bool effectVisible = octopusEffects[ei].visible;
-                        if (ImGui::Checkbox(layerPropName("effect-visibility").c_str(), &effectVisible)) {
-                            changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layer.id, ei, [&effect = octopusEffects[ei], effectVisible](octopus::LayerChange::Values &values) {
-                                values.effect = effect;
-                                values.effect->visible = effectVisible;
-                            });
-                        }
-
-                        ImGui::SameLine(415);
-                        if (ImGui::SmallButton((std::string("-##layer-effect-remove")+std::to_string(ei)).c_str())) {
-                            effectToRemove = static_cast<int>(ei);
-                        }
-
-                        // TODO: remaining effect parameters
-                    }
-                    if (effectToRemove >= 0 && effectToRemove < static_cast<int>(octopusEffects.size())) {
-                        changeRemove(octopus::LayerChange::Subject::EFFECT, apiContext, layer.id, effectToRemove);
-                    }
-
-                    ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
+                    drawLayerEffects(layer.id, apiContext, octopusLayer.effects);
                 }
 
                 ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
                 ImGui::PushStyleColor(ImGuiCol_Button, IM_COLOR_DARK_RED);
                 ImGui::SameLine(100);
-                if (ImGui::Button(layerPropName("delete", "Delete Layer [FUTURE_API]").c_str(), ImVec2 { 250, 20 })) {
+                if (ImGui::Button(layerPropName(layer.id, "delete", "Delete Layer [FUTURE_API]").c_str(), ImVec2 { 250, 20 })) {
                     // TODO: Remove layer when API available
 //                    if (ode_component_removeLayer(apiContext.component, layer.id) == ODE_RESULT_OK) {
 //                        ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView);
