@@ -168,12 +168,14 @@ int applyLayerChange(octopus::LayerChange::Subject subject,
                      octopus::LayerChange::Op operation,
                      DesignEditorContext::Api &apiContext,
                      const ODE_StringRef &layerId,
-                     const nonstd::optional<int> &changeIndex,
+                     const nonstd::optional<int> &index,
+                     const nonstd::optional<int> &filterIndex,
                      const LayerChangeFunction &changeFunction) {
     octopus::LayerChange layerChange;
     layerChange.subject = subject;
     layerChange.op = operation;
-    layerChange.index = changeIndex;
+    layerChange.index = index;
+    layerChange.filterIndex = filterIndex;
     changeFunction(layerChange.values);
 
     std::string layerChangeStr;
@@ -195,30 +197,34 @@ int applyLayerChange(octopus::LayerChange::Subject subject,
 int changeProperty(octopus::LayerChange::Subject subject,
                    DesignEditorContext::Api &apiContext,
                    const ODE_StringRef &layerId,
+                   const nonstd::optional<int> &index,
                    const LayerChangeFunction &changeFunction) {
-    return applyLayerChange(subject, octopus::LayerChange::Op::PROPERTY_CHANGE, apiContext, layerId, nonstd::nullopt, changeFunction);
+    return applyLayerChange(subject, octopus::LayerChange::Op::PROPERTY_CHANGE, apiContext, layerId, index, nonstd::nullopt, changeFunction);
 }
 
 int changeInsertBack(octopus::LayerChange::Subject subject,
-                 DesignEditorContext::Api &apiContext,
-                 const ODE_StringRef &layerId,
-                 const LayerChangeFunction &changeFunction) {
-    return applyLayerChange(subject, octopus::LayerChange::Op::INSERT, apiContext, layerId, nonstd::nullopt, changeFunction);
+                     DesignEditorContext::Api &apiContext,
+                     const ODE_StringRef &layerId,
+                     const nonstd::optional<int> &index,
+                     const LayerChangeFunction &changeFunction) {
+    return applyLayerChange(subject, octopus::LayerChange::Op::INSERT, apiContext, layerId, index, nonstd::nullopt, changeFunction);
 }
 
 int changeReplace(octopus::LayerChange::Subject subject,
                   DesignEditorContext::Api &apiContext,
                   const ODE_StringRef &layerId,
-                  const nonstd::optional<int> &changeIndex,
+                  const nonstd::optional<int> &index,
+                  const nonstd::optional<int> &filterIndex,
                   const LayerChangeFunction &changeFunction) {
-    return applyLayerChange(subject, octopus::LayerChange::Op::REPLACE, apiContext, layerId, changeIndex, changeFunction);
+    return applyLayerChange(subject, octopus::LayerChange::Op::REPLACE, apiContext, layerId, index, filterIndex, changeFunction);
 }
 
 int changeRemove(octopus::LayerChange::Subject subject,
                  DesignEditorContext::Api &apiContext,
                  const ODE_StringRef &layerId,
-                 const nonstd::optional<int> &changeIndex) {
-    return applyLayerChange(subject, octopus::LayerChange::Op::REPLACE, apiContext, layerId, changeIndex, NO_LAYER_CHANGE);
+                 const nonstd::optional<int> &index,
+                 const nonstd::optional<int> &filterIndex) {
+    return applyLayerChange(subject, octopus::LayerChange::Op::REPLACE, apiContext, layerId, index, filterIndex, NO_LAYER_CHANGE);
 }
 
 ImVec4 toImColor(const octopus::Color &color) {
@@ -268,7 +274,7 @@ void drawLayerCommonProperties(const ODE_StringRef &layerId,
     ImGui::SameLine(100);
     bool layerVisible = octopusLayer.visible;
     if (ImGui::Checkbox(layerPropName(layerId, "visibility").c_str(), &layerVisible)) {
-        changeProperty(octopus::LayerChange::Subject::LAYER, apiContext, layerId, [layerVisible](octopus::LayerChange::Values &values) {
+        changeProperty(octopus::LayerChange::Subject::LAYER, apiContext, layerId, nonstd::nullopt, [layerVisible](octopus::LayerChange::Values &values) {
             values.visible = layerVisible;
         });
     }
@@ -277,7 +283,7 @@ void drawLayerCommonProperties(const ODE_StringRef &layerId,
     ImGui::SameLine(100);
     float layerOpacity = octopusLayer.opacity;
     if (ImGui::SliderFloat(layerPropName(layerId, "opacity").c_str(), &layerOpacity, 0.0f, 1.0f)) {
-        changeProperty(octopus::LayerChange::Subject::LAYER, apiContext, layerId, [layerOpacity](octopus::LayerChange::Values &values) {
+        changeProperty(octopus::LayerChange::Subject::LAYER, apiContext, layerId, nonstd::nullopt, [layerOpacity](octopus::LayerChange::Values &values) {
             values.opacity = layerOpacity;
         });
     }
@@ -289,7 +295,7 @@ void drawLayerCommonProperties(const ODE_StringRef &layerId,
         for (int bmI = 0; bmI < IM_ARRAYSIZE(BLEND_MODES_STR); bmI++) {
             const bool isSelected = (blendModeI == bmI);
             if (ImGui::Selectable(BLEND_MODES_STR[bmI], isSelected)) {
-                changeProperty(octopus::LayerChange::Subject::LAYER, apiContext, layerId, [bmI](octopus::LayerChange::Values &values) {
+                changeProperty(octopus::LayerChange::Subject::LAYER, apiContext, layerId, nonstd::nullopt, [bmI](octopus::LayerChange::Values &values) {
                     values.blendMode = static_cast<octopus::BlendMode>(bmI);
                 });
             }
@@ -358,7 +364,6 @@ void drawLayerTransformation(const ODE_StringRef &layerId,
     ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
 }
 
-// TODO: Unsupported Subject TEXT
 void drawLayerText(const ODE_StringRef &layerId,
                    DesignEditorContext::Api &apiContext,
                    const octopus::Text &octopusText) {
@@ -371,7 +376,7 @@ void drawLayerText(const ODE_StringRef &layerId,
     ImGui::SameLine(100);
     ImGui::InputText(layerPropName(layerId, "text-value").c_str(), textBuffer, 50);
     if (ImGui::IsItemEdited()) {
-        changeProperty(octopus::LayerChange::Subject::TEXT, apiContext, layerId, [&textBuffer](octopus::LayerChange::Values &values) {
+        changeProperty(octopus::LayerChange::Subject::TEXT, apiContext, layerId, nonstd::nullopt, [&textBuffer](octopus::LayerChange::Values &values) {
             values.value = textBuffer;
         });
     }
@@ -381,7 +386,7 @@ void drawLayerText(const ODE_StringRef &layerId,
     ImGui::Text("Font size:");
     ImGui::SameLine(100);
     if (ImGui::DragFloat(layerPropName(layerId, "text-font-size").c_str(), &fontSize, 0.1f, 0.0f, 100.0f)) {
-        changeProperty(octopus::LayerChange::Subject::TEXT, apiContext, layerId, [&fontSize, &defaultTextStyle](octopus::LayerChange::Values &values) {
+        changeProperty(octopus::LayerChange::Subject::TEXT, apiContext, layerId, nonstd::nullopt, [&fontSize, &defaultTextStyle](octopus::LayerChange::Values &values) {
             values.defaultStyle = defaultTextStyle;
             values.defaultStyle->fontSize = fontSize;
         });
@@ -398,7 +403,7 @@ void drawLayerText(const ODE_StringRef &layerId,
     ImGui::Text("Color:");
     ImGui::SameLine(100);
     if (ImGui::ColorPicker4(layerPropName(layerId, "text-color").c_str(), (float*)&imColor, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview)) {
-        changeProperty(octopus::LayerChange::Subject::TEXT, apiContext, layerId, [&imColor, &defaultTextStyle](octopus::LayerChange::Values &values) {
+        changeProperty(octopus::LayerChange::Subject::TEXT, apiContext, layerId, nonstd::nullopt, [&imColor, &defaultTextStyle](octopus::LayerChange::Values &values) {
             octopus::Fill newFill;
             newFill.type = octopus::Fill::Type::COLOR;
             newFill.color = toOctopusColor(imColor);
@@ -410,7 +415,8 @@ void drawLayerText(const ODE_StringRef &layerId,
     ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
 }
 
-void drawLayerShapeStroke(const ODE_StringRef &layerId,
+void drawLayerShapeStroke(int strokeI,
+                          const ODE_StringRef &layerId,
                           DesignEditorContext::Api &apiContext,
                           const octopus::Shape::Stroke &octopusShapeStroke) {
     const octopus::Fill &octopusShapeStrokeFill = octopusShapeStroke.fill;
@@ -420,7 +426,7 @@ void drawLayerShapeStroke(const ODE_StringRef &layerId,
     ImGui::SameLine(100);
     bool strokeVisible = octopusShapeStroke.visible;
     if (ImGui::Checkbox(layerPropName(layerId, "stroke-visibility").c_str(), &strokeVisible)) {
-        changeProperty(octopus::LayerChange::Subject::STROKE, apiContext, layerId, [&octopusShapeStroke, strokeVisible](octopus::LayerChange::Values &values) {
+        changeReplace(octopus::LayerChange::Subject::STROKE, apiContext, layerId, strokeI, nonstd::nullopt, [&octopusShapeStroke, strokeVisible](octopus::LayerChange::Values &values) {
             values.stroke = octopusShapeStroke;
             values.stroke->visible = strokeVisible;
         });
@@ -431,7 +437,7 @@ void drawLayerShapeStroke(const ODE_StringRef &layerId,
     ImGui::SameLine(100);
     float strokeThickness = octopusShapeStroke.thickness;
     if (ImGui::DragFloat(layerPropName(layerId, "shape-stroke-thickness").c_str(), &strokeThickness, 0.1f, 0.0f, 100.0f)) {
-        changeProperty(octopus::LayerChange::Subject::STROKE, apiContext, layerId, [&strokeThickness, &octopusShapeStroke](octopus::LayerChange::Values &values) {
+        changeReplace(octopus::LayerChange::Subject::STROKE, apiContext, layerId, strokeI, nonstd::nullopt, [&strokeThickness, &octopusShapeStroke](octopus::LayerChange::Values &values) {
             values.stroke = octopusShapeStroke;
             values.stroke->thickness = strokeThickness;
         });
@@ -445,7 +451,7 @@ void drawLayerShapeStroke(const ODE_StringRef &layerId,
         for (int spI = 0; spI < IM_ARRAYSIZE(STROKE_POSITIONS_STR); spI++) {
             const bool isSelected = (strokePositionI == spI);
             if (ImGui::Selectable(STROKE_POSITIONS_STR[spI], isSelected)) {
-                changeProperty(octopus::LayerChange::Subject::STROKE, apiContext, layerId, [spI, &octopusShapeStroke](octopus::LayerChange::Values &values) {
+                changeReplace(octopus::LayerChange::Subject::STROKE, apiContext, layerId, strokeI, nonstd::nullopt, [spI, &octopusShapeStroke](octopus::LayerChange::Values &values) {
                     values.stroke = octopusShapeStroke;
                     values.stroke->position = static_cast<octopus::Stroke::Position>(spI);
                 });
@@ -466,7 +472,7 @@ void drawLayerShapeStroke(const ODE_StringRef &layerId,
         for (int ssI = 0; ssI < IM_ARRAYSIZE(STROKE_STYLES_STR); ssI++) {
             const bool isSelected = (strokeStyleI == ssI);
             if (ImGui::Selectable(STROKE_STYLES_STR[ssI], isSelected)) {
-                changeProperty(octopus::LayerChange::Subject::STROKE, apiContext, layerId, [ssI, &octopusShapeStroke](octopus::LayerChange::Values &values) {
+                changeReplace(octopus::LayerChange::Subject::STROKE, apiContext, layerId, strokeI, nonstd::nullopt, [ssI, &octopusShapeStroke](octopus::LayerChange::Values &values) {
                     values.stroke = octopusShapeStroke;
                     values.stroke->style = static_cast<octopus::VectorStroke::Style>(ssI);
                 });
@@ -487,7 +493,7 @@ void drawLayerShapeStroke(const ODE_StringRef &layerId,
     ImGui::Text("Color:");
     ImGui::SameLine(100);
     if (ImGui::ColorPicker4(layerPropName(layerId, "shape-stroke-color").c_str(), (float*)&imColor, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview)) {
-        changeProperty(octopus::LayerChange::Subject::STROKE_FILL, apiContext, layerId, [&imColor, &octopusShapeStrokeFill](octopus::LayerChange::Values &values) {
+        changeReplace(octopus::LayerChange::Subject::STROKE_FILL, apiContext, layerId, strokeI, nonstd::nullopt, [&imColor, &octopusShapeStrokeFill](octopus::LayerChange::Values &values) {
             values.fill = octopusShapeStrokeFill;
             values.fill->type = octopus::Fill::Type::COLOR;
             values.fill->color = toOctopusColor(imColor);
@@ -497,7 +503,8 @@ void drawLayerShapeStroke(const ODE_StringRef &layerId,
     ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
 }
 
-void drawLayerShapeFill(const ODE_StringRef &layerId,
+void drawLayerShapeFill(int fillI,
+                        const ODE_StringRef &layerId,
                         DesignEditorContext::Api &apiContext,
                         const octopus::Fill &octopusFill) {
     // Visibility
@@ -506,7 +513,7 @@ void drawLayerShapeFill(const ODE_StringRef &layerId,
     bool fillVisible = octopusFill.visible;
     if (ImGui::Checkbox(layerPropName(layerId, "fill-visibility").c_str(), &fillVisible)) {
         // TODO: Subject SHAPE or FILL ?
-        changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layerId, [&octopusFill, fillVisible](octopus::LayerChange::Values &values) {
+        changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, fillVisible](octopus::LayerChange::Values &values) {
             values.fill = octopusFill;
             values.fill->visible = fillVisible;
         });
@@ -520,7 +527,7 @@ void drawLayerShapeFill(const ODE_StringRef &layerId,
         for (int bmI = 0; bmI < IM_ARRAYSIZE(BLEND_MODES_STR); bmI++) {
             const bool isSelected = (blendModeI == bmI);
             if (ImGui::Selectable(BLEND_MODES_STR[bmI], isSelected)) {
-                changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layerId, [&octopusFill, bmI](octopus::LayerChange::Values &values) {
+                changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, bmI](octopus::LayerChange::Values &values) {
                     values.fill = octopusFill;
                     values.fill->blendMode = static_cast<octopus::BlendMode>(bmI);
                 });
@@ -540,7 +547,7 @@ void drawLayerShapeFill(const ODE_StringRef &layerId,
         for (int ftI = 0; ftI < IM_ARRAYSIZE(FILL_TYPES_STR); ftI++) {
             const bool isSelected = (fillTypeI == ftI);
             if (ImGui::Selectable(FILL_TYPES_STR[ftI], isSelected)) {
-                changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layerId, [&octopusFill, ftI](octopus::LayerChange::Values &values) {
+                changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, ftI](octopus::LayerChange::Values &values) {
                     values.fill = octopusFill;
                     values.fill->type = static_cast<octopus::Fill::Type>(ftI);
                 });
@@ -563,7 +570,7 @@ void drawLayerShapeFill(const ODE_StringRef &layerId,
             ImGui::Text("Color:");
             ImGui::SameLine(100);
             if (ImGui::ColorPicker4(layerPropName(layerId, "shape-fill-color").c_str(), (float*)&imColor, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview)) {
-                changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layerId, [&imColor, &octopusFill](octopus::LayerChange::Values &values) {
+                changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&imColor, &octopusFill](octopus::LayerChange::Values &values) {
                     values.fill = octopusFill;
                     values.fill->type = octopus::Fill::Type::COLOR;
                     values.fill->color = toOctopusColor(imColor);
@@ -584,7 +591,7 @@ void drawLayerShapeFill(const ODE_StringRef &layerId,
                 for (int gtI = 0; gtI < IM_ARRAYSIZE(FILL_GRADIENT_TYPES_STR); gtI++) {
                     const bool isSelected = (gradientTypeI == gtI);
                     if (ImGui::Selectable(FILL_GRADIENT_TYPES_STR[gtI], isSelected)) {
-                        changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layerId, [&octopusFill, gtI](octopus::LayerChange::Values &values) {
+                        changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, gtI](octopus::LayerChange::Values &values) {
                             values.fill = octopusFill;
                             if (values.fill->gradient.has_value()) {
                                 values.fill->gradient->type = static_cast<octopus::Gradient::Type>(gtI);
@@ -618,7 +625,7 @@ void drawLayerShapeFill(const ODE_StringRef &layerId,
                 for (int irI = 0; irI < IM_ARRAYSIZE(IMAGE_REF_TYPES_STR); irI++) {
                     const bool isSelected = (imageRefTypeI == irI);
                     if (ImGui::Selectable(IMAGE_REF_TYPES_STR[irI], isSelected)) {
-                        changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layerId, [&octopusFill, irI](octopus::LayerChange::Values &values) {
+                        changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, irI](octopus::LayerChange::Values &values) {
                             values.fill = octopusFill;
                             if (values.fill->image.has_value()) {
                                 values.fill->image->ref.type = static_cast<octopus::ImageRef::Type>(irI);
@@ -645,7 +652,7 @@ void drawLayerShapeFill(const ODE_StringRef &layerId,
             ImGui::SameLine(100);
             ImGui::InputText(layerPropName(layerId, "fill-image-ref-value").c_str(), textBuffer, 50);
             if (ImGui::IsItemEdited()) {
-                changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layerId, [&octopusFill, &textBuffer](octopus::LayerChange::Values &values) {
+                changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, &textBuffer](octopus::LayerChange::Values &values) {
                     values.fill = octopusFill;
                     if (values.fill->image.has_value()) {
                         values.fill->image->ref.value = textBuffer;
@@ -669,7 +676,7 @@ void drawLayerShapeFill(const ODE_StringRef &layerId,
                 for (int plI = 0; plI < IM_ARRAYSIZE(FILL_POSITIONING_LAYOUTS_STR); plI++) {
                     const bool isSelected = (positioningLayoutI == plI);
                     if (ImGui::Selectable(FILL_POSITIONING_LAYOUTS_STR[plI], isSelected)) {
-                        changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layerId, [&octopusFill, plI](octopus::LayerChange::Values &values) {
+                        changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, plI](octopus::LayerChange::Values &values) {
                             values.fill = octopusFill;
                             if (values.fill->positioning.has_value()) {
                                 values.fill->positioning->layout = static_cast<octopus::Fill::Positioning::Layout>(plI);
@@ -695,7 +702,7 @@ void drawLayerShapeFill(const ODE_StringRef &layerId,
                 for (int poI = 0; poI < IM_ARRAYSIZE(FILL_POSITIONING_ORIGINS_STR); poI++) {
                     const bool isSelected = (positioningOriginI == poI);
                     if (ImGui::Selectable(FILL_POSITIONING_ORIGINS_STR[poI], isSelected)) {
-                        changeProperty(octopus::LayerChange::Subject::FILL, apiContext, layerId, [&octopusFill, poI](octopus::LayerChange::Values &values) {
+                        changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, poI](octopus::LayerChange::Values &values) {
                             values.fill = octopusFill;
                             if (values.fill->positioning.has_value()) {
                                 values.fill->positioning->origin = static_cast<octopus::Fill::Positioning::Origin>(poI);
@@ -729,7 +736,7 @@ void drawLayerShapeFill(const ODE_StringRef &layerId,
 
             bool filterVisible = (*octopusFill.filters)[ffI].visible;
             if (ImGui::Checkbox(layerPropName(layerId, (std::string("fill-filter-")+std::to_string(ffI)+"-visibility").c_str()).c_str(), &filterVisible)) {
-                changeReplace(octopus::LayerChange::Subject::FILL_FILTER, apiContext, layerId, ffI, [fillFilter, filterVisible](octopus::LayerChange::Values &values) {
+                changeReplace(octopus::LayerChange::Subject::FILL_FILTER, apiContext, layerId, fillI, ffI, [fillFilter, filterVisible](octopus::LayerChange::Values &values) {
                     values.filter = fillFilter;
                     values.filter->visible = filterVisible;
                 });
@@ -753,7 +760,7 @@ void drawLayerShape(const ODE_StringRef &layerId,
             ImGui::Text("Corner radius:");
             ImGui::SameLine(100);
             if (ImGui::DragFloat(layerPropName(layerId, "shape-rectangle-corner-radius").c_str(), &cornerRadius, 0.1f, 0.0f, 1000.0f)) {
-                changeProperty(octopus::LayerChange::Subject::SHAPE, apiContext, layerId, [&cornerRadius, &octopusShapePath](octopus::LayerChange::Values &values) {
+                changeProperty(octopus::LayerChange::Subject::SHAPE, apiContext, layerId, nonstd::nullopt, [&cornerRadius, &octopusShapePath](octopus::LayerChange::Values &values) {
                     values.path = octopusShapePath;
                     values.path->cornerRadius = cornerRadius;
                 });
@@ -766,13 +773,13 @@ void drawLayerShape(const ODE_StringRef &layerId,
     // Shape stroke
     // TODO: What about multiple or no strokes ? -> INSERT / REPLACE / REMOVE
     if (octopusShape.strokes.size() == 1 && ImGui::CollapsingHeader("Shape stroke (TODO)")) {
-        drawLayerShapeStroke(layerId, apiContext, octopusShape.strokes.front());
+        drawLayerShapeStroke(0, layerId, apiContext, octopusShape.strokes.front());
     }
 
     // Shape Fill
     // TODO: What about multiple or no fills ? -> INSERT / REPLACE / REMOVE
     if (octopusShape.fills.size() == 1 && ImGui::CollapsingHeader("Shape fill (TODO)")) {
-        drawLayerShapeFill(layerId, apiContext, octopusShape.fills.front());
+        drawLayerShapeFill(0, layerId, apiContext, octopusShape.fills.front());
     }
 }
 
@@ -784,7 +791,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
     ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
     ImGui::SameLine(415);
     if (ImGui::SmallButton(layerPropName(layerId, "effect-add", "+").c_str())) {
-        changeInsertBack(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, [](octopus::LayerChange::Values &values) {
+        changeInsertBack(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, nonstd::nullopt, [](octopus::LayerChange::Values &values) {
             // TODO: Default effect values?
             octopus::Effect newEffect;
             values.effect = newEffect;
@@ -806,7 +813,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
         ImGui::SameLine(100);
         bool effectVisible = octopusEffect.visible;
         if (ImGui::Checkbox(layerPropName(layerId, "effect-visibility").c_str(), &effectVisible)) {
-            changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&octopusEffect, effectVisible](octopus::LayerChange::Values &values) {
+            changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, nonstd::nullopt, [&octopusEffect, effectVisible](octopus::LayerChange::Values &values) {
                 values.effect = octopusEffect;
                 values.effect->visible = effectVisible;
             });
@@ -819,7 +826,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
             for (int bmI = 0; bmI < IM_ARRAYSIZE(BLEND_MODES_STR); bmI++) {
                 const bool isSelected = (blendModeI == bmI);
                 if (ImGui::Selectable(BLEND_MODES_STR[bmI], isSelected)) {
-                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&octopusEffect, bmI](octopus::LayerChange::Values &values) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, nonstd::nullopt, [&octopusEffect, bmI](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
                         values.effect->blendMode = static_cast<octopus::BlendMode>(bmI);
                     });
@@ -840,7 +847,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                 const int ebI = ebPair.first;
                 const bool isSelected = (effectBasisI == ebI);
                 if (ImGui::Selectable(EFFECT_BASIS_MAP.at(ebI), isSelected)) {
-                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&octopusEffect, ebI](octopus::LayerChange::Values &values) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, nonstd::nullopt, [&octopusEffect, ebI](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
                         values.effect->basis = static_cast<octopus::EffectBasis>(ebI);
                     });
@@ -860,7 +867,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
             for (int etI = 0; etI < IM_ARRAYSIZE(EFFECT_TYPES_STR); etI++) {
                 const bool isSelected = (effectTypeI == etI);
                 if (ImGui::Selectable(EFFECT_TYPES_STR[etI], isSelected)) {
-                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&octopusEffect, etI](octopus::LayerChange::Values &values) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, nonstd::nullopt, [&octopusEffect, etI](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
                         values.effect->type = static_cast<octopus::Effect::Type>(etI);
                     });
@@ -894,7 +901,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                 ImGui::Text("Color:");
                 ImGui::SameLine(100);
                 if (ImGui::ColorPicker4(layerPropName(layerId, "effect-overlay-color").c_str(), (float*)&imColor, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview)) {
-                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&imColor, &octopusEffect](octopus::LayerChange::Values &values) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, nonstd::nullopt, [&imColor, &octopusEffect](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
                         values.effect->overlay->type = octopus::Fill::Type::COLOR;
                         values.effect->overlay->color = toOctopusColor(imColor);
@@ -917,7 +924,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                 ImGui::SameLine(100);
                 float strokeThickness = octopusEffectStroke.thickness;
                 if (ImGui::DragFloat(layerPropName(layerId, "effect-stroke-thickness").c_str(), &strokeThickness, 0.1f, 0.0f, 100.0f)) {
-                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&strokeThickness, &octopusEffect](octopus::LayerChange::Values &values) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, nonstd::nullopt, [&strokeThickness, &octopusEffect](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
                         values.effect->stroke->thickness = strokeThickness;
                     });
@@ -931,7 +938,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                     for (int spI = 0; spI < IM_ARRAYSIZE(STROKE_POSITIONS_STR); spI++) {
                         const bool isSelected = (strokePositionI == spI);
                         if (ImGui::Selectable(STROKE_POSITIONS_STR[spI], isSelected)) {
-                            changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [spI, &octopusEffect](octopus::LayerChange::Values &values) {
+                            changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei,nonstd::nullopt,  [spI, &octopusEffect](octopus::LayerChange::Values &values) {
                                 values.effect = octopusEffect;
                                 values.effect->stroke->position = static_cast<octopus::Stroke::Position>(spI);
                             });
@@ -952,7 +959,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                 ImGui::Text("Color:");
                 ImGui::SameLine(100);
                 if (ImGui::ColorPicker4(layerPropName(layerId, "effect-stroke-color").c_str(), (float*)&imColor, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview)) {
-                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&imColor, &octopusEffect](octopus::LayerChange::Values &values) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, nonstd::nullopt, [&imColor, &octopusEffect](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
                         values.effect->stroke->fill.type = octopus::Fill::Type::COLOR;
                         values.effect->stroke->fill.color = toOctopusColor(imColor);
@@ -976,7 +983,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                 ImGui::SameLine(100);
                 Vector2f shadowOffset { static_cast<float>(octopusEffectShadow.offset.x), static_cast<float>(octopusEffectShadow.offset.y) };
                 if (ImGui::DragFloat2(layerPropName(layerId, "effect-shadow-offset").c_str(), &shadowOffset.x, 0.05f, 0.0f, 100.0f)) {
-                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&octopusEffect, &shadowOffset](octopus::LayerChange::Values &values) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, nonstd::nullopt, [&octopusEffect, &shadowOffset](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
                         values.effect->shadow->offset.x = shadowOffset.x;
                         values.effect->shadow->offset.y = shadowOffset.y;
@@ -988,7 +995,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                 ImGui::SameLine(100);
                 float shadowBlur = octopusEffectShadow.blur;
                 if (ImGui::DragFloat(layerPropName(layerId, "effect-shadow-blur").c_str(), &shadowBlur, 0.1f, 0.0f, 100.0f)) {
-                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&shadowBlur, &octopusEffect](octopus::LayerChange::Values &values) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, nonstd::nullopt, [&shadowBlur, &octopusEffect](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
                         values.effect->shadow->blur = shadowBlur;
                     });
@@ -999,7 +1006,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                 ImGui::SameLine(100);
                 float shadowChoke = octopusEffectShadow.choke;
                 if (ImGui::DragFloat(layerPropName(layerId, "effect-shadow-choke").c_str(), &shadowChoke, 0.1f, 0.0f, 100.0f)) {
-                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&shadowChoke, &octopusEffect](octopus::LayerChange::Values &values) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, nonstd::nullopt, [&shadowChoke, &octopusEffect](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
                         values.effect->shadow->choke = shadowChoke;
                     });
@@ -1010,7 +1017,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                 ImGui::SameLine(100);
                 const ImVec4 &imColor = toImColor(octopusEffectShadow.color);
                 if (ImGui::ColorPicker4(layerPropName(layerId, "effect-shadow-color").c_str(), (float*)&imColor, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview)) {
-                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&imColor, &octopusEffect](octopus::LayerChange::Values &values) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, nonstd::nullopt, [&imColor, &octopusEffect](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
                         values.effect->shadow->color = toOctopusColor(imColor);
                     });
@@ -1032,7 +1039,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                 ImGui::SameLine(100);
                 Vector2f shadowOffset { static_cast<float>(octopusEffectGlow.offset.x), static_cast<float>(octopusEffectGlow.offset.y) };
                 if (ImGui::DragFloat2(layerPropName(layerId, "effect-glow-offset").c_str(), &shadowOffset.x, 0.05f, 0.0f, 100.0f)) {
-                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&octopusEffect, &shadowOffset](octopus::LayerChange::Values &values) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, nonstd::nullopt, [&octopusEffect, &shadowOffset](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
                         values.effect->glow->offset.x = shadowOffset.x;
                         values.effect->glow->offset.y = shadowOffset.y;
@@ -1044,7 +1051,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                 ImGui::SameLine(100);
                 float shadowBlur = octopusEffectGlow.blur;
                 if (ImGui::DragFloat(layerPropName(layerId, "effect-glow-blur").c_str(), &shadowBlur, 0.1f, 0.0f, 100.0f)) {
-                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&shadowBlur, &octopusEffect](octopus::LayerChange::Values &values) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, nonstd::nullopt, [&shadowBlur, &octopusEffect](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
                         values.effect->glow->blur = shadowBlur;
                     });
@@ -1055,7 +1062,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                 ImGui::SameLine(100);
                 float shadowChoke = octopusEffectGlow.choke;
                 if (ImGui::DragFloat(layerPropName(layerId, "effect-glow-choke").c_str(), &shadowChoke, 0.1f, 0.0f, 100.0f)) {
-                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&shadowChoke, &octopusEffect](octopus::LayerChange::Values &values) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, nonstd::nullopt, [&shadowChoke, &octopusEffect](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
                         values.effect->glow->choke = shadowChoke;
                     });
@@ -1066,7 +1073,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                 ImGui::SameLine(100);
                 const ImVec4 &imColor = toImColor(octopusEffectGlow.color);
                 if (ImGui::ColorPicker4(layerPropName(layerId, "effect-glow-color").c_str(), (float*)&imColor, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview)) {
-                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&imColor, &octopusEffect](octopus::LayerChange::Values &values) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, nonstd::nullopt, [&imColor, &octopusEffect](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
                         values.effect->glow->color = toOctopusColor(imColor);
                     });
@@ -1085,7 +1092,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                 ImGui::SameLine(100);
                 float blurAmount = *octopusEffect.blur;
                 if (ImGui::DragFloat(layerPropName(layerId, "effect-blur-amount").c_str(), &blurAmount, 0.1f, 0.0f, 100.0f)) {
-                    changeReplace(octopus::LayerChange::Subject::LAYER, apiContext, layerId, ei, [&octopusEffect, blurAmount](octopus::LayerChange::Values &values) {
+                    changeReplace(octopus::LayerChange::Subject::LAYER, apiContext, layerId, ei, nonstd::nullopt, [&octopusEffect, blurAmount](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
                         values.effect->blur = blurAmount;
                     });
@@ -1102,7 +1109,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
 
     }
     if (effectToRemove >= 0 && effectToRemove < static_cast<int>(octopusEffects.size())) {
-        changeRemove(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, effectToRemove);
+        changeRemove(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, nonstd::nullopt, effectToRemove);
     }
 
     ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
