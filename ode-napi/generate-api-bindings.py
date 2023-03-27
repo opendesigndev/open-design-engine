@@ -336,7 +336,7 @@ def tsType(type):
     type = type.strip()
     wrap = ''
     if (match := reArgAttrib.search(type)):
-        if match.group(1) == 'ODE_OUT_RETURN':
+        if match.group(1) == 'ODE_OUT':
             # The argument object does not have to contain any values, but it has
             # to be there for us to be able to write into it.
             wrap = 'Partial'

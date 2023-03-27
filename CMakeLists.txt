@@ -19,8 +19,10 @@ endif()
 get_property(ODE_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if(NOT ODE_MULTI_CONFIG AND NOT CMAKE_BUILD_TYPE)
     message(STATUS "CMAKE_BUILD_TYPE not set, defaulting to Release")
-    set(CMAKE_BUILD_TYPE Release)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "")
 endif()
+
+message(STATUS "CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
 
 # Make sure that vcpkg toolchain file is set
 if(NOT CMAKE_TOOLCHAIN_FILE AND NOT EMSCRIPTEN)
