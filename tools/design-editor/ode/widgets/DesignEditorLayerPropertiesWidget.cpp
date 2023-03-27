@@ -92,6 +92,28 @@ const char *IMAGE_REF_TYPES_STR[] = {
     "RESOURCE_REF",
 };
 
+const char *EFFECT_TYPES_STR[] = {
+    "OVERLAY",
+    "STROKE",
+    "DROP_SHADOW",
+    "INNER_SHADOW",
+    "OUTER_GLOW",
+    "INNER_GLOW",
+    "GAUSSIAN_BLUR",
+    "BOUNDED_BLUR",
+    "BLUR",
+    "OTHER"
+};
+
+const std::map<int, const char*> EFFECT_BASIS_MAP {
+    { 1, "BODY" },
+    { 3, "BODY_AND_STROKES" },
+    { 4, "FILL" },
+    { 7, "LAYER_AND_EFFECTS" },
+    { 8, "BACKGROUND" },
+};
+
+
 std::string layerTypeToShortString(ODE_LayerType layerType) {
     switch (layerType) {
         case ODE_LAYER_TYPE_UNSPECIFIED: return "-";
@@ -585,7 +607,6 @@ void drawLayerShapeFill(const ODE_StringRef &layerId,
         }
         case octopus::Fill::Type::IMAGE:
         {
-            // TODO: Image + positioning
             ImGui::Text("Image:");
 
             // Image ref value
@@ -771,23 +792,314 @@ void drawLayerEffects(const ODE_StringRef &layerId,
     }
     int effectToRemove = -1;
     for (size_t ei = 0; ei < octopusEffects.size(); ++ei) {
-        ImGui::Dummy(ImVec2(20.0f, 0.0f));
-        ImGui::SameLine(50);
+        const octopus::Effect &octopusEffect = octopusEffects[ei];
 
-        bool effectVisible = octopusEffects[ei].visible;
+        ImGui::Text("Effect #%i:", static_cast<int>(ei));
+
+        ImGui::SameLine(415);
+        if (ImGui::SmallButton(layerPropName(layerId, (std::string("-##layer-effect-remove")+std::to_string(ei)).c_str(), "-").c_str())) {
+            effectToRemove = static_cast<int>(ei);
+        }
+
+        // Visibility
+        ImGui::Text("Visible:");
+        ImGui::SameLine(100);
+        bool effectVisible = octopusEffect.visible;
         if (ImGui::Checkbox(layerPropName(layerId, "effect-visibility").c_str(), &effectVisible)) {
-            changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&effect = octopusEffects[ei], effectVisible](octopus::LayerChange::Values &values) {
-                values.effect = effect;
+            changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&octopusEffect, effectVisible](octopus::LayerChange::Values &values) {
+                values.effect = octopusEffect;
                 values.effect->visible = effectVisible;
             });
         }
 
-        ImGui::SameLine(415);
-        if (ImGui::SmallButton(layerPropName(layerId, (std::string("-##layer-effect-remove")+std::to_string(ei)).c_str()).c_str())) {
-            effectToRemove = static_cast<int>(ei);
+        ImGui::Text("Blend mode:");
+        ImGui::SameLine(100);
+        const int blendModeI = static_cast<int>(octopusEffect.blendMode);
+        if (ImGui::BeginCombo(layerPropName(layerId, "effect-blend-mode").c_str(), BLEND_MODES_STR[blendModeI])) {
+            for (int bmI = 0; bmI < IM_ARRAYSIZE(BLEND_MODES_STR); bmI++) {
+                const bool isSelected = (blendModeI == bmI);
+                if (ImGui::Selectable(BLEND_MODES_STR[bmI], isSelected)) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&octopusEffect, bmI](octopus::LayerChange::Values &values) {
+                        values.effect = octopusEffect;
+                        values.effect->blendMode = static_cast<octopus::BlendMode>(bmI);
+                    });
+                }
+                if (isSelected) {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
         }
 
-        // TODO: remaining effect parameters
+        // Basis
+        ImGui::Text("Basis:");
+        ImGui::SameLine(100);
+        const int effectBasisI = static_cast<int>(octopusEffect.basis);
+        if (ImGui::BeginCombo(layerPropName(layerId, "effect-basis").c_str(), EFFECT_BASIS_MAP.at(effectBasisI))) {
+            for (const auto &ebPair : EFFECT_BASIS_MAP) {
+                const int ebI = ebPair.first;
+                const bool isSelected = (effectBasisI == ebI);
+                if (ImGui::Selectable(EFFECT_BASIS_MAP.at(ebI), isSelected)) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&octopusEffect, ebI](octopus::LayerChange::Values &values) {
+                        values.effect = octopusEffect;
+                        values.effect->basis = static_cast<octopus::EffectBasis>(ebI);
+                    });
+                }
+                if (isSelected) {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+        }
+
+        // Type
+        ImGui::Text("Type:");
+        ImGui::SameLine(100);
+        const int effectTypeI = static_cast<int>(octopusEffect.type);
+        if (ImGui::BeginCombo(layerPropName(layerId, "effect-type").c_str(), EFFECT_TYPES_STR[effectTypeI])) {
+            for (int etI = 0; etI < IM_ARRAYSIZE(EFFECT_TYPES_STR); etI++) {
+                const bool isSelected = (effectTypeI == etI);
+                if (ImGui::Selectable(EFFECT_TYPES_STR[etI], isSelected)) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&octopusEffect, etI](octopus::LayerChange::Values &values) {
+                        values.effect = octopusEffect;
+                        values.effect->type = static_cast<octopus::Effect::Type>(etI);
+                    });
+                }
+                if (isSelected) {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+        }
+
+        switch (octopusEffect.type) {
+            case octopus::Effect::Type::OVERLAY:
+            {
+                if (!octopusEffect.overlay.has_value()) {
+                    // TODO: Can overlay be undefined ?
+                    break;
+                }
+
+                const octopus::Fill &octopusEffectOverlay = *octopusEffect.overlay;
+                if (octopusEffectOverlay.type != octopus::Fill::Type::COLOR) {
+                    // TODO: Handle other effect overlay types ?
+                    break;
+                }
+
+                // Color
+                ImVec4 imColor = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+                if (octopusEffectOverlay.color.has_value()) {
+                    imColor = toImColor(*octopusEffectOverlay.color);
+                }
+                ImGui::Text("Color:");
+                ImGui::SameLine(100);
+                if (ImGui::ColorPicker4(layerPropName(layerId, "effect-overlay-color").c_str(), (float*)&imColor, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview)) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&imColor, &octopusEffect](octopus::LayerChange::Values &values) {
+                        values.effect = octopusEffect;
+                        values.effect->overlay->type = octopus::Fill::Type::COLOR;
+                        values.effect->overlay->color = toOctopusColor(imColor);
+                    });
+                }
+                break;
+            }
+            case octopus::Effect::Type::STROKE:
+            {
+                if (!octopusEffect.stroke.has_value()) {
+                    // TODO: Can stroke be undefined ?
+                    break;
+                }
+
+                const octopus::Stroke &octopusEffectStroke = *octopusEffect.stroke;
+                const octopus::Fill &octopusEffectStrokeFill = octopusEffectStroke.fill;
+
+                // Thickness
+                ImGui::Text("Thickess:");
+                ImGui::SameLine(100);
+                float strokeThickness = octopusEffectStroke.thickness;
+                if (ImGui::DragFloat(layerPropName(layerId, "effect-stroke-thickness").c_str(), &strokeThickness, 0.1f, 0.0f, 100.0f)) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&strokeThickness, &octopusEffect](octopus::LayerChange::Values &values) {
+                        values.effect = octopusEffect;
+                        values.effect->stroke->thickness = strokeThickness;
+                    });
+                }
+
+                // Position
+                ImGui::Text("Position:");
+                ImGui::SameLine(100);
+                const int strokePositionI = static_cast<int>(octopusEffectStroke.position);
+                if (ImGui::BeginCombo(layerPropName(layerId, "effect-stroke-position").c_str(), STROKE_POSITIONS_STR[strokePositionI])) {
+                    for (int spI = 0; spI < IM_ARRAYSIZE(STROKE_POSITIONS_STR); spI++) {
+                        const bool isSelected = (strokePositionI == spI);
+                        if (ImGui::Selectable(STROKE_POSITIONS_STR[spI], isSelected)) {
+                            changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [spI, &octopusEffect](octopus::LayerChange::Values &values) {
+                                values.effect = octopusEffect;
+                                values.effect->stroke->position = static_cast<octopus::Stroke::Position>(spI);
+                            });
+                        }
+                        if (isSelected) {
+                            ImGui::SetItemDefaultFocus();
+                        }
+                    }
+                    ImGui::EndCombo();
+                }
+
+                // Color
+                // TODO: What if effect stroke type other than COLOR?
+                ImVec4 imColor = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+                if (octopusEffectStrokeFill.type == octopus::Fill::Type::COLOR && octopusEffectStrokeFill.color.has_value()) {
+                    imColor = toImColor(*octopusEffectStrokeFill.color);
+                }
+                ImGui::Text("Color:");
+                ImGui::SameLine(100);
+                if (ImGui::ColorPicker4(layerPropName(layerId, "effect-stroke-color").c_str(), (float*)&imColor, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview)) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&imColor, &octopusEffect](octopus::LayerChange::Values &values) {
+                        values.effect = octopusEffect;
+                        values.effect->stroke->fill.type = octopus::Fill::Type::COLOR;
+                        values.effect->stroke->fill.color = toOctopusColor(imColor);
+                    });
+                }
+
+                break;
+            }
+            case octopus::Effect::Type::DROP_SHADOW:
+            case octopus::Effect::Type::INNER_SHADOW:
+            {
+                if (!octopusEffect.shadow.has_value()) {
+                    // TODO: Can shadow be undefined ?
+                    break;
+                }
+
+                const octopus::Shadow &octopusEffectShadow = *octopusEffect.shadow;
+
+                // Effect shadow offset
+                ImGui::Text("Offset:");
+                ImGui::SameLine(100);
+                Vector2f shadowOffset { static_cast<float>(octopusEffectShadow.offset.x), static_cast<float>(octopusEffectShadow.offset.y) };
+                if (ImGui::DragFloat2(layerPropName(layerId, "effect-shadow-offset").c_str(), &shadowOffset.x, 0.05f, 0.0f, 100.0f)) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&octopusEffect, &shadowOffset](octopus::LayerChange::Values &values) {
+                        values.effect = octopusEffect;
+                        values.effect->shadow->offset.x = shadowOffset.x;
+                        values.effect->shadow->offset.y = shadowOffset.y;
+                    });
+                }
+
+                // Effect shadow blur
+                ImGui::Text("Blur:");
+                ImGui::SameLine(100);
+                float shadowBlur = octopusEffectShadow.blur;
+                if (ImGui::DragFloat(layerPropName(layerId, "effect-shadow-blur").c_str(), &shadowBlur, 0.1f, 0.0f, 100.0f)) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&shadowBlur, &octopusEffect](octopus::LayerChange::Values &values) {
+                        values.effect = octopusEffect;
+                        values.effect->shadow->blur = shadowBlur;
+                    });
+                }
+
+                // Effect shadow choke
+                ImGui::Text("Thickess:");
+                ImGui::SameLine(100);
+                float shadowChoke = octopusEffectShadow.choke;
+                if (ImGui::DragFloat(layerPropName(layerId, "effect-shadow-choke").c_str(), &shadowChoke, 0.1f, 0.0f, 100.0f)) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&shadowChoke, &octopusEffect](octopus::LayerChange::Values &values) {
+                        values.effect = octopusEffect;
+                        values.effect->shadow->choke = shadowChoke;
+                    });
+                }
+
+                // Effect shadow color
+                ImGui::Text("Color:");
+                ImGui::SameLine(100);
+                const ImVec4 &imColor = toImColor(octopusEffectShadow.color);
+                if (ImGui::ColorPicker4(layerPropName(layerId, "effect-shadow-color").c_str(), (float*)&imColor, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview)) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&imColor, &octopusEffect](octopus::LayerChange::Values &values) {
+                        values.effect = octopusEffect;
+                        values.effect->shadow->color = toOctopusColor(imColor);
+                    });
+                }
+                break;
+            }
+            case octopus::Effect::Type::OUTER_GLOW:
+            case octopus::Effect::Type::INNER_GLOW:
+            {
+                if (!octopusEffect.glow.has_value()) {
+                    // TODO: Can glow be undefined ?
+                    break;
+                }
+
+                const octopus::Shadow &octopusEffectGlow = *octopusEffect.glow;
+
+                // Effect shadow offset
+                ImGui::Text("Offset:");
+                ImGui::SameLine(100);
+                Vector2f shadowOffset { static_cast<float>(octopusEffectGlow.offset.x), static_cast<float>(octopusEffectGlow.offset.y) };
+                if (ImGui::DragFloat2(layerPropName(layerId, "effect-glow-offset").c_str(), &shadowOffset.x, 0.05f, 0.0f, 100.0f)) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&octopusEffect, &shadowOffset](octopus::LayerChange::Values &values) {
+                        values.effect = octopusEffect;
+                        values.effect->glow->offset.x = shadowOffset.x;
+                        values.effect->glow->offset.y = shadowOffset.y;
+                    });
+                }
+
+                // Effect shadow blur
+                ImGui::Text("Blur:");
+                ImGui::SameLine(100);
+                float shadowBlur = octopusEffectGlow.blur;
+                if (ImGui::DragFloat(layerPropName(layerId, "effect-glow-blur").c_str(), &shadowBlur, 0.1f, 0.0f, 100.0f)) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&shadowBlur, &octopusEffect](octopus::LayerChange::Values &values) {
+                        values.effect = octopusEffect;
+                        values.effect->glow->blur = shadowBlur;
+                    });
+                }
+
+                // Effect shadow choke
+                ImGui::Text("Thickess:");
+                ImGui::SameLine(100);
+                float shadowChoke = octopusEffectGlow.choke;
+                if (ImGui::DragFloat(layerPropName(layerId, "effect-glow-choke").c_str(), &shadowChoke, 0.1f, 0.0f, 100.0f)) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&shadowChoke, &octopusEffect](octopus::LayerChange::Values &values) {
+                        values.effect = octopusEffect;
+                        values.effect->glow->choke = shadowChoke;
+                    });
+                }
+
+                // Effect shadow color
+                ImGui::Text("Color:");
+                ImGui::SameLine(100);
+                const ImVec4 &imColor = toImColor(octopusEffectGlow.color);
+                if (ImGui::ColorPicker4(layerPropName(layerId, "effect-glow-color").c_str(), (float*)&imColor, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview)) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, [&imColor, &octopusEffect](octopus::LayerChange::Values &values) {
+                        values.effect = octopusEffect;
+                        values.effect->glow->color = toOctopusColor(imColor);
+                    });
+                }
+                break;
+            }
+            case octopus::Effect::Type::GAUSSIAN_BLUR:
+            case octopus::Effect::Type::BOUNDED_BLUR:
+            case octopus::Effect::Type::BLUR:
+            {
+                if (!octopusEffect.blur.has_value()) {
+                    // TODO: Can blur be undefined ?
+                    break;
+                }
+                ImGui::Text("Blur:");
+                ImGui::SameLine(100);
+                float blurAmount = *octopusEffect.blur;
+                if (ImGui::DragFloat(layerPropName(layerId, "effect-blur-amount").c_str(), &blurAmount, 0.1f, 0.0f, 100.0f)) {
+                    changeReplace(octopus::LayerChange::Subject::LAYER, apiContext, layerId, ei, [&octopusEffect, blurAmount](octopus::LayerChange::Values &values) {
+                        values.effect = octopusEffect;
+                        values.effect->blur = blurAmount;
+                    });
+                }
+                break;
+            }
+            case octopus::Effect::Type::OTHER:
+            {
+                break;
+            }
+        }
+
+        // TODO: effect fill filters
+
     }
     if (effectToRemove >= 0 && effectToRemove < static_cast<int>(octopusEffects.size())) {
         changeRemove(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, effectToRemove);
