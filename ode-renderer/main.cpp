@@ -12,12 +12,9 @@
 
 #ifdef ODE_DEBUG
     #define BUILD_TYPE "Debug"
-    #error Debug build
 #endif
 #ifdef ODE_RELEASE
     #define BUILD_TYPE "Release"
-#else
-    #error Debug build
 #endif
 #ifdef ODE_RASTERIZER_TEXTURE_SUPPORT
     #define CONFIG_SKIA_GPU "enabled"
