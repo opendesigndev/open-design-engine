@@ -1,6 +1,5 @@
-import { StringRef, String } from './exports.js'
+import { StringRef, String, MemoryBuffer } from './exports.js'
 
-export type MemoryRef = ArrayBuffer;
 export type Transformation = [
     a: number,
     b: number,
@@ -11,3 +10,4 @@ export type Transformation = [
 ]
 export function makeString(value: string): String
 export function getString(value: StringRef): string
+export function makeMemoryBuffer(value: ArrayBuffer): MemoryBuffer

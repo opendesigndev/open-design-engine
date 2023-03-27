@@ -86,7 +86,7 @@ ODE_Result ODE_API ode_destroyDesignImageBase(ODE_DesignImageBaseHandle designIm
 }
 
 ODE_Result ODE_API ode_design_loadImagePixels(ODE_DesignImageBaseHandle designImageBase, ODE_StringRef key, ODE_BitmapRef bitmap) {
-    ODE_ASSERT(key.data && bitmap.pixels.data && bitmap.pixels.length == 4*bitmap.width*bitmap.height);
+    ODE_ASSERT(key.data && bitmap.pixels);
     if (!designImageBase.ptr)
         return ODE_RESULT_INVALID_IMAGE_BASE;
     if (!(bitmap.width > 0 && bitmap.height > 0))
@@ -98,7 +98,7 @@ ODE_Result ODE_API ode_design_loadImagePixels(ODE_DesignImageBaseHandle designIm
         default:
             return ODE_RESULT_INVALID_PIXEL_FORMAT;
     }
-    BitmapConstRef bitmapRef(PixelFormat(bitmap.format), reinterpret_cast<const void *>(bitmap.pixels.data), bitmap.width, bitmap.height);
+    BitmapConstRef bitmapRef(PixelFormat(bitmap.format), reinterpret_cast<const void *>(bitmap.pixels), bitmap.width, bitmap.height);
     octopus::Image imageRef = { };
     imageRef.ref.type = octopus::ImageRef::Type::PATH;
     imageRef.ref.value = ode_stringDeref(key);

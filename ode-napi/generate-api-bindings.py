@@ -133,7 +133,7 @@ def generateNapiBindings(entities, apiPath, donePaths):
     for entity in entities:
 
         # TODO actually solve this normally
-        if entity.name == 'ODE_MemoryRef' or entity.name == 'ODE_Transformation':
+        if entity.name == 'ODE_Transformation':
             continue
 
         fullName = namespacedName(entity.namespace, entity.name)

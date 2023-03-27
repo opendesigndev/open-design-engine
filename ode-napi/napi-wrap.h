@@ -36,9 +36,6 @@ Napi::Value wrapHandle(const Napi::Env &env, const char *name, const T &src);
 template <typename T>
 bool unwrapHandle(T &dst, const char *name, const Napi::Value &src);
 
-Napi::Value wrap(const Napi::Env &env, const ODE_MemoryRef &src);
-bool unwrap(ODE_MemoryRef &dst, const Napi::Value &src);
-
 Napi::Value wrap(const Napi::Env &env, const ODE_Transformation &src);
 bool unwrap(ODE_Transformation &dst, const Napi::Value &src);
 

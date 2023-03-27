@@ -27,14 +27,6 @@ ODE_Result ODE_API ode_reallocateMemoryBuffer(ODE_MemoryBuffer *buffer, size_t l
     return ODE_RESULT_MEMORY_ALLOCATION_ERROR;
 }
 
-ODE_Result ODE_API ode_createMemoryBuffer(ODE_MemoryBuffer *buffer, ODE_MemoryRef data) {
-    ODE_ASSERT(buffer);
-    if (ODE_Result result = ode_allocateMemoryBuffer(buffer, data.length))
-        return result;
-    memcpy(reinterpret_cast<void *>(buffer->data), reinterpret_cast<const void *>(data.data), data.length);
-    return ODE_RESULT_OK;
-}
-
 ODE_Result ODE_API ode_destroyMemoryBuffer(ODE_MemoryBuffer *buffer) {
     ODE_ASSERT(buffer);
     free(reinterpret_cast<void *>(buffer->data));

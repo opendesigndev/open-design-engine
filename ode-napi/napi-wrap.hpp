@@ -138,24 +138,6 @@ inline bool unwrapHandle(T &dst, const char *name, const Napi::Value &src) {
     return true;
 }
 
-inline Napi::Value wrap(const Napi::Env &env, const ODE_MemoryRef &src) {
-    Napi::TypeError::New(env, "Not implemented yet").ThrowAsJavaScriptException();
-    return Napi::Value();
-}
-
-inline bool unwrap(ODE_MemoryRef &dst, const Napi::Value &src) {
-    if (!src.IsArrayBuffer()) {
-        Napi::TypeError::New(src.Env(), "ArrayBuffer expected").ThrowAsJavaScriptException();
-        return false;
-    }
-    Napi::ArrayBuffer arrayBuffer = src.As<Napi::ArrayBuffer>();
-    if (src.Env().IsExceptionPending())
-        return false;
-    dst.data = arrayBuffer.Data();
-    dst.length = arrayBuffer.ByteLength();
-    return true;
-}
-
 inline Napi::Value wrap(const Napi::Env &env, const ODE_Transformation &src) {
     Napi::Array arr = Napi::Array::New(env, 6);
     arr.Set(uint32_t(0), src.matrix[0]);

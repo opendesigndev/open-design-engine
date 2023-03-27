@@ -34,9 +34,22 @@ Napi::Value getString(const Napi::CallbackInfo &info) {
     return Napi::String::New(env, reinterpret_cast<const char *>(ref.data), ref.length);
 }
 
+Napi::Value makeMemoryBuffer(const Napi::CallbackInfo &info) {
+    Napi::Env env = info.Env();
+    Napi::ArrayBuffer napiArrayBuffer = info[0].As<Napi::ArrayBuffer>();
+    if (env.IsExceptionPending())
+        return Napi::Value();
+    ODE_MemoryBuffer buffer = ode_makeMemoryBuffer(napiArrayBuffer.Data(), napiArrayBuffer.ByteLength());
+    Napi::Object obj = Napi::Object::New(env);
+    obj.Set("data", Napi::Number::New(env, reinterpret_cast<uintptr_t>(buffer.data)));
+    obj.Set("length", Napi::Number::New(env, buffer.length));
+    return obj;
+}
+
 Napi::Object initialize(Napi::Env env, Napi::Object exports) {
     exports.Set("makeString", Napi::Function::New<makeString>(env, "makeString"));
     exports.Set("getString", Napi::Function::New<getString>(env, "getString"));
+    exports.Set("makeMemoryBuffer", Napi::Function::New<makeMemoryBuffer>(env, "makeMemoryBuffer"));
     api_base_export(env, exports);
     logic_api_export(env, exports);
     renderer_api_export(env, exports);

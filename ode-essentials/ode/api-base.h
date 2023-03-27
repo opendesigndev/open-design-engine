@@ -112,14 +112,6 @@ typedef struct {
     size_t length;
 } ODE_MemoryBuffer;
 
-/// A reference to mutable memory block, does not hold ownership of data
-typedef struct {
-    /// Pointer to the beginning of the memory block
-    ODE_VarDataPtr data;
-    /// Length of the buffer in bytes
-    size_t length;
-} ODE_MemoryRef;
-
 /// A list of immutable string references
 typedef struct {
     /// Array of strings
@@ -148,9 +140,6 @@ ODE_Result ODE_API ode_allocateMemoryBuffer(ODE_OUT_RETURN ODE_MemoryBuffer *buf
  */
 ODE_Result ODE_API ode_reallocateMemoryBuffer(ODE_INOUT ODE_MemoryBuffer *buffer, size_t length);
 
-/// Creates a memory buffer as a copy of memory reference (TODO CONST CORRECTNESS)
-ODE_Result ODE_API ode_createMemoryBuffer(ODE_OUT_RETURN ODE_MemoryBuffer *buffer, ODE_MemoryRef data);
-
 /// Destroys the memory buffer, freeing its allocated memory
 ODE_Result ODE_API ode_destroyMemoryBuffer(ODE_INOUT ODE_MemoryBuffer *buffer);
 
@@ -161,7 +150,6 @@ ODE_Result ODE_API ode_destroyMemoryBuffer(ODE_INOUT ODE_MemoryBuffer *buffer);
 
 // C++ utilities
 
-#include <cstdlib>
 #include <cstring>
 #include <string>
 
@@ -214,6 +202,17 @@ inline ODE_String ode_makeString(const ODE_StringRef &ref) {
         string.length = ref.length;
     }
     return string;
+}
+
+/// Creates an ODE_MemoryBuffer from an array
+inline ODE_MemoryBuffer ode_makeMemoryBuffer(const void *data, size_t length) {
+    ODE_MemoryBuffer buffer = { };
+    if (length && (buffer.data = malloc(length))) {
+        buffer.length = length;
+        if (data)
+            memcpy(buffer.data, data, length);
+    }
+    return buffer;
 }
 
 #endif

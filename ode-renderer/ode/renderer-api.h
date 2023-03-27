@@ -33,7 +33,7 @@ typedef struct {
     /// The pixel format (see ODE_PIXEL_FORMAT_... constants)
     int format;
     /// Pointer to the first (top-left) pixel. Pixels are stored contiguously in memory in row-major order
-    ODE_MemoryRef pixels;
+    ODE_ConstDataPtr pixels;
     /// Dimensions of bitmap
     int width, height;
 } ODE_BitmapRef;
@@ -127,8 +127,7 @@ ODE_Result ODE_API ode_pr1_animation_drawFrame(ODE_PR1_AnimationRendererHandle r
 inline ODE_BitmapRef ode_bitmapRef(ODE_Bitmap bitmap) {
     ODE_BitmapRef ref = { };
     ref.format = bitmap.format;
-    ref.pixels.data = bitmap.pixels;
-    ref.pixels.length = 4*bitmap.width*bitmap.height; // TODO: take format into account
+    ref.pixels = bitmap.pixels;
     ref.width = bitmap.width;
     ref.height = bitmap.height;
     return ref;
