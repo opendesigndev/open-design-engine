@@ -17,7 +17,7 @@ class TextShapeHolder {
 public:
     class RendererData {
     public:
-        virtual ~RendererData() = 0;
+        virtual ~RendererData() = default;
     };
 
     std::unique_ptr<RendererData> rendererData;

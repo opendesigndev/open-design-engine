@@ -343,20 +343,6 @@ PlacedImagePtr Renderer::resolveAlphaChannel(const PlacedImagePtr &image) {
     return PlacedImagePtr(Image::fromTexture(outTex, Image::PREMULTIPLIED), pxBounds);
 }
 
-// THE REST IS TEMPORARILY BORROWED FROM OLD RENDERER - TODO REMAKE
-
-static Matrix3x3d translationMatrix(const Vector2i &v) {
-    return Matrix3x3d(1, 0, 0, 0, 1, 0, v.x, v.y, 1);
-}
-
-static Matrix3x3d scaleMatrix(const Vector2d &v) {
-    return Matrix3x3d(v.x, 0, 0, 0, v.y, 0, 0, 0, 1);
-}
-
-static byte cComp_f2b(float v) {
-    return (byte) std::min(std::max(int(256.f*v), 0x00), 0xff);
-}
-
 static UnscaledBounds transformBounds(const UntransformedBounds &bounds, const TransformationMatrix &matrix) {
     Vector2d a = matrix*Vector3d(bounds.a.x, bounds.a.y, 1);
     Vector2d b = matrix*Vector3d(bounds.b.x, bounds.a.y, 1);

@@ -1,7 +1,14 @@
 
 #include "TextRenderer.h"
 
+#include <open-design-text-renderer/PlacedTextData.h>
+#include "TextMesh.h"
+#include "FontAtlas.h"
+
 namespace ode {
+
+// TODO move to context
+std::map<odtr::FontSpecifier, FontAtlas> GLOBAL_FONT_ATLAS_STORAGE;
 
 // TODO delete when text transformations are implemented properly
 static TransformationMatrix animationTransform(Component &component, const LayerInstanceSpecifier &layer, double time) {
@@ -18,17 +25,34 @@ static TransformationMatrix animationTransform(Component &component, const Layer
 }
 
 TextRenderer::TextRenderer(GraphicsContext &gc, TextureFrameBufferManager &tfbManager, Mesh &billboard) : tfbManager(tfbManager), billboard(billboard) {
-    #ifndef ODE_REALTIME_TEXT_RENDERER
+    #ifdef ODE_REALTIME_TEXT_RENDERER
+        // TODO
+    #else
         transformShader.initialize();
     #endif
 }
 
 #ifdef ODE_REALTIME_TEXT_RENDERER
-#else
 
 PlacedImagePtr TextRenderer::drawLayerText(Component &component, const LayerInstanceSpecifier &layer, const ScaledBounds &visibleBounds, double scale, double time) {
-    if (Result<odtr::TextShapeHandle, DesignError> shape = component.getLayerTextShape(layer->id)) {
-        odtr::Dimensions dimensions = odtr::getDrawBufferDimensions(TEXT_RENDERER_CONTEXT, shape.value());
+    if (Result<TextShapeHolder *, DesignError> shape = component.getLayerTextShape(layer->id)) {
+        if (!(shape.value() && *shape.value()))
+            return nullptr;
+        TextMesh *textMesh = static_cast<TextMesh *>(shape.value()->rendererData.get());
+        if (!textMesh)
+            shape.value()->rendererData = std::unique_ptr<TextShapeHolder::RendererData>(textMesh = new TextMesh);
+        ODE_ASSERT(textMesh);
+
+        const odtr::PlacedTextData *placedTextData = odtr::getShapedText(TEXT_RENDERER_CONTEXT, *shape.value());
+        ODE_ASSERT(placedTextData);
+        printf("Glyph fonts:");
+        for (const odtr::PlacedGlyphsPerFont::value_type &font : placedTextData->glyphs) {
+            FontAtlas &atlas = GLOBAL_FONT_ATLAS_STORAGE[font.first];
+            printf(" %s,", font.first.faceId.c_str());
+        }
+        printf("\n");
+
+        odtr::Dimensions dimensions = odtr::getDrawBufferDimensions(TEXT_RENDERER_CONTEXT, *shape.value());
         // Hack to add 1 pixel padding for clamp-to-edge, in-place pixel move
         BitmapPtr bitmap(new Bitmap(PixelFormat::PREMULTIPLIED_RGBA, Vector2i(dimensions.width+2, dimensions.height+2)));
         size_t pxSize = pixelSize(bitmap->format());
@@ -36,7 +60,42 @@ PlacedImagePtr TextRenderer::drawLayerText(Component &component, const LayerInst
         bitmap->clear();
         BitmapRef misalignedBitmap(bitmap->format(), (*bitmap)(1, 1), dimensions.width, dimensions.height);
         SparseBitmapRef bitmapMid(bitmap->format(), (*bitmap)(1, 1), dimensions.width, dimensions.height, bitmapStride);
-        odtr::DrawTextResult result = odtr::drawText(TEXT_RENDERER_CONTEXT, shape.value(), misalignedBitmap.pixels, misalignedBitmap.width(), misalignedBitmap.height());
+        odtr::DrawTextResult result = odtr::drawText(TEXT_RENDERER_CONTEXT, *shape.value(), misalignedBitmap.pixels, misalignedBitmap.width(), misalignedBitmap.height());
+        // Fix misaligned pixel rows
+        for (int y = bitmapMid.height()-1; y > 0; --y) {
+            memmove(bitmapMid(0, y), misalignedBitmap(0, y), pxSize*bitmapMid.width());
+            // Re-clear leftmost and rightmost column
+            memset((*bitmap)(0, y+1), 0, pxSize);
+            memset((*bitmap)(bitmap->width()-1, y+1), 0, pxSize);
+        }
+        memset((*bitmap)(bitmap->width()-1, 1), 0, pxSize);
+        ScaledBounds bounds(result.bounds.l, result.bounds.t, result.bounds.l+result.bounds.w, result.bounds.t+result.bounds.h);
+        ScaledMargin padding;
+        padding.a.x = padding.b.x = bounds.dimensions().x/dimensions.width;
+        padding.a.y = padding.b.y = bounds.dimensions().y/dimensions.height;
+        bounds += padding;
+        PlacedImagePtr image(ImagePtr(new BitmapImage(bitmap, Image::NORMAL, Image::NO_BORDER)), bounds);
+        Matrix3x3d imageTransform = Matrix3x3d(TransformationMatrix::scale(scale)*layer.parentTransform*TransformationMatrix(layer->transform)*animationTransform(component, layer, time))*fromTextRendererMatrix(result.transform);
+        return image; //transformImage(image, imageTransform);
+    }
+    return nullptr;
+}
+
+#else
+
+PlacedImagePtr TextRenderer::drawLayerText(Component &component, const LayerInstanceSpecifier &layer, const ScaledBounds &visibleBounds, double scale, double time) {
+    if (Result<TextShapeHolder *, DesignError> shape = component.getLayerTextShape(layer->id)) {
+        if (!(shape.value() && *shape.value()))
+            return nullptr;
+        odtr::Dimensions dimensions = odtr::getDrawBufferDimensions(TEXT_RENDERER_CONTEXT, *shape.value());
+        // Hack to add 1 pixel padding for clamp-to-edge, in-place pixel move
+        BitmapPtr bitmap(new Bitmap(PixelFormat::PREMULTIPLIED_RGBA, Vector2i(dimensions.width+2, dimensions.height+2)));
+        size_t pxSize = pixelSize(bitmap->format());
+        size_t bitmapStride = pxSize*bitmap->width();
+        bitmap->clear();
+        BitmapRef misalignedBitmap(bitmap->format(), (*bitmap)(1, 1), dimensions.width, dimensions.height);
+        SparseBitmapRef bitmapMid(bitmap->format(), (*bitmap)(1, 1), dimensions.width, dimensions.height, bitmapStride);
+        odtr::DrawTextResult result = odtr::drawText(TEXT_RENDERER_CONTEXT, *shape.value(), misalignedBitmap.pixels, misalignedBitmap.width(), misalignedBitmap.height());
         // Fix misaligned pixel rows
         for (int y = bitmapMid.height()-1; y > 0; --y) {
             memmove(bitmapMid(0, y), misalignedBitmap(0, y), pxSize*bitmapMid.width());

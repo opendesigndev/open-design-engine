@@ -42,8 +42,8 @@ public:
     LayerMetrics metrics() const;
     TransformationMatrix transformation() const;
     double featureScale() const;
-    Rasterizer::Shape *getShape();
-    odtr::TextShapeHandle getTextShape();
+    Rasterizer::Shape *shape();
+    TextShapeHolder &textShape();
     const std::string &getParentId() const;
 
     octopus::Layer *operator->();
@@ -61,8 +61,8 @@ private:
     int statusFlags = 0;
     LayerBounds layerBounds;
 
-    Rasterizer::ShapePtr shape;
-    TextShapeHolder textShape;
+    Rasterizer::ShapePtr rasterizerShape;
+    TextShapeHolder textShapeHolder;
 
     DocumentAnimation anim;
 

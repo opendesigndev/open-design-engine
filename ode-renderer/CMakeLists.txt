@@ -17,6 +17,9 @@ target_include_directories(ode-renderer INTERFACE
     $<INSTALL_INTERFACE:include>
 )
 
+# Module configuration
+target_compile_definitions(ode-renderer PRIVATE ODE_REALTIME_TEXT_RENDERER)
+
 # Module dependencies
 target_link_libraries(ode-renderer PUBLIC liboctopus open-design-text-renderer ode-essentials ode-rasterizer ode-logic ode-graphics)
 if(NOT EMSCRIPTEN)
