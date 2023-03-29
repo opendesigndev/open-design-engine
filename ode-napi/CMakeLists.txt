@@ -1,31 +1,35 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-set(ODE_NAPI_SOURCES
-    "addon.cpp"
-    ${CMAKE_CURRENT_BINARY_DIR}/codegen/gen-api-base.cpp
-    ${CMAKE_CURRENT_BINARY_DIR}/codegen/gen-logic-api.cpp
-    ${CMAKE_CURRENT_BINARY_DIR}/codegen/gen-renderer-api.cpp
-    "manual-api-base.cpp"
-    "manual-logic-api.cpp"
-    "addon.h"
-    "manual-logic-api.h"
-    "napi-wrap.h"
+file(GLOB ODE_NAPI_HEADERS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "*.h" "*.hpp")
+file(GLOB ODE_NAPI_SOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "*.cpp")
+
+set(ODE_NAPI_GENERATED_HEADERS
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/napi-api-base.h
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/napi-logic-api.h
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/napi-renderer-api.h
 )
 
-# LIBRARY / EXECUTABLE
+set(ODE_NAPI_GENERATED_SOURCES
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/napi-api-base.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/napi-logic-api.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/napi-renderer-api.cpp
+)
+
+# LIBRARY / Emscripten module
 if(EMSCRIPTEN)
-    add_executable(ode-napi ${ODE_NAPI_SOURCES})
+    add_executable(ode-napi ${ODE_NAPI_HEADERS} ${ODE_NAPI_SOURCES} ${ODE_NAPI_GENERATED_HEADERS} ${ODE_NAPI_GENERATED_SOURCES})
 else()
-    add_library(ode-napi SHARED ${ODE_NAPI_SOURCES})
+    add_library(ode-napi SHARED ${ODE_NAPI_HEADERS} ${ODE_NAPI_SOURCES} ${ODE_NAPI_GENERATED_HEADERS} ${ODE_NAPI_GENERATED_SOURCES})
 endif()
 
 # DEPENDENCIES
-# The intermediate target is required to avoid some dependencies being linked
-# twice in wasm build.
-add_library(ode-napi-lib INTERFACE)
-target_link_libraries(ode-napi-lib INTERFACE liboctopus ode-essentials ode-logic ode-renderer)
-target_link_libraries(ode-napi PRIVATE ode-napi-lib)
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
+# The intermediate target is required to avoid some dependencies being linked twice in wasm build
+add_library(ode-napi-dependencies INTERFACE)
+target_link_libraries(ode-napi-dependencies INTERFACE liboctopus ode-essentials ode-logic ode-renderer)
+target_link_libraries(ode-napi PRIVATE ode-napi-dependencies)
 
 # This module's include files
 target_include_directories(ode-napi INTERFACE
@@ -34,37 +38,41 @@ target_include_directories(ode-napi INTERFACE
 )
 target_include_directories(ode-napi PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-    ${CMAKE_CURRENT_BINARY_DIR}/codegen/
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
 )
 
-SET(ODE_NAPI_CODEGEN_INPUT
-    ../ode-essentials/ode/api-base.h
-    ../ode-logic/ode/logic-api.h
-    ../ode-renderer/ode/renderer-api.h
+# Generate API bindings
+set(ODE_NAPI_BINDING_GENERATOR_INPUT
+    ${CMAKE_CURRENT_LIST_DIR}/../ode-essentials/ode/api-base.h
+    ${CMAKE_CURRENT_LIST_DIR}/../ode-logic/ode/logic-api.h
+    ${CMAKE_CURRENT_LIST_DIR}/../ode-renderer/ode/renderer-api.h
 )
 
 add_custom_command(
-        OUTPUT
-            ${CMAKE_CURRENT_BINARY_DIR}/codegen/api-base.d.ts
-            ${CMAKE_CURRENT_BINARY_DIR}/codegen/index.d.ts
-            ${CMAKE_CURRENT_BINARY_DIR}/codegen/logic-api.d.ts
-            ${CMAKE_CURRENT_BINARY_DIR}/codegen/renderer-api.d.ts
-            ${CMAKE_CURRENT_BINARY_DIR}/codegen/gen-api-base.cpp
-            ${CMAKE_CURRENT_BINARY_DIR}/codegen/gen-api-base.h
-            ${CMAKE_CURRENT_BINARY_DIR}/codegen/gen-logic-api.cpp
-            ${CMAKE_CURRENT_BINARY_DIR}/codegen/gen-logic-api.h
-            ${CMAKE_CURRENT_BINARY_DIR}/codegen/gen-renderer-api.cpp
-            ${CMAKE_CURRENT_BINARY_DIR}/codegen/gen-renderer-api.h
-            ${CMAKE_CURRENT_BINARY_DIR}/codegen/gen.h
-        MAIN_DEPENDENCY
-            generate-api-bindings.py
-        DEPENDS
-            ${ODE_NAPI_CODEGEN_INPUT}
-            generate-api-bindings.py
-        COMMAND python3 "${CMAKE_CURRENT_LIST_DIR}/generate-api-bindings.py" "${CMAKE_CURRENT_BINARY_DIR}" ${ODE_NAPI_CODEGEN_INPUT}
-        VERBATIM
+    OUTPUT
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/index.d.ts
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/api-base.d.ts
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/logic-api.d.ts
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/renderer-api.d.ts
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/napi-api-base.h
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/napi-api-base.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/napi-logic-api.h
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/napi-logic-api.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/napi-renderer-api.h
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/napi-renderer-api.cpp
+    MAIN_DEPENDENCY
+        ${CMAKE_CURRENT_LIST_DIR}/generate-api-bindings.py
+    DEPENDS
+        ${ODE_NAPI_BINDING_GENERATOR_INPUT}
+        ${CMAKE_CURRENT_LIST_DIR}/../api-utils.py
+        ${CMAKE_CURRENT_LIST_DIR}/generate-api-bindings.py
+    COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_LIST_DIR}/generate-api-bindings.py" "${CMAKE_CURRENT_BINARY_DIR}" ${ODE_NAPI_BINDING_GENERATOR_INPUT}
+    VERBATIM
 )
 
+source_group("Generated source" FILES ${ODE_NAPI_GENERATED_HEADERS} ${ODE_NAPI_GENERATED_SOURCES})
+
+# NPM PACKAGING
 function(copy_file_to_package packages from)
     set(target ${ARGV2})
     if(NOT target)
@@ -96,18 +104,18 @@ endfunction()
 # Then there are three sources for files which can be put into those packages:
 # - source files
 # - binary files, which are generated per config in case of cmake multi config setup
-# - codegened files, which are only generated once
+# - generated source files, which are only generated once
 #
 # Use correct function from the following list:
-# copy_built_file_to_package, copy_codegen_file_to_package, copy_source_file_to_package
+# copy_built_file_to_package, copy_generated_file_to_package, copy_source_file_to_package
 # and first argument is always the target package or list of packages
 
 function(copy_built_file_to_package packages file)
     copy_file_to_package("${packages}" $<TARGET_FILE_DIR:ode-napi>/${file} ${ARGV2})
 endfunction()
 
-function(copy_codegen_file_to_package packages file)
-    copy_file_to_package("${packages}" ${CMAKE_CURRENT_BINARY_DIR}/codegen/${file} ${ARGV2})
+function(copy_generated_file_to_package packages file)
+    copy_file_to_package("${packages}" ${CMAKE_CURRENT_BINARY_DIR}/generated/${file} ${ARGV2})
 endfunction()
 
 function(copy_source_file_to_package packages file)
@@ -128,7 +136,6 @@ if(EMSCRIPTEN)
     FetchContent_MakeAvailable(emnapi)
     target_link_libraries(ode-napi PRIVATE emnapi)
 
-
     set_target_properties(ode-napi PROPERTIES OUTPUT_NAME ode)
 
     # Emscripten options
@@ -140,34 +147,34 @@ if(EMSCRIPTEN)
     target_link_options(ode-napi PRIVATE "SHELL:-s ENVIRONMENT=web")
     target_link_options(ode-napi PRIVATE "SHELL:-s FILESYSTEM=0")
     target_link_options(ode-napi PRIVATE "SHELL:-s USE_SDL=0")
-    target_link_options(ode-napi PRIVATE "SHELL:-s USE_ICU=1")
-    target_link_options(ode-napi PRIVATE "SHELL:-s USE_FREETYPE=1")
     target_link_options(ode-napi PRIVATE "SHELL:-s LLD_REPORT_UNDEFINED")
     target_link_options(ode-napi PRIVATE "SHELL:-s EXPORTED_FUNCTIONS=\"['_malloc','_free']\"")
     target_link_options(ode-napi PRIVATE "SHELL:--no-entry")
     target_link_options(ode-napi PRIVATE "SHELL:--bind")
     target_link_options(ode-napi PRIVATE "SHELL:-Wl,--whole-archive")
     if(ODE_USE_WEBGL2)
-        target_link_options(ode-napi PRIVATE "SHELL:-s USE_WEBGL2=1")
+        target_link_options(ode-napi PRIVATE "-sMAX_WEBGL_VERSION=2")
+        target_link_options(ode-napi PRIVATE "-sMIN_WEBGL_VERSION=2")
     endif()
 
-    configure_file(wasm-package/index.js codegen/index.js)
-    copy_codegen_file_to_package("target-specific" index.js)
-    configure_file(wasm-package/package.json codegen/target-specific/package.json)
-    copy_codegen_file_to_package("target-specific" target-specific/package.json)
+    configure_file(wasm-package/index.js generated/index.js)
+    copy_generated_file_to_package("target-specific" index.js)
+    configure_file(wasm-package/package.json generated/target-specific/package.json)
+    copy_generated_file_to_package("target-specific" target-specific/package.json)
     copy_built_file_to_package("target-specific" ode.js)
     copy_built_file_to_package("target-specific" ode.wasm)
 
     # configure_file does variable replacement
-    configure_file(wrapper-package/package.json codegen/package.json)
-    configure_file(wrapper-package/node.js codegen/node.js)
-    configure_file(wrapper-package/wasm.js codegen/wasm.js)
+    configure_file(wrapper-package/package.json generated/package.json)
+    configure_file(wrapper-package/node.js generated/node.js)
+    configure_file(wrapper-package/wasm.js generated/wasm.js)
 else()
     # Removes some warning
     set_target_properties(ode-napi PROPERTIES
         SUFFIX ".node"
         PREFIX ""
-        POSITION_INDEPENDENT_CODE ON)
+        POSITION_INDEPENDENT_CODE ON
+    )
 
     # Module dependencies
     find_package(unofficial-node-addon-api CONFIG REQUIRED)
@@ -191,31 +198,30 @@ else()
         endif()
     endif()
 
-    configure_file(native-package/index.js codegen/index.js)
-    copy_codegen_file_to_package("target-specific" index.js)
+    configure_file(native-package/index.js generated/index.js)
+    copy_generated_file_to_package("target-specific" index.js)
     if(DEFINED ODE_PLATFORM_OS AND DEFINED ODE_PLATFORM_CPU)
-        configure_file(native-package/package.json codegen/target-specific/package.json)
-        copy_codegen_file_to_package("target-specific" target-specific/package.json)
+        configure_file(native-package/package.json generated/target-specific/package.json)
+        copy_generated_file_to_package("target-specific" target-specific/package.json)
     endif()
     copy_built_file_to_package("target-specific" ode-napi.node)
-    
+
     # configure_file does variable replacement
-    configure_file(wrapper-package-test/package.json codegen/package.json)
-    configure_file(wrapper-package-test/node.js codegen/node.js)
-    configure_file(wrapper-package-test/wasm.js codegen/wasm.js)
+    configure_file(wrapper-package-test/package.json generated/package.json)
+    configure_file(wrapper-package-test/node.js generated/node.js)
+    configure_file(wrapper-package-test/wasm.js generated/wasm.js)
 endif()
 
+copy_generated_file_to_package("wrapper" wasm.js)
+copy_generated_file_to_package("wrapper" package.json)
+copy_generated_file_to_package("wrapper" node.js)
 
-copy_codegen_file_to_package("wrapper" wasm.js)
-copy_codegen_file_to_package("wrapper" package.json)
-copy_codegen_file_to_package("wrapper" node.js)
-
-copy_codegen_file_to_package("target-specific;wrapper" api-base.d.ts)
-copy_codegen_file_to_package("wrapper" index.d.ts node.d.ts)
-copy_codegen_file_to_package("wrapper" index.d.ts wasm.d.ts)
-copy_codegen_file_to_package("target-specific" index.d.ts)
-copy_codegen_file_to_package("target-specific;wrapper" logic-api.d.ts)
-copy_codegen_file_to_package("target-specific;wrapper" renderer-api.d.ts)
+copy_generated_file_to_package("target-specific;wrapper" api-base.d.ts)
+copy_generated_file_to_package("wrapper" index.d.ts node.d.ts)
+copy_generated_file_to_package("wrapper" index.d.ts wasm.d.ts)
+copy_generated_file_to_package("target-specific" index.d.ts)
+copy_generated_file_to_package("target-specific;wrapper" logic-api.d.ts)
+copy_generated_file_to_package("target-specific;wrapper" renderer-api.d.ts)
 copy_source_file_to_package("target-specific;wrapper" every-package/exports.d.ts)
 copy_source_file_to_package("target-specific;wrapper" every-package/common.d.ts)
-copy_source_file_to_package("target-specific;wrapper" every-package/manual.d.ts)
+copy_source_file_to_package("target-specific;wrapper" every-package/predefined.d.ts)

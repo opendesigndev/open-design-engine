@@ -17,22 +17,22 @@ runs:
         NODE_AUTH_TOKEN: ${{ inputs.npm_token }}
       run: |
         set -xe
-        if [ -z "$ODE_VERSION_NPM" ]; then
-          echo "Missing env: ODE_VERSION_NPM. Did you run determine-version?"
+        if [ -z "$ODE_NPM_VERSION" ]; then
+          echo "Missing env: ODE_NPM_VERSION. Did you run determine-version?"
           exit 1
         fi
         cd ${{ inputs.directory }}
         pkg_name=`jq .name package.json -r`
-        json_exist=`npm view $pkg_name@$ODE_VERSION_NPM --json 2> /dev/null`
+        json_exist=`npm view $pkg_name@$ODE_NPM_VERSION --json 2> /dev/null`
         if ! [ -z "$json_exist" ]; then
-          echo "Package $pkg_name with version $ODE_VERSION_NPM is already published. Skipping."
+          echo "Package $pkg_name with version $ODE_NPM_VERSION is already published. Skipping."
           exit 0
         fi
         if [ ${{ inputs.directory }} == "." ]; then
-          jq .version=$ODE_VERSION_NPM package.json
+          jq .version=$ODE_NPM_VERSION package.json
         fi
         pkg_json_version=`jq .version package.json -r`
-        if [ "$ODE_VERSION_NPM" != "$pkg_json_version" ]; then
+        if [ "$ODE_NPM_VERSION" != "$pkg_json_version" ]; then
           echo "Error: Versions do not match"
           exit 1
         fi

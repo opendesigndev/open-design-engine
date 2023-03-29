@@ -13,8 +13,7 @@ runs:
             echo "vcpkg.json.version and tag name do not match"
             exit 1
           fi
-          echo "ODE_VERSION_NPM=${{ github.ref_name }}" >> $GITHUB_ENV
+          echo "ODE_NPM_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
         else
-          SPEC=`git log -n 1 "--pretty=format:%h_%cs" | sed s/-//g | tr '_' '-'`
-          echo "ODE_VERSION_NPM=$BASE_VERSION-$SPEC" >> $GITHUB_ENV
+          { echo -n "ODE_NPM_VERSION="; git describe --tags --always; } >> $GITHUB_ENV
         fi

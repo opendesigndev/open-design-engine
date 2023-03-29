@@ -1,736 +1,324 @@
 
+import sys
 import os
 import re
-import sys
 
-# Data structures for the parsed entities (struct, enum, function etc.)
-class Entity:
-    def __init__(self, category, type, namespace, name, description, members):
-        self.category = category
-        self.type = type
-        self.namespace = namespace
-        self.name = name
-        self.description = description
-        self.members = members
-    def __repr__(self):
-        return f"<Entity category:{self.category} type:{self.type} namespace:{self.namespace} name:{self.name} description:\"{self.description if self.description else ''}\" members:["+('\n'+'\n'.join(["  "+str(x) for x in self.members])+'\n' if self.members else "")+"]>\n"
+def relPath(path):
+    return os.path.join(os.path.dirname(__file__), path.replace('/', os.sep))
 
-class Member: # a struct member, enum value, or function argument
-    def __init__(self, category, type, name, value, description):
-        self.category = category
-        self.type = type
-        self.name = name
-        self.value = value
-        self.description = description
-    def __repr__(self):
-        return str(self.__dict__)
+# This is apparently how you do an include in Python ......
+apiUtilsPath = relPath('../api-utils.py')
+globalName = __name__
+globalFile = __file__
+__name__ = 'generateApiBindings'
+__file__ = apiUtilsPath
+exec(compile(open(apiUtilsPath, 'rb').read(), apiUtilsPath, 'exec'), globals())
+__name__ = globalName
+__file__ = globalFile
 
-typesUsedAsPtrInAPI = set()
-
-###########################
-#         PARSING         #
-###########################
-
-def nestedBrackets(left, right, depth):
-    nonBrackets = "[^\\"+left+"\\"+right+"]*"
-    if depth == 0:
-        return nonBrackets
-    return nonBrackets+"(\\"+left+nestedBrackets(left, right, depth-1)+"\\"+right+nonBrackets+")*"
-
-# Regular expressions to match parts of C header
-reDefine = re.compile(r"^#define[^\S\n]+(ODE_[A-Z0-9_]+)[^\S\n]+([0-9\+\-\.][\w\+\-\.]*|\([^\S\n]*[0-9\+\-\.][\w\+\-\.]*[^\S\n]*\))[^\S\n]*(\/\/.*)?\n")
-reConstant = re.compile(r"^extern\s+ODE_API\s+(const\s+[\w\s\*]+[\s\*]|\w[\w\s\*]*[\s\*]const)(\w+)(\s*=.*)?;")
-reEnum = re.compile(r"^(typedef\s+|const\s+)?enum\s*(\w*)\s*\{\s*(.*?)\s*\}\s*((\*\s*)?\w*)\s*;", re.DOTALL)
-reTypedef = re.compile(r"^typedef\s+(\w[\w\s\*]*[\s\*])\s*(\w+)\s*(\s*\[\s*[0-9]+\s*\])*\s*;")
-reHandle = re.compile(r"^ODE_HANDLE_DECL\s*\(\s*(\w+)\s*\)\s*(\w+)\s*;")
-reStruct = re.compile(r"^(typedef\s+|const\s+)?struct\s*(\w*)\s*\{\s*("+nestedBrackets('{', '}', 4)+ r")\s*\}\s*((\*\s*)?\w*)\s*;", re.DOTALL) # Increase nesting if necessary
-reFunction = re.compile(r"^\n\s*([\w\s\*]+[\s\*])ODE_API\s+(\w+)\s*\(\s*(.*?)\s*\)\s*;", re.DOTALL)
-reDescCommentA = re.compile(r"^\/\/\/\s*(.*)")
-reDescCommentB = re.compile(r"^\/\*\*\s*(.*?)\s*\*\/", re.DOTALL)
-reSkipA = re.compile(r"^(#|\/\/).*") # Directive or inline comment
-reSkipB = re.compile(r"^\/\*.*?\*\/", re.DOTALL) # Multi-line comment
-
-reOddBackslashesNL = re.compile(r"([^\\](\\\\)*)\\\n") # An escaped newline
-reMultiLineComment = re.compile(r"\/\*.*?\*\/", re.DOTALL)
-reEnumValue = re.compile(r"(\w+)\s*(=\s*([\w\.\+\-]+))\s*$")
-reFunctionArg = re.compile(r"((?:(?:ODE_IN|ODE_OUT|ODE_IN_OUT|ODE_OUT_RETURN) )?[\w\s\*]+[\s\*])(\w+)\s*$")
-reMixedMember = re.compile(r"(^|[\w\s\*]*[\s\*])\s*(\w+)\s*$", re.DOTALL)
-reMemberVariable = re.compile(r"^(\w[\w\s\*]*\w|\w)([\s\*][\w\s\*,]*\w)\s*(\[[\w\s\[\]]*\])?\s*;")
-reMemberVariableName = re.compile(r"^(|.*[\s\*])(\w+)$")
-reTupleMarker = re.compile(r"^ODE_TUPLE[\s\n]")
-reManualMarker = re.compile(r"^ODE_MANUAL[\s\n]")
-reBindArrayGetter = re.compile(r"^ODE_BIND_ARRAY_GETTER\s*\(\s*(\w+)\s*,\s*(\w+)\s*,\s*(\w+)\s*\)\s*;")
-rePtrType = re.compile(r"([A-Za-z]\w*)(\s+const)?\s*\*")
-reParamDesc = re.compile(r"^param\s*(\w+)\s*\-?\s*")
-reArrayType = re.compile(r"\[\s*([0-9]+)\s*\]\s*$")
-
-# Split string but ignore separators within comments
-def safeSplit(s, separator):
-    # Remove escaped newlines
-    s = reOddBackslashesNL.sub(r"\1", s)
-    # Escape the '$' character, which will be used in our custom escape sequences
-    s = s.replace('$', "$D")
-    # Sanitize separators within inline comments
-    lines = s.split('\n')
-    for i in range(len(lines)):
-        if "//" in lines[i]:
-            line, comment = lines[i].split("//", 1)
-            lines[i] = line+"//"+comment.replace(separator, "$S")
-    s = '\n'.join(lines)
-    # Sanitize separators within multi-line comments
-    s = reMultiLineComment.sub(lambda m: m.group(0).replace(separator, "$S"), s)
-    # Split, unescape, and trim whitespace
-    elems = [x.replace("$S", separator).replace("$D", '$').strip() for x in s.split(separator)]
-    # Remove the last element if it is empty
-    if elems and not elems[-1]:
-        elems.pop()
-    return elems
-
-def namespacedName(namespace, name):
-    fullName = ""
-    for ns in namespace:
-        fullName += ns+"::"
-    fullName += name
-    return fullName
-
-def guessNumberType(value):
-    value = value.lower()
-    if "lf" in value:
-        return "double"
-    elif "f" in value and not "x" in value:
-        return "float"
-    elif "." in value or ("e" in value and not "x" in value):
-        return "double"
-    elif "ull" in value:
-        return "unsigned long long"
-    elif "ll" in value:
-        return "long long"
-    elif "u" in value:
-        return "unsigned"
-    return "int"
-
-def updateTypesUsedAsPtrInAPI(apiArgType):
-    for match in rePtrType.finditer(apiArgType):
-        typesUsedAsPtrInAPI.add(match.group(1))
-
-# Reconstructs the full type of a nested enum/struct and member variable in one declaration
-def mixedMemberType(prefix, namespace, name, suffix):
-    return ((prefix.strip()+' ' if prefix and not prefix.startswith("typedef") else "")+namespacedName(namespace, name)+' '+suffix.strip()).replace("* ", '*').strip()
-
-# Prunes extra whitespace and decorating asterisks from description comments
-def cleanupDescription(s):
-    lines = s.strip().split('\n')
-    for i in range(len(lines)):
-        lines[i] = lines[i].strip()
-        if lines[i].startswith('*'):
-            lines[i] = lines[i][1:].strip()
-    return '\n'.join(lines).strip()
-
-# Extracts descriptions of arguments (@param x - desc) from a description comment
-def extractArgumentDescription(desc, argMap):
-    parts = desc.split('@')
-    nonArgParts = []
-    if parts:
-        nonArgParts.append(parts[0])
-    for part in parts[1:]:
-        if (match := reParamDesc.search(part)):
-            argName = match.group(1)
-            argDesc = part[match.end():].strip()
-            argMap[argName] = argDesc
-        else:
-            nonArgParts.append(part)
-    return '@'.join(nonArgParts).strip()
-
-# Parse description from comments
-def parseDescription(s):
-    if (match := reDescCommentA.search(s)):
-        return cleanupDescription(match.group(1))
-    if (match := reDescCommentB.search(s)):
-        return cleanupDescription(match.group(1))
-    return None
-
-# Enumeration parser
-def parseEnum(groups):
-    # Determine name
-    name = None
-    if groups[0] and groups[0].startswith("typedef"):
-        name = groups[3].strip()
-    if not name:
-        name = groups[1].strip()
-    if not name:
-        return None
-    # Split enumeration values
-    rawValues = safeSplit(groups[2], ',')
-    # Inspect enumeration values and transform them into members
-    values = []
-    for rawValue in rawValues:
-        if (match := reEnumValue.search(rawValue)):
-            valueName = match.group(1).strip()
-            valueValue = match.group(3).strip()
-            desc = parseDescription(rawValue)
-            values.append(Member("enum_value", None, valueName, valueValue, desc))
-    return Entity("enum", None, [], name, None, values)
-
-# Function header parser
-def parseFunction(groups, desc):
-    # Extract argument description
-    argDescMap = {}
-    desc = extractArgumentDescription(desc, argDescMap)
-    # Determine return type and function's name
-    returnType = groups[0].strip()
-    name = groups[1].strip()
-    if not (name and returnType):
-        return None
-    # Split arguments
-    rawArgs = safeSplit(groups[2], ',')
-    args = []
-    for rawArg in rawArgs:
-        if (match := reFunctionArg.search(rawArg)):
-            argType = match.group(1).strip()
-            argName = match.group(2).strip()
-            argDesc = parseDescription(rawArg)
-            if not argDesc and argName in argDescMap:
-                argDesc = argDescMap[argName]
-            args.append(Member("argument", argType, argName, None, argDesc))
-            updateTypesUsedAsPtrInAPI(argType)
-    return Entity("function", returnType, [], name, desc, args)
-
-# Structure parser - may contain nested structs and enums
-def parseStruct(entities, groups, desc, namespace = []):
-    category = "struct"
-    # Determine name
-    name = None
-    if groups[0] and groups[0].startswith("typedef"):
-        name = groups[-2].strip()
-    if not name:
-        name = groups[1].strip()
-    if not name:
-        return None
-    childNamespace = namespace+[ name ]
-    # Parse body
-    body = groups[2]
-    memberDesc = None
-    members = []
-    while body:
-
-        # ODE_TUPLE marker
-        if (match := reTupleMarker.search(body)):
-            category = "tuple"
-            memberDesc = None
-            body = body[match.end():]
-
-        # ODE_MANUAL marker
-        elif (match := reManualMarker.search(body)):
-            category = "manual"
-            memberDesc = None
-            body = body[match.end():]
-
-        # ODE_BIND_ARRAY_GETTER
-        elif (match := reBindArrayGetter.search(body)):
-            members.append(Member("array_getter_bind", None, match.group(1).strip(), match.group(2).strip()+','+match.group(3).strip(), memberDesc))
-            memberDesc = None
-            body = body[match.end():]
-
-        # Enumeration
-        elif (match := reEnum.search(body)):
-            if (entity := parseEnum(match.groups())):
-                entity.namespace = childNamespace
-                entity.description = memberDesc
-                entities.append(entity)
-                # Also a variable
-                if not (match.group(1) and match.group(1).startswith("typedef")):
-                    if (subMatch := reMixedMember.search(match.group(4))):
-                        members.append(Member("member_variable", mixedMemberType(match.group(1), childNamespace, entity.name, subMatch.group(1)), subMatch.group(2).strip(), None, memberDesc))
-            memberDesc = None
-            body = body[match.end():]
-
-        # Struct
-        elif (match := reStruct.search(body)):
-            if (entity := parseStruct(entities, match.groups(), memberDesc, childNamespace)):
-                entities.append(entity)
-                # Also a variable
-                if not (match.group(1) and match.group(1).startswith("typedef")):
-                    if (subMatch := reMixedMember.search(match.groups()[-2])):
-                        members.append(Member("member_variable", mixedMemberType(match.group(1), childNamespace, entity.name, subMatch.group(1)), subMatch.group(2).strip(), None, memberDesc))
-            memberDesc = None
-            body = body[match.end():]
-
-        # Member variable
-        elif (match := reMemberVariable.search(body)):
-            for rawMemberVariable in match.group(2).split(','):
-                if (subMatch := reMemberVariableName.search(rawMemberVariable)):
-                    varType = match.group(1).strip()
-                    if subMatch.group(1).strip(): # pointer / reference
-                        varType = varType+' '+subMatch.group(1).strip()
-                    if match.group(3): # array suffix
-                        arrayInstanceName = varType+"_array"+'_'.join([x.replace(']', '').strip() for x in match.group(3).split('[')])
-                        varType = varType+match.group(3).strip()
-                        entities.append(Entity("array_instance", varType, [], arrayInstanceName, None, []))
-                        varType = arrayInstanceName
-                    varName = subMatch.group(2).strip()
-                    # TODO remember nested structures and enum names and add namespace to type if variable type is one of them
-                    members.append(Member("member_variable", varType, varName, None, memberDesc))
-            memberDesc = None
-            body = body[match.end():]
-
-        # Description comments
-        elif (match := reDescCommentA.search(body)):
-            memberDesc = cleanupDescription(match.group(1))
-            body = body[match.end():]
-        elif (match := reDescCommentB.search(body)):
-            memberDesc = cleanupDescription(match.group(1))
-            body = body[match.end():]
-
-        # Skip directives and normal comments
-        elif (match := reSkipA.search(body)):
-            memberDesc = None
-            body = body[match.end():]
-        elif (match := reSkipB.search(body)):
-            memberDesc = None
-            body = body[match.end():]
-
-        else:
-            body = body[1:]
-
-    return Entity(category, None, namespace, name, desc, members)
-
-# Whole header parser
-def parseHeader(header):
-    entities = []
-    desc = None
-    header = reOddBackslashesNL.sub(r"\1", header)
-    while header:
-
-        # Define
-        if (match := reDefine.search(header)):
-            name = match.group(1).strip()
-            type = guessNumberType(match.group(2))
-            if type and name:
-                entities.append(Entity("define", type, [], name, desc, []))
-            desc = None
-            header = header[match.end():]
-
-        # Constant
-        elif (match := reConstant.search(header)):
-            type = match.group(1).strip()
-            name = match.group(2).strip()
-            if type and name:
-                entities.append(Entity("const", type, [], name, desc, []))
-            desc = None
-            header = header[match.end():]
-
-        # Enumeration
-        elif (match := reEnum.search(header)):
-            if (entity := parseEnum(match.groups())):
-                entity.description = desc
-                entities.append(entity)
-            desc = None
-            header = header[match.end():]
-
-        # Typedef
-        elif (match := reTypedef.search(header)):
-            type = match.group(1).strip()
-            if match.group(3):
-                type = type+match.group(3).strip()
-            name = match.group(2).strip()
-            if type and name:
-                entities.append(Entity("typedef", type, [], name, desc, []))
-            desc = None
-            header = header[match.end():]
-
-        # Handle
-        elif (match := reHandle.search(header)):
-            type = match.group(1).strip()
-            name = match.group(2).strip()
-            if type and name:
-                entities.append(Entity("handle", type, [], name, desc, []))
-            desc = None
-            header = header[match.end():]
-
-        # Struct
-        elif (match := reStruct.search(header)):
-            if (entity := parseStruct(entities, match.groups(), desc)):
-                entities.append(entity)
-            desc = None
-            header = header[match.end():]
-
-        # Function
-        elif (match := reFunction.search(header)):
-            if (entity := parseFunction(match.groups(), desc)):
-                entities.append(entity)
-            desc = None
-            header = header[match.end():]
-
-        # Description comments
-        elif (match := reDescCommentA.search(header)):
-            desc = cleanupDescription(match.group(1))
-            header = header[match.end():]
-        elif (match := reDescCommentB.search(header)):
-            desc = cleanupDescription(match.group(1))
-            header = header[match.end():]
-
-        # Skip directives and normal comments
-        elif (match := reSkipA.search(header)):
-            desc = None
-            header = header[match.end():]
-        elif (match := reSkipB.search(header)):
-            desc = None
-            header = header[match.end():]
-
-        else:
-            header = header[1:]
-
-    return entities
 
 
 ###########################
-#         UTILS           #
+#    NODE-API BINDINGS    #
 ###########################
 
-padding = '    '
-reOdePrefix = re.compile(r"^(ODE|ode)_")
-
-def removePrefix(s):
-    return reOdePrefix.sub('', s)
-
-def jsTypeName(name):
-    return removePrefix(name).replace('::', '_')
-
-
-def isValueObject(entity):
-    if entity.category == 'struct' and not namespacedName(entity.namespace, entity.name) in typesUsedAsPtrInAPI and entity.members:
-        for member in entity.members:
-            if member.category != 'member_variable' or '*' in member.type:
-                return False
-        return True
-    return False
-
-def findMemberType(members, name):
-    for member in members:
-        if member.name == name and member.type:
-            return member.type
-    return None
-
-def commonEnumPrefixLength(entity):
-    if not entity.members:
-        return 0
-    # Find common prefix of all enumeration values
-    prefixLen = len(entity.members[0].name)
-    for value in entity.members[1:]:
-        prefixLen = min(prefixLen, len(value.name))
-        while not value.name.startswith(entity.members[0].name[:prefixLen]):
-            prefixLen -= 1
-    prefix = entity.members[0].name[:prefixLen]
-    # Match enumeration name in the common prefix
-    namePos = 0
-    prefixPos = 0
-    while namePos < len(entity.name) and prefixPos < len(prefix):
-        if entity.name[namePos] == '_':
-            namePos += 1
-            continue
-        if prefix[prefixPos] == '_':
-            prefixPos += 1
-            continue
-        if entity.name[namePos].upper() == prefix[prefixPos].upper():
-            namePos += 1
-            prefixPos += 1
-        else:
-            break
-    if namePos < len(entity.name) and entity.name[namePos] == '_':
-        namePos += 1
-    if prefixPos < len(prefix) and prefix[prefixPos] == '_':
-        prefixPos += 1
-    if namePos == len(entity.name) and prefixPos == len(prefix):
-        return len(prefix)
-    elif prefix.startswith('ODE_'):
-        return len('ODE_')
-    return 0
-
-
-###########################
-#   N-API BINDINGS        #
-###########################
+reConstModifier = re.compile(r'\bconst\b')
+reArrayTypeAlias = re.compile(r'_array_([0-9]+)$')
 
 def generateNapiFunctionBinding(entity, emName, fullName):
-    is_result = entity.type == 'ODE_Result'
-    return_type = 'void' if is_result else 'Napi::Value'
-    empty_return = 'return;' if is_result else 'return Napi::Value();'
-    signature = f'{return_type} node_napi_{emName}(const Napi::CallbackInfo& info)'
-    definition = ""
+    hasResult = entity.type == 'ODE_Result'
+    returnType = 'void' if hasResult else 'Napi::Value'
+    emptyReturn = 'return' if hasResult else 'return Napi::Value()'
+    signature = f'{returnType} call_{emName}(const Napi::CallbackInfo &info)'
 
-    definition += (
-        f'    Napi::Env env = info.Env();\n'
-    )
-    call = ""
+    body = '    Napi::Env env = info.Env();\n'
+    callArgs = ''
     i = 0
-    outputs = ""
-    return_arg = ""
-    for mem in entity.members:
-        if mem.type.startswith("ODE_OUT_RETURN"):
-            if not is_result:
-                raise Exception("ODE_OUT_RETURN is only supported on functions returning ODE_Result")
-            signature = f'Napi::Value node_napi_{emName}(const Napi::CallbackInfo& info)'
-            return_arg = f'    return ode_napi_serialize(env, {mem.name});\n'
-            empty_return = 'return Napi::Value();'
+    outputs = ''
+    returnArg = ''
+    for member in entity.members:
+        if reReturnArg.search(member.type):
+            if not hasResult:
+                raise Exception('ODE_OUT_RETURN is only supported on functions returning ODE_Result')
+            signature = f'Napi::Value call_{emName}(const Napi::CallbackInfo &info)'
+            returnArg = f'    return wrap(env, {member.name});\n'
+            emptyReturn = 'return Napi::Value()'
 
-    for mem in entity.members:
-        i += 1
-        t = mem.type
-        if call != "":
-            call += ", "
+    for member in entity.members:
+        argType = member.type
+        if callArgs != '':
+            callArgs += ', '
 
-        inout_type = "IN"
-        if t.startswith("ODE_IN_OUT"): inout_type = "INOUT"
-        elif t.startswith("ODE_IN"): inout_type = "IN"
-        elif t.startswith("ODE_OUT_RETURN"): inout_type = "RETURN"
-        elif t.startswith("ODE_OUT"): inout_type = "OUT"
+        argAttrib = 'IN'
+        if (match := reArgAttrib.search(argType)):
+            argAttrib = match.group(2)
 
-        if t.startswith("const") and t.endswith("*"):
-            t = t[6:-1].strip()
-            call += f"&{mem.name}"
-        elif t.endswith("*"):
-            t = t[:-1].strip()
-            call += f"&{mem.name}"
+        # Remove pointer & const
+        if argType.endswith('*'):
+            argType = argType[:-1].strip()
+            argTypeCParts = reConstModifier.split(argType)
+            argType = 'const'.join(argTypeCParts[:-1]).strip()+argTypeCParts[-1].strip()
+            callArgs += f'&{member.name}'
         else:
-            call += mem.name
+            callArgs += member.name
 
-        definition += f'    {t} {mem.name};\n'
-        if inout_type == "INOUT" or inout_type == "IN":
-            definition += (
-                f'    if (!ode_napi_read_into(info[{i-1}], {mem.name})) {{\n'
-                f'        auto ex = env.GetAndClearPendingException();\n'
-                f'        Napi::Error::New(env, "Failed to parse argument{i} {mem.name} in {emName} ("+ ex.Message() +")").ThrowAsJavaScriptException();\n'
-                f'        {empty_return}\n'
-                f'    }}\n'
+        body += f'    {argType} {member.name};\n'
+        if argAttrib == 'IN' or argAttrib == 'INOUT':
+            body += (
+                f'    if (!unwrap({member.name}, info[{i}]))' ' {\n'
+                f'        Napi::Error error = env.GetAndClearPendingException();\n'
+                f'        Napi::Error::New(env, "Failed to parse argument {i} {member.name} in {emName} ("+ error.Message() +")").ThrowAsJavaScriptException();\n'
+                f'        {emptyReturn};\n'
+                 '    }\n'
             )
-        if inout_type == "INOUT" or inout_type == "OUT":
-            outputs += f'    ode_napi_write_from(info[{i-1}], {mem.name});\n'
-        if inout_type == "RETURN":
-            i -= 1
+        if argAttrib == 'INOUT' or argAttrib == 'OUT':
+            outputs += f'    copyWrapped(info[{i}], {member.name});\n'
+        if argAttrib != 'OUT_RETURN':
+            i += 1
 
-    if is_result:
-        definition += (
-            f'    auto result = {fullName}({call});\n'
+    if hasResult:
+        body += (
+            f'    ODE_Result result = {fullName}({callArgs});\n'
             f'{outputs}'
-            f'    if (!check_result(env,result)) {empty_return}\n'
-            f'{return_arg}'
+            f'    if (!checkResult(env, result))\n'
+            f'        {emptyReturn};\n'
+            f'{returnArg}'
         )
     else:
-        definition += (
-            f'    auto result = {fullName}({call});\n'
+        body += (
+            f'    {entity.type} result = {fullName}({callArgs});\n'
             f'{outputs}'
-            f'    return ode_napi_serialize(env, result);\n'
+            f'    return wrap(env, result);\n'
         )
     return [
-        signature + ';\n',
-        f'{signature} {{\n{definition}}}\n\n'
+        f'{signature};\n',
+        f'{signature}' ' {\n'
+        f'{body}'
+        '}\n\n'
     ]
 
-def generateNapiBindings(entities, apiPath):
-    name = os.path.basename(apiPath)
+def generateNapiBindings(entities, apiPath, donePaths):
+    fileName = os.path.basename(apiPath)
     header = (
-        "#pragma once\n"
-        "#include <napi.h>\n"
-        f"#include <ode/{name}>\n"
-        "\n"
+        f'\n#pragma once\n\n'
+        f'#include <napi-base.h>\n'
+        f'#include <ode/{fileName}>\n\n'
+         'namespace ode {\n'
+         'namespace napi {\n\n'
     )
-    src_head = (
-        '#include <string>\n'
-        '#include "addon.h"\n'
-        '#include "napi-wrap.h"\n'
-        '#include "gen.h"\n'
-        '\n'
+    src = (
+        f'\n#include "napi-{fileName}"\n\n'
+        f'#include <string>\n'
     )
-    name = os.path.splitext(name)[0].replace("-", "_")
-    src_tail = ""
-    src_body = f"Napi::Object init_gen_{name}(Napi::Env env, Napi::Object exports) {{\n"
-
-    duplicate = set()
+    for donePath in donePaths:
+        src += f'#include "napi-{os.path.basename(donePath)}"\n'
+    src += (
+        '#include <napi-utils.h>\n'
+        # napi-wrap.h must be included last!
+        '#include <napi-wrap.h>\n\n'
+        'namespace ode {\n'
+        'namespace napi {\n\n'
+    )
+    namespaceEnd = '}\n}\n'
+    name = os.path.splitext(fileName)[0].replace('-', '_')
+    header += f'Napi::Object {name}_initialize(Napi::Env env, Napi::Object exports);\n'
+    header += f'void {name}_export(const Napi::Env &env, Napi::Object &exports);\n\n'
+    src += (
+        f'Napi::Object {name}_initialize(Napi::Env env, Napi::Object exports)' ' {\n'
+        f'    {name}_export(env, exports);\n'
+         '    return exports;\n'
+         '}\n\n'
+    )
+    srcExports = ''
 
     for entity in entities:
+
         fullName = namespacedName(entity.namespace, entity.name)
         emName = jsTypeName(fullName)
 
-        if fullName in duplicate:
-            continue
-        duplicate.add(fullName)
-
-        src_body += "\n"
-
         # Define or constant
         if entity.category == 'define' or entity.category == 'const':
-            src_body += f"    exports.Set(\"{emName}\", uint32_t({fullName}));\n"
-        
+            srcExports += f'    exports.Set("{emName}", uint32_t({fullName}));\n'
+
         # Enumeration
         elif entity.category == 'enum':
             commonPrefixLen = commonEnumPrefixLength(entity)
-            src_body += "    {\n"
-            src_body += f"        auto {emName} = Napi::Object::New(env);\n"
+            srcExports += '    {\n'
+            srcExports += f'        Napi::Object obj{emName} = Napi::Object::New(env);\n'
             for value in entity.members:
                 k = value.name[commonPrefixLen:]
                 v = namespacedName(entity.namespace, value.name)
-                src_body += f"        {emName}.Set(\"{k}\", uint32_t({v}));\n"
-            src_body += f"        exports.Set(\"{emName}\", {emName});\n"
-            src_body += "    }\n"
+                srcExports += f'        obj{emName}.Set("{k}", int32_t({v}));\n'
+            srcExports += f'        exports.Set("{emName}", (Napi::Object &&) obj{emName});\n'
+            srcExports += '    }\n'
+            wrapSignature = f'Napi::Value wrap(const Napi::Env &env, const {fullName} &src)'
             header += (
-                f'std::string ode_napi_enum_to_string({fullName} value);\n'
-                f'bool ode_napi_read_into(const Napi::Value& value, {fullName}& parsed);\n'
+                f'std::string enumString({fullName} value);\n'
+                f'{wrapSignature};\n'
+                f'bool unwrap({fullName} &dst, const Napi::Value &src);\n\n'
             )
-            src_tail += (
-                f'bool ode_napi_read_into(const Napi::Value& value, {fullName}& parsed) {{\n'
-                f'    std::string text = value.As<Napi::String>();\n'
+            src += (
+                f'std::string enumString({fullName} value)' ' {\n'
+                 '    switch(value) {\n'
             )
             for value in entity.members:
                 k = value.name[commonPrefixLen:]
                 full = namespacedName(entity.namespace, value.name)
-                src_tail += f'    if (text == "{k}") {{ parsed = {full}; return true; }}'
-            src_tail += (
+                src += f'        case {full}: return "{k}";\n'
+            src += (
+                f'        default: return "!UNKNOWN_{emName}_"+std::to_string(int32_t(value));\n'
+                 '    }\n'
+                 '}\n\n'
+                f'{wrapSignature}' ' {\n'
+                f'    return Napi::String::New(env, enumString(src));\n'
+                 '}\n\n'
+                f'bool unwrap({fullName} &dst, const Napi::Value &src)' ' {\n'
+                f'    std::string text = src.As<Napi::String>();\n'
+            )
+            for value in entity.members:
+                k = value.name[commonPrefixLen:]
+                full = namespacedName(entity.namespace, value.name)
+                src += f'    if (text == "{k}") return dst = {full}, true;\n'
+            src += (
                 f'    return false;\n'
-                f'}}\n'
-                f"std::string ode_napi_enum_to_string({fullName} value) {{\n"
-                "    switch(value) {\n"
+                 '}\n\n'
             )
-            for value in entity.members:
-                k = value.name[commonPrefixLen:]
-                full = namespacedName(entity.namespace, value.name)
-                src_tail += f'        case {full}: return "{k}";\n'
-            serialize_signature = f'Napi::Value ode_napi_serialize(Napi::Env env, const {fullName}& source)'
-            header += f'{serialize_signature};\n'
-            src_tail += (
-                f'        default: return "UNKNOWN_{emName}_"+std::to_string(uint32_t(value));\n'
-                "    }\n"
-                "}\n"
-                f'{serialize_signature} {{\n'
-                f'    return Napi::String::New(env, ode_napi_enum_to_string(source));\n'
-                f'}}\n'
-                "\n"
-            )
+
         # Handle
         elif entity.category == 'handle':
-            serialize_signature = f'Napi::Value ode_napi_serialize(Napi::Env env, const {fullName}& source)'
-            read_into_signature = f'bool ode_napi_read_into(const Napi::Value& value, {fullName}& target)'
-            header += f'{serialize_signature};\n{read_into_signature};\n'
-            src_tail += (
-                f'{read_into_signature} {{\n'
-                f'    return ode_napi_handle_read_into(value, "{emName}", target);\n'
-                '}\n'
-                f'{serialize_signature} {{\n'
-                f'    return ode_napi_handle_serialize(env, "{emName}", source);\n'
-                '}\n'
-                "\n"
+            wrapSignature = f'Napi::Value wrap(const Napi::Env &env, const {fullName} &src)'
+            unwrapSignature = f'bool unwrap({fullName} &dst, const Napi::Value &src)'
+            header += f'{wrapSignature};\n{unwrapSignature};\n\n'
+            src += (
+                f'{wrapSignature}' ' {\n'
+                f'    return wrapHandle(env, "{emName}", src);\n'
+                 '}\n\n'
+                f'{unwrapSignature}' ' {\n'
+                f'    return unwrapHandle(dst, "{emName}", src);\n'
+                 '}\n\n'
             )
-        
+
         # Function
         elif entity.category == 'function':
-            [declaration,definition] = generateNapiFunctionBinding(entity, emName, fullName)
-            src_tail += definition
-            src_head += declaration
-            src_body += f'    exports.Set("{emName}", Napi::Function::New<node_napi_{emName}>(env, "{emName}"));'
-        elif entity.category == 'array_instance':
-            src_body += f"    // TODO: {entity.category} {emName}\n"
+            [declaration, body] = generateNapiFunctionBinding(entity, emName, fullName)
+            src += body
+            srcExports += f'    exports.Set("{emName}", Napi::Function::New<call_{emName}>(env, "{emName}"));\n'
+
+        # Struct
         elif entity.category == 'struct':
-            serialize_signature = f'Napi::Value ode_napi_serialize(Napi::Env env, const {fullName}& source)'
-            read_into_signature = f'bool ode_napi_read_into(const Napi::Value& value, {fullName}& parsed)'
-            header += f'{serialize_signature};\n{read_into_signature};\n'
-            read_into = (
-                f'{read_into_signature} {{\n'
+            wrapSignature = f'Napi::Value wrap(const Napi::Env &env, const {fullName} &src)'
+            unwrapSignature = f'bool unwrap({fullName} &dst, const Napi::Value &value)'
+            header += f'{wrapSignature};\n{unwrapSignature};\n\n'
+            wrap = (
+                f'{wrapSignature}' ' {\n'
+                f'    Napi::Object obj = Napi::Object::New(env);\n'
+            )
+            unwrap = (
+                f'{unwrapSignature}' ' {\n'
                 f'    Napi::Env env = value.Env();\n'
                 f'    Napi::Object obj = value.As<Napi::Object>();\n'
             )
-            serialize = (
-                f'{serialize_signature} {{\n'
-                f'    Napi::Object obj = Napi::Object::New(env);\n'
-            )
             for member in entity.members:
                 if member.category == 'member_variable':
-                    read_into += (
-                        f'    if (!ode_napi_read_into(obj.Get("{member.name}"), parsed.{member.name})) {{\n'
-                        f'        auto ex = env.GetAndClearPendingException();\n'
-                        f'        Napi::Error::New(env, "Invalid value for field {member.name} of {fullName} ("+ex.Message()+")").ThrowAsJavaScriptException();\n'
+                    wrapFnSuffix = ''
+                    if (match := reArrayTypeAlias.search(member.type)):
+                        wrapFnSuffix = 'Array<'+match.group(1)+'>'
+                    wrap += f'    Napi::Value {member.name} = wrap{wrapFnSuffix}(env, src.{member.name});\n'
+                    unwrap += (
+                        f'    if (!unwrap{wrapFnSuffix}(dst.{member.name}, obj.Get("{member.name}")))' ' {\n'
+                        f'        Napi::Error error = env.GetAndClearPendingException();\n'
+                        f'        Napi::Error::New(env, "Invalid value for field {member.name} of {fullName} ("+error.Message()+")").ThrowAsJavaScriptException();\n'
                         f'        return false;\n'
-                        f'    }}\n'
+                         '    }\n'
                     )
-                    serialize += f'    Napi::Value {member.name} = ode_napi_serialize(env, source.{member.name});\n'
                 elif member.category == 'array_getter_bind':
-                    [entries,n] = member.value.split(',')
-                    fn_name = f'{emName}_{member.name}'
-                    signature = f'Napi::Value node_napi_{fn_name}(const Napi::CallbackInfo& info)'
-                    src_head += f'{signature};\n'
-                    src_tail += (
-                        f'{signature} {{\n'
+                    [entries, n] = member.value.split(',')
+                    fnName = f'{emName}_{member.name}'
+                    signature = f'Napi::Value call_{fnName}(const Napi::CallbackInfo &info)'
+                    src += (
+                        f'{signature}' ' {\n'
                         f'    {fullName} self;\n'
                         f'    Napi::Env env = info.Env();\n'
-                        f'    if (!ode_napi_read_into(info[0], self)) {{ return Napi::Value(); }};\n'
-                        f'    int i = info[1].As<Napi::Number>().Uint32Value();\n'
-                        f'    if (i < 0 || i >= self.{n}) {{ Napi::Error::New(env, "Index out of range").ThrowAsJavaScriptException(); return Napi::Value(); }}\n'
-                        f'    return ode_napi_serialize(info.Env(), self.{entries}[i]);\n'
-                        f'}}\n'
+                        f'    if (!unwrap(self, info[0]))\n'
+                        f'        return Napi::Value();\n'
+                        f'    int i = info[1].As<Napi::Number>().Int32Value();\n'
+                        f'    if (i < 0 || i >= self.{n})' ' {\n'
+                        f'        Napi::Error::New(env, "Index out of range").ThrowAsJavaScriptException();\n'
+                        f'        return Napi::Value();\n'
+                         '    }\n'
+                        f'    return wrap(info.Env(), self.{entries}[i]);\n'
+                         '}\n\n'
                     )
-                    src_body += f'    exports.Set("{fn_name}", Napi::Function::New<node_napi_{fn_name}>(env, "{fn_name}"));\n'
+                    srcExports += f'    exports.Set("{fnName}", Napi::Function::New<call_{fnName}>(env, "{fnName}"));\n'
                 else:
-                    read_into += f"    // TODO: {member.category}\n"
-                
+                    unwrap += f'    // TODO: {member.category}\n'
+
                 if member.category == 'member_variable':
-                    serialize += (
-                        f'    if ({member.name}.IsEmpty()) return Napi::Value();\n'
+                    wrap += (
+                        f'    if ({member.name}.IsEmpty())\n'
+                        f'        return Napi::Value();\n'
                         f'    obj.Set("{member.name}", {member.name});\n'
                     )
-            read_into += (
-                f'    return true;\n'
-                f'}}\n'
-            ) 
-            serialize += (
+            wrap += (
                 f'    return obj;\n'
-                f'}}\n\n'
+                 '}\n\n'
             )
-            src_tail += read_into + serialize
-        
-        # Tuple
+            unwrap += (
+                f'    return true;\n'
+                 '}\n\n'
+            )
+            src += wrap+unwrap
+
+        # Tuple struct
         elif entity.category == 'tuple':
-            serialize_signature = f'Napi::Value ode_napi_serialize(Napi::Env env, const {fullName}& source)'
-            read_into_signature = f'bool ode_napi_read_into(const Napi::Value& value, {fullName}& parsed)'
-            header += f'{serialize_signature};\n{read_into_signature};\n'
-            read_into = (
-                f'{read_into_signature} {{\n'
+            wrapSignature = f'Napi::Value wrap(const Napi::Env &env, const {fullName} &src)'
+            unwrapSignature = f'bool unwrap({fullName} &dst, const Napi::Value &value)'
+            header += f'{wrapSignature};\n{unwrapSignature};\n\n'
+            wrap = (
+                f'{wrapSignature}' ' {\n'
+                f'    Napi::Array obj = Napi::Array::New(env);\n'
+            )
+            unwrap = (
+                f'{unwrapSignature}' ' {\n'
                 f'    Napi::Env env = value.Env();\n'
                 f'    Napi::Array obj = value.As<Napi::Array>();\n'
             )
-            serialize = (
-                f'{serialize_signature} {{\n'
-                f'    Napi::Array obj = Napi::Array::New(env);\n'
-            )
             i = 0
             for member in entity.members:
-                read_into += (
-                    f'    if (!ode_napi_read_into(obj.Get(uint32_t({i})), parsed.{member.name})) {{\n'
-                    f'        auto ex = env.GetAndClearPendingException();\n'
-                    f'        Napi::Error::New(env, "Invalid value for field {member.name} of {fullName} ("+ex.Message()+") got: "+(std::string)obj.Get(uint32_t({i})).Unwrap().ToString().Unwrap()).ThrowAsJavaScriptException();\n'
-                    f'        return false;\n'
-                    f'    }}\n'
-                )
-                serialize += f'    Napi::Value {member.name} = ode_napi_serialize(env, source.{member.name});\n'
-            
-            
-                serialize += (
+                wrap += (
+                    f'    Napi::Value {member.name} = wrap(env, src.{member.name});\n'
                     f'    if ({member.name}.IsEmpty()) return Napi::Value();\n'
                     f'    obj.Set(uint32_t({i}), {member.name});\n'
                 )
+                unwrap += (
+                    f'    if (!unwrap(dst.{member.name}, obj.Get(uint32_t({i}))))' ' {\n'
+                    f'        Napi::Error error = env.GetAndClearPendingException();\n'
+                    f'        Napi::Error::New(env, "Invalid value for field {member.name} of {fullName} ("+error.Message()+") got: "+(std::string)obj.Get(uint32_t({i})).Unwrap().ToString().Unwrap()).ThrowAsJavaScriptException();\n'
+                    f'        return false;\n'
+                     '    }\n'
+                )
                 i += 1
-            read_into += (
-                f'    return true;\n'
-                f'}}\n'
-            ) 
-            serialize += (
+            wrap += (
                 f'    return obj;\n'
-                f'}}\n\n'
+                 '}\n\n'
             )
-            src_tail += read_into + serialize
+            unwrap += (
+                f'    return true;\n'
+                 '}\n\n'
+            )
+            src += wrap+unwrap
 
         else:
-            src_body += f"    // TODO: {entity.category} {emName}\n"
+            srcExports += f'    // TODO: {entity.category} {emName}\n'
 
-    src_body += "    return exports;\n}\n\n"
-    return (src_head + "\n" + src_body + src_tail, header)
+    header += namespaceEnd
+    src += (
+        f'void {name}_export(const Napi::Env &env, Napi::Object &exports)' ' {\n'
+        f'{srcExports}'
+         '}\n\n'
+        f'{namespaceEnd}'
+    )
+    return (src, header)
 
 
 
@@ -742,21 +330,19 @@ tsTypes = []
 
 def tsType(type):
     type = type.strip()
-    wrap = ""
-    if type.startswith("ODE_IN "): type = type[7:]
-    if type.startswith("ODE_OUT "):
-        type = type[8:]
-        # The argument object does not have to contain any values, but it has
-        # to be there for us to be able to write into it.
-        wrap = 'Partial'
-    if type.startswith("ODE_IN_OUT "): type = type[11:]
-    if type.startswith("ODE_OUT_RETURN "): type = type[15:]
+    wrap = ''
+    if (match := reArgAttrib.search(type)):
+        if match.group(1) == 'ODE_OUT':
+            # The argument object does not have to contain any values, but it has
+            # to be there for us to be able to write into it.
+            wrap = 'Partial'
+        type = type[match.end():].strip()
     if type:
         type = (' '+type+' ').replace('*', ' ').replace(' const ', '').strip()
         if (jsType := jsTypeName(type)):
             tsType = jsType[0].upper()+jsType[1:]
             if wrap:
-                return f'{wrap}<ode.{tsType}>'
+                return wrap+'<ode.'+tsType+'>'
             return 'ode.'+tsType
     return 'unknown'
 
@@ -823,7 +409,7 @@ def generateTypescriptBindings(entities):
             tsTypes.append(name)
             ts += tsDescription(entity.description)
             ts += 'export type '+name+' = {\n'
-            ts += f'    {name}: number;\n'
+            ts += padding+name+': number;\n'
             ts += '};\n\n'
 
         # Value object struct
@@ -853,7 +439,7 @@ def generateTypescriptBindings(entities):
                     arrayMember, lengthMember = member.value.split(',', 1)
                     arrayElementType = findMemberType(entity.members, arrayMember).strip()[:-1].strip()
                     ts += tsDescription(member.description, '')
-                    ts += f'export function {name}_{member.name}(self: {name}, i: ode.Int): {tsType(arrayElementType)};\n'
+                    ts += 'export function '+name+'_'+member.name+'(self: '+name+', i: ode.Int): '+tsType(arrayElementType)+';\n'
             ts += '\n'
 
         # Tuple struct
@@ -870,19 +456,19 @@ def generateTypescriptBindings(entities):
         # Function
         elif entity.category == 'function':
             returnType = tsType(entity.type)
-            if entity.type == "ODE_Result":
-                returnType = "void"
+            if entity.type == 'ODE_Result':
+                returnType = 'void'
             fullDescription = entity.description
             for arg in entity.members:
-                if arg.description and not arg.type.startswith("ODE_OUT_RETURN"):
+                if arg.description and not reReturnArg.search(arg.type):
                     fullDescription += '\n@param '+arg.name+' '+arg.description
             for arg in entity.members:
-                if arg.description and arg.type.startswith("ODE_OUT_RETURN"):
+                if arg.description and reReturnArg.search(arg.type):
                     fullDescription += '\n@returns '+arg.name+' '+arg.description
             ts += tsDescription(fullDescription)
             ts += 'export function '+name+'(\n'
             for arg in entity.members:
-                if arg.type.startswith("ODE_OUT_RETURN"):
+                if reReturnArg.search(arg.type):
                     returnType = tsType(arg.type)
                 else:
                     ts += padding+arg.name+': '+tsType(arg.type)+',\n'
@@ -914,47 +500,31 @@ def generateTopLevelTypescriptBindings():
     ts += '} from "./exports.js";\n'
     return ts
 
-
-
-preamble = '\n// FILE GENERATED BY '+os.path.basename(__file__)+'\n'
-
-def relPath(path):
-    return os.path.join(os.path.dirname(__file__), path.replace("/", os.sep))
-
-# Make sure not to rewrite the file if not necessary to make recompilation
-# reasonably fast.
-def write(file, contents):
-    dirname = os.path.dirname(file)
-    if not os.path.exists(dirname):
-        os.makedirs(dirname)
-    with open(file, "w") as f:
-        f.write(contents)
-
-def generateBindings(headerPath, out_path):
-    napiBindingsPath = os.path.join(out_path, "codegen", "gen-"+os.path.splitext(os.path.basename(headerPath))[0])
-    typescriptBindingsPath = os.path.join(out_path, "codegen", os.path.splitext(os.path.basename(headerPath))[0]+".d.ts")
-    with open(headerPath, "r") as f:
+def generateBindings(headerPath, outPath, donePaths):
+    napiBindingsPath = os.path.join(outPath, 'generated', 'napi-'+os.path.splitext(os.path.basename(headerPath))[0])
+    typescriptBindingsPath = os.path.join(outPath, 'generated', os.path.splitext(os.path.basename(headerPath))[0]+'.d.ts')
+    with open(headerPath, 'r') as f:
         header = f.read()
     entities = parseHeader(header)
-    (napiBindings, napiHeader) = generateNapiBindings(entities, headerPath)
-    write(napiBindingsPath+".cpp", preamble+napiBindings)
-    write(napiBindingsPath+".h", preamble+napiHeader)
+    (napiBindings, napiHeader) = generateNapiBindings(entities, headerPath, donePaths)
+    writeFile(napiBindingsPath+'.cpp', preamble()+napiBindings)
+    writeFile(napiBindingsPath+'.h', preamble()+napiHeader)
     typescriptBindings = generateTypescriptBindings(entities)
-    write(typescriptBindingsPath, preamble+typescriptBindings)
+    writeFile(typescriptBindingsPath, preamble()+typescriptBindings)
 
-def generateTopLevelBindings(paths, out_path):
-    typescriptBindingsPath = os.path.join(out_path, "codegen", "index.d.ts")
+def generateTopLevelBindings(paths, outPath):
+    typescriptBindingsPath = os.path.join(outPath, 'generated', 'index.d.ts')
     typescriptBindings = generateTopLevelTypescriptBindings()
-    write(typescriptBindingsPath, preamble+typescriptBindings)
-    
-    includes = ""
-    for path in paths:
-        basename = os.path.basename(path)
-        includes += f'#include "gen-{basename}"\n'
-    write(os.path.join(out_path, "codegen", "gen.h"), "#pragma once\n"+preamble+includes)
+    writeFile(typescriptBindingsPath, preamble()+typescriptBindings)
 
-out_path = sys.argv[1]
-paths = sys.argv[2:]
-for path in paths:
-    generateBindings(relPath(path), out_path)
-generateTopLevelBindings(paths, out_path)
+if len(sys.argv) >= 2:
+    outPath = sys.argv[1]
+    paths = sys.argv[2:]
+    donePaths = []
+    for path in paths:
+        generateBindings(path, outPath, donePaths)
+        donePaths.append(path)
+    generateTopLevelBindings(donePaths, outPath)
+
+else:
+    print("Usage: python generate-api-bindings.py <output path> <api headers ...>", file=sys.stderr)

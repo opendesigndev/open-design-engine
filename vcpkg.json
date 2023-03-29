@@ -4,20 +4,16 @@
     "version": "0.2.3",
     "builtin-baseline": "a7b6122f6b6504d16d96117336a0562693579933",
     "default-features": [
-        "node-api",
         "glfw",
         "glew",
         "skia",
         "freetype",
         "harfbuzz",
         "icu",
-        "image-formats"
+        "image-formats",
+        "node-api"
     ],
     "features": {
-        "node-api": {
-            "description": "node.js bindings",
-            "dependencies": [ "node-addon-api", "node-api" ]
-        },
         "glfw": {
             "description": "Graphics context management by GLFW",
             "dependencies": [ "glfw3" ]
@@ -63,11 +59,16 @@
                 "libwebp"
             ]
         },
+        "node-api": {
+            "description": "Node.js bindings",
+            "dependencies": [
+                "node-api",
+                "node-addon-api"
+            ]
+        },
         "gtest": {
             "description": "Google Test library",
-            "dependencies": [
-                "gtest"
-            ]
+            "dependencies": [ "gtest" ]
         }
     }
 }

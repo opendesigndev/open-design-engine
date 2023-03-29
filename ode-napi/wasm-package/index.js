@@ -7,4 +7,4 @@ export default async function init(options) {
 }
 
 export const wasm = new URL("./ode.wasm", import.meta.url).href
-export const version = '${ODE_VERSION_NPM}'
+export const version = '${ODE_NPM_VERSION}'

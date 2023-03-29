@@ -1,6 +1,6 @@
 {
     "name": "@opendesign/engine",
-    "version": "${ODE_VERSION_NPM}",
+    "version": "${ODE_NPM_VERSION}",
     "private": true,
     "description": "Purpose of this package is to be used in local development with portal: protocol. See wraper-package for actually release package.",
     "dependencies": {

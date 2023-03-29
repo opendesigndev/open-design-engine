@@ -1,27 +1,59 @@
+
 #pragma once
-#include "addon.h"
-#include <napi.h>
-#include <optional>
 
-template<typename T>
-bool ode_napi_handle_read_into(const Napi::Value &value, const char *name, T &target) {
-    auto env = value.Env();
-    Napi::Object obj = value.As<Napi::Object>();
-    if (env.IsExceptionPending()) return false;
-    auto maybe = obj.Get(name);
-    if (env.IsExceptionPending()) return false;
-    if (maybe.IsNothing()) {
-        Napi::Error::New(env, "Incorrect argument type (no Handle)").ThrowAsJavaScriptException();
-        return false;
-    }
-    auto ptr = (void *) (uintptr_t) (int64_t) maybe.Unwrap().As<Napi::Number>();
-    target.ptr = static_cast<decltype(target.ptr)>(ptr);
-    return true;
+#include <ode/api-base.h>
+#include <ode/logic-api.h>
+#include "napi-base.h"
+
+namespace ode {
+namespace napi {
+
+Napi::Value wrap(const Napi::Env &env, int src);
+Napi::Value wrap(const Napi::Env &env, size_t src);
+Napi::Value wrap(const Napi::Env &env, ODE_Scalar src);
+Napi::Value wrap(const Napi::Env &env, ODE_VarDataPtr src);
+Napi::Value wrap(const Napi::Env &env, ODE_ConstDataPtr src);
+
+bool unwrap(int &dst, const Napi::Value &src);
+bool unwrap(size_t &dst, const Napi::Value &src);
+bool unwrap(ODE_Scalar &dst, const Napi::Value &src);
+bool unwrap(ODE_VarDataPtr &dst, const Napi::Value &src);
+bool unwrap(ODE_ConstDataPtr &dst, const Napi::Value &src);
+
+template <typename T>
+Napi::Value wrap(const Napi::Env &env, T *src);
+template <typename T>
+Napi::Value wrap(const Napi::Env &env, const T *src);
+
+template <typename T>
+bool unwrap(T *&dst, const Napi::Value &src);
+template <typename T>
+bool unwrap(const T *&dst, const Napi::Value &src);
+
+template <typename T>
+Napi::Value wrapHandle(const Napi::Env &env, const char *name, const T &src);
+
+template <typename T>
+bool unwrapHandle(T &dst, const char *name, const Napi::Value &src);
+
+template <unsigned N, typename T>
+Napi::Value wrapArray(const Napi::Env &env, const T src[N]);
+
+template <unsigned N, typename T>
+bool unwrapArray(T dst[N], const Napi::Value &src);
+
+template <typename T>
+bool unwrap(T &dst, const Napi::Maybe<Napi::Value> &src);
+
+template <unsigned N, typename T>
+bool unwrapArray(T dst[N], const Napi::Maybe<Napi::Value> &src);
+
+bool copy(const Napi::Value &dst, const Napi::Value &src);
+
+template <typename T>
+bool copyWrapped(const Napi::Value &dst, const T &src);
+
+}
 }
 
-template<typename T>
-Napi::Value ode_napi_handle_serialize(Napi::Env env, const char *name, const T &source) {
-    auto obj = Napi::Object::New(env);
-    obj.Set(name, (uintptr_t) source.ptr);
-    return obj;
-}
+#include "napi-wrap.hpp"

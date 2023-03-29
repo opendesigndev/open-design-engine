@@ -7,4 +7,4 @@ export default async function init() {
 }
 
 export const wasm = 'node wrapper package'
-export const version = '${ODE_VERSION_NPM}'
+export const version = '${ODE_NPM_VERSION}'

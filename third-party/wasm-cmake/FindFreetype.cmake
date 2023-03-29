@@ -1,5 +1,8 @@
-set(FREETYPE_FOUND TRUE)
-set(FREETYPE_INCLUDE_DIR "${EMSCRIPTEN_SYSROOT}/include/freetype2/freetype" "${EMSCRIPTEN_SYSROOT}/include/freetype2")
-set(FREETYPE_LIBRARY "null")
-add_library(freetype ALIAS null)
-target_include_directories(null PUBLIC "${FREETYPE_INCLUDE_DIR}")
+if(NOT TARGET freetype)
+  add_library(freetype INTERFACE IMPORTED)
+  set_target_properties(freetype PROPERTIES
+    INTERFACE_COMPILE_OPTIONS "-sUSE_FREETYPE=1"
+    INTERFACE_LINK_LIBRARIES "-sUSE_FREETYPE=1"
+    INTERFACE_INCLUDE_DIRECTORIES "${EMSCRIPTEN_SYSROOT}/include/freetype2"
+  )
+endif()

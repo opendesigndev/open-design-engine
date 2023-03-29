@@ -5,4 +5,4 @@ export default async function init() {
 }
 
 export const wasm = 'node native module'
-export const version = '${ODE_VERSION_NPM}'
+export const version = '${ODE_NPM_VERSION}'

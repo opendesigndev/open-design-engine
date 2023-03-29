@@ -1,5 +1,8 @@
-set(ICU_FOUND TRUE)
-set(ICU_INCLUDE_DIR "${EMSCRIPTEN_SYSROOT}/include")
-set(ICU_LIBRARIES "null")
-add_library(icu ALIAS null)
-target_include_directories(null PUBLIC "${ICU_INCLUDE_DIR}")
+if(NOT TARGET icu)
+  add_library(icu INTERFACE IMPORTED)
+  set(ICU_LIBRARY icu)
+  set_target_properties(icu PROPERTIES
+    INTERFACE_COMPILE_OPTIONS "-sUSE_ICU=1"
+    INTERFACE_LINK_LIBRARIES "-sUSE_ICU=1"
+  )
+endif()

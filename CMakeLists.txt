@@ -15,6 +15,13 @@ if(EMSCRIPTEN)
     option(ODE_USE_WEBGL2 "Use WebGL version 2 (otherwise WebGL 1 is used)" OFF)
 endif()
 
+# Default to release if not multi-config
+get_property(ODE_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if(NOT ODE_MULTI_CONFIG AND NOT CMAKE_BUILD_TYPE)
+    message(STATUS "CMAKE_BUILD_TYPE not set, defaulting to Release")
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "")
+endif()
+
 # Make sure that vcpkg toolchain file is set
 if(NOT CMAKE_TOOLCHAIN_FILE AND NOT EMSCRIPTEN)
     if(DEFINED ENV{VCPKG_ROOT})
@@ -22,8 +29,8 @@ if(NOT CMAKE_TOOLCHAIN_FILE AND NOT EMSCRIPTEN)
     else()
         include(FetchContent)
         FetchContent_Declare(vcpkg
-            GIT_REPOSITORY https://github.com/microsoft/vcpkg/
-            GIT_TAG a7b6122f6b6504d16d96117336a0562693579933
+            GIT_REPOSITORY https://github.com/microsoft/vcpkg
+            GIT_TAG ${ODE_VCPKG_BUILTIN_BASELINE}
         )
         FetchContent_MakeAvailable(vcpkg)
         set(CMAKE_TOOLCHAIN_FILE "${vcpkg_SOURCE_DIR}/scripts/buildsystems/vcpkg.cmake" CACHE FILEPATH "")
@@ -89,22 +96,9 @@ if(NOT MSVC)
     add_compile_options(-Wno-empty-body)
 endif()
 
-# Fake library to convince cmake that everything is OK
-# TODO get rid of this and find a different solution
-if(EMSCRIPTEN)
-    message(WARNING "TODO get rid of null target!")
-    file(WRITE "${CMAKE_BINARY_DIR}/null.cpp" "")
-    add_library(null "${CMAKE_BINARY_DIR}/null.cpp")
-    target_include_directories(null PUBLIC "${EMSCRIPTEN_SYSROOT}/include")
-endif()
-
 # Third-party packages
 find_package(Freetype REQUIRED)
-if(EMSCRIPTEN)
-    find_package(HarfBuzz REQUIRED)
-else()
-    find_package(harfbuzz REQUIRED)
-endif()
+find_package(harfbuzz REQUIRED)
 find_package(ICU REQUIRED)
 find_package(skia REQUIRED)
 if(ODE_RENDERER_ENABLED)
