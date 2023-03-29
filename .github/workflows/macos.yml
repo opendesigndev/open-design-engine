@@ -38,8 +38,8 @@ jobs:
       - name: Configure and build ODE
         uses: lukka/run-cmake@v10
         with:
-          configurePreset: osx-${{ env.ARCH_LOWER }}
-          buildPreset: osx-${{ env.ARCH_LOWER }}-rel
+          configurePreset: osx-${{ env.ARCH_LOWER }}-no-skia-gpu
+          buildPreset: osx-${{ env.ARCH_LOWER }}-no-skia-gpu-rel
           configurePresetAdditionalArgs: "['-DVCPKG_TARGET_TRIPLET=${{ env.ARCH_LOWER }}-osx-release']"
 
       - name: Gather artifacts
@@ -47,8 +47,8 @@ jobs:
           mkdir -p build/artifacts/open-design-engine/$arch
           cp build/osx-$arch/ode-logic/ode-logic-cli build/artifacts/open-design-engine/$arch
           cp build/osx-$arch/ode-renderer/ode-renderer-cli build/artifacts/open-design-engine/$arch
-          cp build/osx-$arch/ode-animation-prototype/ode-animation-prototype-window build/artifacts/open-design-engine/$arch
-          cp build/osx-$arch/tests/renderer-unit-tests/renderer-unit-tests build/artifacts/open-design-engine/$arch
+          cp build/osx-$arch/tests/renderer-output-tests/renderer-output-tests build/artifacts/open-design-engine/$arch
+          cp build/osx-$arch/tools/animation-prototype/animation-prototype-window build/artifacts/open-design-engine/$arch
           cp build/osx-$arch/tools/render-graph-inspector/render-graph-inspector build/artifacts/open-design-engine/$arch
         env:
           arch: ${{ env.ARCH_LOWER }}

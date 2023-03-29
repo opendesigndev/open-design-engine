@@ -52,7 +52,7 @@ int main(int argc, const char *const *argv) {
     double repeatPeriod = 10;
 
     if (argc < 2) {
-        puts("Usage: ode-animation-prototype-window octopus.json animation-def.json");
+        puts("Usage: animation-prototype-window octopus.json animation-def.json");
         return 0;
     }
 

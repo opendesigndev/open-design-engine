@@ -90,4 +90,4 @@ ENV PATH="${PATH}:/opt/ode-renderer/bin"
 COPY --from=ode-debian-build /opt/ode-renderer /opt/ode-renderer
 
 # Build locally using:
-# bash -c 'docker build . -f dockerfiles/debian-build/Dockerfile --build-arg ODE_BUILD_COMMIT_TAG=`git describe 2> /dev/null || { echo -n "\`git describe --tags --always\`-"; git show -s "--format=format:%cs"; echo; }` --tag ode --platform linux/amd64'
+# bash -c 'docker build . -f dockerfiles/debian-build/Dockerfile --build-arg ODE_BUILD_COMMIT_TAG=`git describe 2> /dev/null || echo "\`git describe --tags --always\`-\`git show -s "--format=format:%cs" | tr -d -\`"` --tag ode --platform linux/amd64'
