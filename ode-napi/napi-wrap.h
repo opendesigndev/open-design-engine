@@ -36,11 +36,17 @@ Napi::Value wrapHandle(const Napi::Env &env, const char *name, const T &src);
 template <typename T>
 bool unwrapHandle(T &dst, const char *name, const Napi::Value &src);
 
-Napi::Value wrap(const Napi::Env &env, const ODE_Transformation &src);
-bool unwrap(ODE_Transformation &dst, const Napi::Value &src);
+template <unsigned N, typename T>
+Napi::Value wrapArray(const Napi::Env &env, const T src[N]);
+
+template <unsigned N, typename T>
+bool unwrapArray(T dst[N], const Napi::Value &src);
 
 template <typename T>
 bool unwrap(T &dst, const Napi::Maybe<Napi::Value> &src);
+
+template <unsigned N, typename T>
+bool unwrapArray(T dst[N], const Napi::Maybe<Napi::Value> &src);
 
 bool copy(const Napi::Value &dst, const Napi::Value &src);
 

@@ -138,29 +138,22 @@ inline bool unwrapHandle(T &dst, const char *name, const Napi::Value &src) {
     return true;
 }
 
-inline Napi::Value wrap(const Napi::Env &env, const ODE_Transformation &src) {
-    Napi::Array arr = Napi::Array::New(env, 6);
-    arr.Set(uint32_t(0), src.matrix[0]);
-    arr.Set(uint32_t(1), src.matrix[1]);
-    arr.Set(uint32_t(2), src.matrix[2]);
-    arr.Set(uint32_t(3), src.matrix[3]);
-    arr.Set(uint32_t(4), src.matrix[4]);
-    arr.Set(uint32_t(5), src.matrix[5]);
+template <unsigned N, typename T>
+inline Napi::Value wrapArray(const Napi::Env &env, const T src[N]) {
+    Napi::Array arr = Napi::Array::New(env, N);
+    for (uint32_t i = 0; i < N; ++i)
+        arr.Set(i, wrap(env, src[i]));
     return arr;
 }
 
-inline bool unwrap(ODE_Transformation &dst, const Napi::Value &src) {
+template <unsigned N, typename T>
+inline bool unwrapArray(T dst[N], const Napi::Value &src) {
     Napi::Array arr = src.As<Napi::Array>();
-    if (!(
-        unwrap(dst.matrix[0], arr.Get(uint32_t(0)).Unwrap()) &&
-        unwrap(dst.matrix[1], arr.Get(uint32_t(1)).Unwrap()) &&
-        unwrap(dst.matrix[2], arr.Get(uint32_t(2)).Unwrap()) &&
-        unwrap(dst.matrix[3], arr.Get(uint32_t(3)).Unwrap()) &&
-        unwrap(dst.matrix[4], arr.Get(uint32_t(4)).Unwrap()) &&
-        unwrap(dst.matrix[5], arr.Get(uint32_t(5)).Unwrap())
-    )) {
-        Napi::TypeError::New(src.Env(), "Missing value for element").ThrowAsJavaScriptException();
-        return false;
+    for (uint32_t i = 0; i < N; ++i) {
+        if (!unwrap(dst[i], arr.Get(i))) {
+            Napi::TypeError::New(src.Env(), "Missing value for element").ThrowAsJavaScriptException();
+            return false;
+        }
     }
     return true;
 }
@@ -170,6 +163,13 @@ inline bool unwrap(T &dst, const Napi::Maybe<Napi::Value> &src) {
     if (src.IsNothing())
         return false;
     return unwrap(dst, src.Unwrap());
+}
+
+template <unsigned N, typename T>
+inline bool unwrapArray(T dst[N], const Napi::Maybe<Napi::Value> &src) {
+    if (src.IsNothing())
+        return false;
+    return unwrapArray<N>(dst, src.Unwrap());
 }
 
 inline bool copy(const Napi::Value &dst, const Napi::Value &src) {

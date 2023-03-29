@@ -19,10 +19,11 @@ __file__ = globalFile
 
 
 ###########################
-#     N-API BINDINGS      #
+#    NODE-API BINDINGS    #
 ###########################
 
 reConstModifier = re.compile(r'\bconst\b')
+reArrayTypeAlias = re.compile(r'_array_([0-9]+)$')
 
 def generateNapiFunctionBinding(entity, emName, fullName):
     hasResult = entity.type == 'ODE_Result'
@@ -64,7 +65,7 @@ def generateNapiFunctionBinding(entity, emName, fullName):
         body += f'    {argType} {member.name};\n'
         if argAttrib == 'IN' or argAttrib == 'INOUT':
             body += (
-                f'    if (!unwrap({member.name}, info[{i}])) ' '{\n'
+                f'    if (!unwrap({member.name}, info[{i}]))' ' {\n'
                 f'        Napi::Error error = env.GetAndClearPendingException();\n'
                 f'        Napi::Error::New(env, "Failed to parse argument {i} {member.name} in {emName} ("+ error.Message() +")").ThrowAsJavaScriptException();\n'
                 f'        {emptyReturn};\n'
@@ -91,7 +92,7 @@ def generateNapiFunctionBinding(entity, emName, fullName):
         )
     return [
         f'{signature};\n',
-        f'{signature} ' '{\n'
+        f'{signature}' ' {\n'
         f'{body}'
         '}\n\n'
     ]
@@ -132,10 +133,6 @@ def generateNapiBindings(entities, apiPath, donePaths):
 
     for entity in entities:
 
-        # TODO actually solve this normally
-        if entity.name == 'ODE_Transformation':
-            continue
-
         fullName = namespacedName(entity.namespace, entity.name)
         emName = jsTypeName(fullName)
 
@@ -175,7 +172,7 @@ def generateNapiBindings(entities, apiPath, donePaths):
                 f'{wrapSignature}' ' {\n'
                 f'    return Napi::String::New(env, enumString(src));\n'
                  '}\n\n'
-                f'bool unwrap({fullName} &dst, const Napi::Value &src)' '{\n'
+                f'bool unwrap({fullName} &dst, const Napi::Value &src)' ' {\n'
                 f'    std::string text = src.As<Napi::String>();\n'
             )
             for value in entity.members:
@@ -193,10 +190,10 @@ def generateNapiBindings(entities, apiPath, donePaths):
             unwrapSignature = f'bool unwrap({fullName} &dst, const Napi::Value &src)'
             header += f'{wrapSignature};\n{unwrapSignature};\n\n'
             src += (
-                f'{wrapSignature} {{\n'
+                f'{wrapSignature}' ' {\n'
                 f'    return wrapHandle(env, "{emName}", src);\n'
                  '}\n\n'
-                f'{unwrapSignature} {{\n'
+                f'{unwrapSignature}' ' {\n'
                 f'    return unwrapHandle(dst, "{emName}", src);\n'
                  '}\n\n'
             )
@@ -207,29 +204,28 @@ def generateNapiBindings(entities, apiPath, donePaths):
             src += body
             srcExports += f'    exports.Set("{emName}", Napi::Function::New<call_{emName}>(env, "{emName}"));\n'
 
-        # Array instance
-        elif entity.category == 'array_instance':
-            srcExports += f'    // TODO: {entity.category} {emName}\n'
-
         # Struct
         elif entity.category == 'struct':
             wrapSignature = f'Napi::Value wrap(const Napi::Env &env, const {fullName} &src)'
             unwrapSignature = f'bool unwrap({fullName} &dst, const Napi::Value &value)'
             header += f'{wrapSignature};\n{unwrapSignature};\n\n'
             wrap = (
-                f'{wrapSignature} {{\n'
+                f'{wrapSignature}' ' {\n'
                 f'    Napi::Object obj = Napi::Object::New(env);\n'
             )
             unwrap = (
-                f'{unwrapSignature} {{\n'
+                f'{unwrapSignature}' ' {\n'
                 f'    Napi::Env env = value.Env();\n'
                 f'    Napi::Object obj = value.As<Napi::Object>();\n'
             )
             for member in entity.members:
                 if member.category == 'member_variable':
-                    wrap += f'    Napi::Value {member.name} = wrap(env, src.{member.name});\n'
+                    wrapFnSuffix = ''
+                    if (match := reArrayTypeAlias.search(member.type)):
+                        wrapFnSuffix = 'Array<'+match.group(1)+'>'
+                    wrap += f'    Napi::Value {member.name} = wrap{wrapFnSuffix}(env, src.{member.name});\n'
                     unwrap += (
-                        f'    if (!unwrap(dst.{member.name}, obj.Get("{member.name}")))' ' {\n'
+                        f'    if (!unwrap{wrapFnSuffix}(dst.{member.name}, obj.Get("{member.name}")))' ' {\n'
                         f'        Napi::Error error = env.GetAndClearPendingException();\n'
                         f'        Napi::Error::New(env, "Invalid value for field {member.name} of {fullName} ("+error.Message()+")").ThrowAsJavaScriptException();\n'
                         f'        return false;\n'
