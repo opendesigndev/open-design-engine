@@ -1,5 +1,8 @@
 
 cmake_minimum_required(VERSION 3.16)
+# Recommended by cmake-js https://github.com/cmake-js/cmake-js
+cmake_policy(SET CMP0091 NEW)
+cmake_policy(SET CMP0042 NEW)
 
 # Read version from vcpkg.json
 include(version.cmake)
@@ -12,14 +15,29 @@ if(EMSCRIPTEN)
     option(ODE_USE_WEBGL2 "Use WebGL version 2 (otherwise WebGL 1 is used)" OFF)
 endif()
 
+# Default to release if not multi-config
+get_property(ODE_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if(NOT ODE_MULTI_CONFIG AND NOT CMAKE_BUILD_TYPE)
+    message(STATUS "CMAKE_BUILD_TYPE not set, defaulting to Release")
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "")
+endif()
+
 # Make sure that vcpkg toolchain file is set
 if(NOT CMAKE_TOOLCHAIN_FILE AND NOT EMSCRIPTEN)
     if(DEFINED ENV{VCPKG_ROOT})
         set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
     else()
-        message(SEND_ERROR "Vcpkg toolchain not configured. Either set VCPKG_ROOT environment variable or pass -DCMAKE_TOOLCHAIN_FILE=VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake to cmake")
+        include(FetchContent)
+        FetchContent_Declare(vcpkg
+            GIT_REPOSITORY https://github.com/microsoft/vcpkg
+            GIT_TAG ${ODE_VCPKG_BUILTIN_BASELINE}
+        )
+        FetchContent_MakeAvailable(vcpkg)
+        set(CMAKE_TOOLCHAIN_FILE "${vcpkg_SOURCE_DIR}/scripts/buildsystems/vcpkg.cmake" CACHE FILEPATH "")
     endif()
 endif()
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_OSX_DEPLOYMENT_TARGET 13.0)
 
 # Set static vcpkg triplet for Windows
 if(WIN32 AND NOT VCPKG_TARGET_TRIPLET)
@@ -63,6 +81,7 @@ else()
             list(APPEND VCPKG_MANIFEST_FEATURES "glew")
         endif()
     endif()
+    list(APPEND VCPKG_MANIFEST_FEATURES "node-api")
 endif()
 if(ODE_TEST_MODULES)
     list(APPEND VCPKG_MANIFEST_FEATURES "gtest")
@@ -77,22 +96,9 @@ if(NOT MSVC)
     add_compile_options(-Wno-empty-body)
 endif()
 
-# Fake library to convince cmake that everything is OK
-# TODO get rid of this and find a different solution
-if(EMSCRIPTEN)
-    message(WARNING "TODO get rid of null target!")
-    file(WRITE "${CMAKE_BINARY_DIR}/null.cpp" "")
-    add_library(null "${CMAKE_BINARY_DIR}/null.cpp")
-    target_include_directories(null PUBLIC "${EMSCRIPTEN_SYSROOT}/include")
-endif()
-
 # Third-party packages
 find_package(Freetype REQUIRED)
-if(EMSCRIPTEN)
-    find_package(HarfBuzz REQUIRED)
-else()
-    find_package(harfbuzz REQUIRED)
-endif()
+find_package(harfbuzz REQUIRED)
 find_package(ICU REQUIRED)
 find_package(skia REQUIRED)
 if(ODE_RENDERER_ENABLED)
@@ -130,7 +136,10 @@ if(ODE_RENDERER_ENABLED)
     add_subdirectory(ode-graphics)
     add_subdirectory(ode-renderer)
     #add_subdirectory(ode-interactive)
-    add_subdirectory(ode-animation-prototype)
+    add_subdirectory(ode-napi)
+    if(NOT EMSCRIPTEN)
+        add_subdirectory(ode-animation-prototype)
+    endif()
 endif()
 if(ODE_TEST_MODULES)
     add_subdirectory(ode-diagnostics)

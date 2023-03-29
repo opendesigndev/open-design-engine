@@ -16,15 +16,14 @@
 /// Structures marked with ODE_TUPLE can be constructed as array objects in JS
 #define ODE_TUPLE
 
-#ifndef ODE_BIND_CONSTRUCTOR
-#define ODE_BIND_CONSTRUCTOR(api, fnPtr)
-#endif
-#ifndef ODE_BIND_METHOD
-#define ODE_BIND_METHOD(api, methodName, fnPtr)
-#endif
-#ifndef ODE_BIND_PTR_GETTER
-#define ODE_BIND_PTR_GETTER(methodName, memberPtr)
-#endif
+// All pointer arguments must be const or marked with one of:
+/// Pointer arguments marked with ODE_OUT will be written into but not read
+#define ODE_OUT
+/// Pointer arguments marked with ODE_INOUT will be read and written into
+#define ODE_INOUT
+/// Pointer argument marked with ODE_OUT_RETURN is output that can be considered the return value apart from Result
+#define ODE_OUT_RETURN
+
 #ifndef ODE_BIND_ARRAY_GETTER
 #define ODE_BIND_ARRAY_GETTER(methodName, memberArray, memberCount)
 #endif
@@ -74,15 +73,10 @@ typedef enum {
 typedef double ODE_Scalar;
 
 // Raw data pointer types
-#ifdef __EMSCRIPTEN__
-    typedef uintptr_t ODE_VarDataPtr;
-    typedef uintptr_t ODE_ConstDataPtr;
-    typedef uintptr_t ODE_ConstCharPtr;
-#else
-    typedef void *ODE_VarDataPtr;
-    typedef const void *ODE_ConstDataPtr;
-    typedef const char *ODE_ConstCharPtr;
-#endif
+typedef void *ODE_VarDataPtr;
+typedef const void *ODE_ConstDataPtr;
+typedef const char *ODE_ConstCharPtr;
+typedef char *ODE_CharPtr;
 
 /// A mathematical 2-dimensional vector
 typedef struct { ODE_TUPLE
@@ -104,15 +98,10 @@ typedef struct {
 
 /// A standalone string in its own memory block (must be manually destroyed with ode_destroyString)
 typedef struct {
-    ODE_BIND_CONSTRUCTOR((const std::string &str), static_cast<ODE_String (*)(const std::string &)>(&ode_makeString));
     /// Pointer to the beginning of UTF-8 encoded string
-    char *data;
+    ODE_CharPtr data;
     /// Length of the string in bytes excluding the terminating null character
     int length;
-    /// Convert to ODE_StringRef
-    ODE_BIND_METHOD(ODE_StringRef(), ref, static_cast<ODE_StringRef (*)(const ODE_String &)>(&ode_stringRef));
-    /// Get pointer to the beginning of string
-    ODE_BIND_PTR_GETTER(getData, data);
 } ODE_String;
 
 /// A buffer of raw data bytes in physical memory - deallocate with ode_destroyMemoryBuffer
@@ -141,7 +130,7 @@ ODE_Result ODE_API ode_destroyString(ODE_String string);
  * @param buffer - the resulting memory buffer will be stored in this output argument
  * @param length - the desired length of the buffer in bytes
  */
-ODE_Result ODE_API ode_allocateMemoryBuffer(ODE_MemoryBuffer *buffer, size_t length);
+ODE_Result ODE_API ode_allocateMemoryBuffer(ODE_OUT_RETURN ODE_MemoryBuffer *buffer, size_t length);
 
 /**
  * Resizes an existing memory buffer to a given size, or allocates a new memory buffer if buffer's data and length are zero.
@@ -149,10 +138,10 @@ ODE_Result ODE_API ode_allocateMemoryBuffer(ODE_MemoryBuffer *buffer, size_t len
  * @param buffer - the memory buffer to be resized
  * @param length - the desired new length of the buffer in bytes
  */
-ODE_Result ODE_API ode_reallocateMemoryBuffer(ODE_MemoryBuffer *buffer, size_t length);
+ODE_Result ODE_API ode_reallocateMemoryBuffer(ODE_INOUT ODE_MemoryBuffer *buffer, size_t length);
 
 /// Destroys the memory buffer, freeing its allocated memory
-ODE_Result ODE_API ode_destroyMemoryBuffer(ODE_MemoryBuffer *buffer);
+ODE_Result ODE_API ode_destroyMemoryBuffer(ODE_INOUT ODE_MemoryBuffer *buffer);
 
 #ifdef __cplusplus
 }
@@ -161,7 +150,6 @@ ODE_Result ODE_API ode_destroyMemoryBuffer(ODE_MemoryBuffer *buffer);
 
 // C++ utilities
 
-#include <cstdlib>
 #include <cstring>
 #include <string>
 
@@ -214,6 +202,17 @@ inline ODE_String ode_makeString(const ODE_StringRef &ref) {
         string.length = ref.length;
     }
     return string;
+}
+
+/// Creates an ODE_MemoryBuffer from an array
+inline ODE_MemoryBuffer ode_makeMemoryBuffer(const void *data, size_t length) {
+    ODE_MemoryBuffer buffer = { };
+    if (length && (buffer.data = malloc(length))) {
+        buffer.length = length;
+        if (data)
+            memcpy(buffer.data, data, length);
+    }
+    return buffer;
 }
 
 #endif

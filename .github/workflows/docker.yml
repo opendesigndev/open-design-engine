@@ -40,9 +40,11 @@ jobs:
           then
             echo "ON_BRANCH=true" >> $GITHUB_ENV;
             echo "ON_TAG=false" >> $GITHUB_ENV;
+            { echo -n "ODE_BUILD_COMMIT_TAG="; echo -n "`git describe --tags --always`-"; git show -s "--format=format:%cs"; echo; } >> $GITHUB_ENV;
           else
             echo "ON_BRANCH=false" >> $GITHUB_ENV;
             echo "ON_TAG=true" >> $GITHUB_ENV;
+            echo "ODE_BUILD_COMMIT_TAG=${{ github.ref_name }}" >> $GITHUB_ENV;
           fi
           { echo -n "VCPKG_COMMIT="; jq -r '."builtin-baseline"' vcpkg.json; } >> $GITHUB_ENV
           { echo -n "GITLAB_BASE_CACHE=${{ env.GITLAB_BASE_CACHE_IMAGE }}:cache-"; {
@@ -104,7 +106,7 @@ jobs:
           build-args: |
             VCPKG_COMMIT_SOURCE=arg
             VCPKG_COMMIT=${{ env.VCPKG_COMMIT }}
-            ODE_BUILD_COMMIT="${{ github.sha }}"
+            ODE_BUILD_COMMIT_TAG="${{ env.ODE_BUILD_COMMIT_TAG }}"
           cache-from: type=registry,ref=${{ env.GITLAB_BASE_CACHE }}
       - name: Adding output tags to summary
         run: |

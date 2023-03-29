@@ -1,5 +1,0 @@
-set(HARFBUZZ_FOUND TRUE)
-set(HARFBUZZ_INCLUDE_DIR "${EMSCRIPTEN_SYSROOT}/include/harfbuzz")
-set(HARFBUZZ_LIBRARIES "null")
-add_library(harfbuzz::harfbuzz ALIAS null)
-target_include_directories(null PUBLIC "${HARFBUZZ_INCLUDE_DIR}")

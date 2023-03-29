@@ -1,0 +1,11 @@
+{
+    "name": "@opendesign/engine-source",
+    "version": "x.y.z",
+    "main": "./build/npm/Release/target-specific/index.js",
+    "scripts": {
+        "install": "node ode-napi/try-importing-prebuilt.mjs || cmake-js compile -O build/npm --CDODE_TEST_MODULES=OFF --CDODE_SKIA_GPU=OFF"
+    },
+    "dependencies": {
+        "cmake-js": "^7.2.1"
+    }
+}

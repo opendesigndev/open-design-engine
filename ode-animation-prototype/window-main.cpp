@@ -108,7 +108,7 @@ int main(int argc, const char *const *argv) {
         glfwPollEvents();
         glfwGetFramebufferSize(window, &frameView.width, &frameView.height);
         frameView.scale = 1;
-        ode_pr1_animation_drawFrame(renderer, &frameView, t);
+        ode_pr1_animation_drawFrame(renderer, frameView, t);
         if (!frameNo++)
             printf("Textures created in first frame: %d\n", prevTexturesCreated = DEBUG_TEXTURES_CREATED);
         else if (DEBUG_TEXTURES_CREATED != prevTexturesCreated && printouts) {
