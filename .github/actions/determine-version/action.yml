@@ -9,11 +9,11 @@ runs:
         set -xe
         BASE_VERSION=`jq .version vcpkg.json -r`
         if [ $GITHUB_REF_TYPE == tag ]; then
-          if [ "v$BASE_VERSION" != "${{ github.ref_name }}" ]; then
-            echo "vcpkg.json.version and tag name do not match"
-            exit 1
+          if [ "v$BASE_VERSION" == "${{ github.ref_name }}" ]; then
+            echo "ODE_NPM_VERSION=$BASE_VERSION" >> $GITHUB_ENV
+          else
+            echo "ODE_NPM_VERSION=$BASE_VERSION-${{ github.ref_name }}" >> $GITHUB_ENV
           fi
-          echo "ODE_NPM_VERSION=$BASE_VERSION" >> $GITHUB_ENV
         else
           echo "ODE_NPM_VERSION=$BASE_VERSION-`git show -s --format=%h/%cs | tr -d - | tr / -`" >> $GITHUB_ENV
         fi
