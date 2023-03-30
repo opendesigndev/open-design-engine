@@ -512,7 +512,6 @@ void drawLayerShapeFill(int fillI,
     ImGui::SameLine(100);
     bool fillVisible = octopusFill.visible;
     if (ImGui::Checkbox(layerPropName(layerId, "fill-visibility").c_str(), &fillVisible)) {
-        // TODO: Subject SHAPE or FILL ?
         changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, fillVisible](octopus::LayerChange::Values &values) {
             values.fill = octopusFill;
             values.fill->visible = fillVisible;
@@ -759,7 +758,7 @@ void drawLayerShape(const ODE_StringRef &layerId,
             float cornerRadius = octopusShape.path->cornerRadius.has_value() ? *octopusShape.path->cornerRadius : 0.0f;
             ImGui::Text("Corner radius:");
             ImGui::SameLine(100);
-            if (ImGui::DragFloat(layerPropName(layerId, "shape-rectangle-corner-radius").c_str(), &cornerRadius, 0.1f, 0.0f, 1000.0f)) {
+            if (ImGui::DragFloat(layerPropName(layerId, "shape-rectangle-corner-radius").c_str(), &cornerRadius, 1.0f, 0.0f, 1000.0f)) {
                 changeProperty(octopus::LayerChange::Subject::SHAPE, apiContext, layerId, nonstd::nullopt, [&cornerRadius, &octopusShapePath](octopus::LayerChange::Values &values) {
                     values.path = octopusShapePath;
                     values.path->cornerRadius = cornerRadius;
