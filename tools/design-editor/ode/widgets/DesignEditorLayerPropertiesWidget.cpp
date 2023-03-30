@@ -113,6 +113,17 @@ const std::map<int, const char*> EFFECT_BASIS_MAP {
     { 8, "BACKGROUND" },
 };
 
+const octopus::Fill DEFAULT_FILL {
+    octopus::Fill::Type::COLOR,
+    true,
+    octopus::BlendMode::NORMAL,
+    octopus::Color{1.0f,1.0f,1.0f,1.0f},
+    nonstd::nullopt,
+    nonstd::nullopt,
+    nonstd::nullopt,
+    nonstd::nullopt
+};
+
 
 std::string layerTypeToShortString(ODE_LayerType layerType) {
     switch (layerType) {
@@ -799,8 +810,9 @@ void drawLayerEffects(const ODE_StringRef &layerId,
     ImGui::SameLine(415);
     if (ImGui::SmallButton(layerPropName(layerId, "effect-add", nonstd::nullopt, nonstd::nullopt, "+").c_str())) {
         changeInsertBack(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, nonstd::nullopt, [](octopus::LayerChange::Values &values) {
-            // TODO: Default effect values?
             octopus::Effect newEffect;
+            newEffect.type = octopus::Effect::Type::OVERLAY;
+            newEffect.overlay = DEFAULT_FILL;
             values.effect = newEffect;
         });
     }
@@ -877,6 +889,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                     changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, nonstd::nullopt, [&octopusEffect, etI](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
                         values.effect->type = static_cast<octopus::Effect::Type>(etI);
+                        // TODO: Fill in reasonable default values when a type changes to a previously unused type
                     });
                 }
                 if (isSelected) {
