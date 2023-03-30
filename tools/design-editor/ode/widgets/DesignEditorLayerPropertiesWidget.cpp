@@ -1099,7 +1099,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                 ImGui::SameLine(100);
                 float blurAmount = *octopusEffect.blur;
                 if (ImGui::DragFloat(layerPropName(layerId, "effect-blur-amount", ei).c_str(), &blurAmount, 0.1f, 0.0f, 100.0f)) {
-                    changeReplace(octopus::LayerChange::Subject::LAYER, apiContext, layerId, ei, nonstd::nullopt, [&octopusEffect, blurAmount](octopus::LayerChange::Values &values) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, nonstd::nullopt, [&octopusEffect, blurAmount](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
                         values.effect->blur = blurAmount;
                     });
