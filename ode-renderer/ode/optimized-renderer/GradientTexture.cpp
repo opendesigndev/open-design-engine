@@ -96,7 +96,7 @@ bool GradientTexture::initialize(const std::vector<octopus::Gradient::ColorStop>
         pixels[3] = channelFloatToByte(colorStops.front().color.a);
         remap[0] = 1;
         remap[1] = 0;
-        return texture.initialize(pixels, 1, 1, PixelFormat::RGBA);
+        return texture.initialize(BitmapConstRef(PixelFormat::RGBA, pixels, 1, 1));
     }
     // Special case - simple linear gradient with two colors
     if (colorStops.size() == 2 && colorStops.front().interpolation == octopus::Gradient::Interpolation::LINEAR && colorStops.front().position == 0 && colorStops.back().position == 1) {
@@ -117,7 +117,7 @@ bool GradientTexture::initialize(const std::vector<octopus::Gradient::ColorStop>
          */
         remap[0] = .5;
         remap[1] = .25;
-        return texture.initialize(pixels, 2, 1, PixelFormat::RGBA);
+        return texture.initialize(BitmapConstRef(PixelFormat::RGBA, pixels, 2, 1));
     }
     // For the general case, sample the gradient and generate a one-dimensional texture
     GradientSampler gradientSampler(colorStops);
@@ -136,7 +136,7 @@ bool GradientTexture::initialize(const std::vector<octopus::Gradient::ColorStop>
      */
     remap[0] = 1-1./GRADIENT_TEXTURE_WIDTH;
     remap[1] = .5/GRADIENT_TEXTURE_WIDTH;
-    return texture.initialize(pixels, GRADIENT_TEXTURE_WIDTH, 1, PixelFormat::RGBA);
+    return texture.initialize(BitmapConstRef(PixelFormat::RGBA, pixels, GRADIENT_TEXTURE_WIDTH, 1));
 }
 
 void GradientTexture::bind(int unit) const {

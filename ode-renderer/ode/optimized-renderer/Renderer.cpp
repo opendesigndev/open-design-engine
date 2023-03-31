@@ -44,9 +44,9 @@ Renderer::Renderer(GraphicsContext &gc) :
     billboard.initialize(billboardVertices, &attributeSize, 1, GL_TRIANGLES, 6);
 
     int pels[4] = { };
-    transparentTexture.initialize(pels, 1, 1, PixelFormat::RGBA);
+    transparentTexture.initialize(BitmapConstRef(PixelFormat::RGBA, pels, 1, 1));
     memset(pels, 0xff, sizeof(pels));
-    whiteTexture.initialize(pels, 1, 1, PixelFormat::RGBA);
+    whiteTexture.initialize(BitmapConstRef(PixelFormat::RGBA, pels, 1, 1));
 
     solidColorShader.initialize(compositingShaderRes);
     blitShader.initialize(compositingShaderRes);

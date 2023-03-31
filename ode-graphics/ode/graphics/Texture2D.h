@@ -24,10 +24,12 @@ public:
     Texture2D(Texture2D &&orig);
     ~Texture2D();
     Texture2D &operator=(const Texture2D &) = delete;
-    /// Initializes the image data of the texture (deprecated overload)
-    bool initialize(const void *pixels, int width, int height, PixelFormat format);
     /// Initializes the image data of the texture
     bool initialize(const BitmapConstRef &bitmap);
+    /// Allocates the texture without setting its data
+    bool initialize(PixelFormat format, const Vector2i &dimensions);
+    /// Fills in a portion of the texture
+    bool put(const Vector2i &position, const BitmapConstRef &bitmap);
     /// Returns true if image data has been initialized
     explicit operator bool() const;
     /// Binds the texture to the specified texture unit
@@ -60,6 +62,8 @@ private:
     PixelFormat fmt;
     bool hasMipmaps;
     size_t memorySize;
+
+    bool initialize(PixelFormat format, const void *pixels, const Vector2i &dimensions);
 
 };
 

@@ -18,3 +18,6 @@
 [submodule "third-party/imnodes"]
 	path = third-party/imnodes
 	url = https://github.com/Nelarius/imnodes.git
+[submodule "third-party/msdf-atlas-gen"]
+	path = third-party/msdf-atlas-gen
+	url = https://github.com/Chlumsky/msdf-atlas-gen.git

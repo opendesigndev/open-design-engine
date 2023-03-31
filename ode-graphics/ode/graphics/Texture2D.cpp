@@ -146,19 +146,19 @@ Texture2D::~Texture2D() {
     }
 }
 
-bool Texture2D::initialize(const void *pixels, int width, int height, PixelFormat format) {
-    if (!(width > 0 && height > 0 && width <= GraphicsContext::getMaxTextureSize() && height <= GraphicsContext::getMaxTextureSize()))
+bool Texture2D::initialize(PixelFormat format, const void *pixels, const Vector2i &dimensions) {
+    if (!(dimensions.x > 0 && dimensions.y > 0 && dimensions.x <= GraphicsContext::getMaxTextureSize() && dimensions.y <= GraphicsContext::getMaxTextureSize()))
         return false;
-    dims = Vector2i(width, height);
+    dims = dimensions;
     fmt = format;
     GLint internalFormat = GL_INVALID_INDEX;
     GLenum pixelFormat = GL_INVALID_INDEX;
     GLenum pixelType = GL_INVALID_INDEX;
     convertPixelFormat(format, internalFormat, pixelFormat, pixelType);
     glBindTexture(GL_TEXTURE_2D, handle);
-    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, pixelFormat, pixelType, pixels);
+    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, dimensions.x, dimensions.y, 0, pixelFormat, pixelType, pixels);
     ODE_CHECK_GL_ERROR();
-    size_t newMemSize = pixelSize(format)*dims.x*dims.y;
+    size_t newMemSize = pixelSize(format)*dimensions.x*dimensions.y;
     //MemoryWatch::instance().registerChange((long long) newMemSize-(long long) memorySize_, true);
     hasMipmaps = false;
     memorySize = newMemSize;
@@ -168,7 +168,26 @@ bool Texture2D::initialize(const void *pixels, int width, int height, PixelForma
 }
 
 bool Texture2D::initialize(const BitmapConstRef &bitmap) {
-    return initialize(bitmap.pixels, bitmap.width(), bitmap.height(), bitmap.format);
+    return initialize(bitmap.format, bitmap.pixels, bitmap.dimensions);
+}
+
+bool Texture2D::initialize(PixelFormat format, const Vector2i &dimensions) {
+    return initialize(format, nullptr, dimensions);
+}
+
+bool Texture2D::put(const Vector2i &position, const BitmapConstRef &bitmap) {
+    if (bitmap.dimensions == Vector2i())
+        return true;
+    if (hasMipmaps || !(handle && bitmap.pixels && bitmap.format == fmt && position.x >= 0 && position.y >= 0 && position.x+bitmap.dimensions.x <= dims.x && position.y+bitmap.dimensions.y <= dims.y))
+        return false;
+    GLint internalFormat = GL_INVALID_INDEX;
+    GLenum pixelFormat = GL_INVALID_INDEX;
+    GLenum pixelType = GL_INVALID_INDEX;
+    convertPixelFormat(bitmap.format, internalFormat, pixelFormat, pixelType);
+    glBindTexture(GL_TEXTURE_2D, handle);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, position.x, position.y, bitmap.dimensions.x, bitmap.dimensions.y, pixelFormat, pixelType, bitmap.pixels);
+    ODE_CHECK_GL_ERROR();
+    return true;
 }
 
 Texture2D::operator bool() const {
