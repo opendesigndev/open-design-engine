@@ -21,18 +21,21 @@ jobs:
           # https://github.com/organizations/opendesigndev/settings/personal-access-tokens/39049
           token: ${{ secrets.ODE_REPOS_TOKEN }}
           submodules: true
-      - id: version
-        uses: ./.github/actions/determine-version
+      - uses: ./.github/actions/determine-version
+        with:
+          has_publish_label: ${{ contains(github.event.pull_request.labels.*.name, 'ci:npm-publish') }}
+          ref_name: ${{ github.ref_name }}
+          ref: ${{ github.ref }}
       - name: "Emscripten: Setup cache"
         uses: actions/cache@v3
         with:
-          path: 'emsdk-cache'
+          path: "emsdk-cache"
           key: emscripten-${{env.EMSCRIPTEN_VERSION}}-${{ runner.os }}-${{ env.EMSCRIPTEN_PORTS }}
       - name: "Emscripten: Setup emsdk"
         uses: mymindstorm/setup-emsdk@v11
         with:
           version: ${{ env.EMSCRIPTEN_VERSION }}
-          actions-cache-folder: 'emsdk-cache'
+          actions-cache-folder: "emsdk-cache"
       - name: "Emscripten ports: Build"
         run: embuilder build ${{ env.EMSCRIPTEN_PORTS }}
       - name: "Skia: Restore cache"
@@ -68,7 +71,12 @@ jobs:
           path: |
             build/wasm-rel/ode-napi
       - uses: ./.github/actions/npm-publish
-        if: contains(github.event.pull_request.labels.*.name, 'ci:npm-publish') || (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')))
+        if: env.ODE_SHOULD_PUBLISH_TO_NPM
         with:
           npm_token: ${{ secrets.NPM_TOKEN }}
           directory: build/wasm-rel/ode-napi/target-specific
+      - uses: ./.github/actions/npm-publish
+        if: env.ODE_SHOULD_PUBLISH_TO_NPM
+        with:
+          npm_token: ${{ secrets.NPM_TOKEN }}
+          directory: build/wasm-rel/ode-napi/wrapper

@@ -10,10 +10,9 @@ jobs:
     if: |
       (github.event_name == 'pull_request' && github.event.pull_request.draft == false) || github.event_name == 'push'
     runs-on: [self-hosted, macOS, "${{ matrix.arch }}"]
-
     steps:
       #- name: Install prerequisites
-      #  run: brew install automake autoconf autoconf-archive git
+      #  run: brew install automake autoconf autoconf-archive git node
       - name: Setup env
         # The runner has: brew automake autoconf autoconf-archive git cmake
         run: echo "PATH=/opt/homebrew/bin:$PATH" >> $GITHUB_ENV
@@ -28,6 +27,12 @@ jobs:
         run: |
           printf "VCPKG_BASELINE=%s\n" $(jq -r '."builtin-baseline"' vcpkg.json) >> $GITHUB_ENV;
           echo "ARCH_LOWER=`echo ${{ matrix.arch }} | tr '[:upper:]' '[:lower:]'`" >> ${GITHUB_ENV}
+      - uses: ./.github/actions/determine-version
+        with:
+          has_publish_label: ${{ contains(github.event.pull_request.labels.*.name, 'ci:npm-publish') }}
+          ref_name: ${{ github.ref_name }}
+          ref: ${{ github.ref }}
+
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v10
@@ -41,6 +46,7 @@ jobs:
           configurePreset: osx-${{ env.ARCH_LOWER }}-no-skia-gpu
           buildPreset: osx-${{ env.ARCH_LOWER }}-no-skia-gpu-rel
           configurePresetAdditionalArgs: "['-DVCPKG_TARGET_TRIPLET=${{ env.ARCH_LOWER }}-osx-release']"
+          buildPresetAdditionalArgs: "['--parallel']"
 
       - name: Gather artifacts
         run: |
@@ -58,3 +64,8 @@ jobs:
         with:
           name: ode-osx-${{ env.ARCH_LOWER }}
           path: build/artifacts
+      - uses: ./.github/actions/npm-publish
+        if: env.ODE_SHOULD_PUBLISH_TO_NPM
+        with:
+          npm_token: ${{ secrets.NPM_TOKEN }}
+          directory: build/osx-${{ env.ARCH_LOWER }}/ode-napi/target-specific

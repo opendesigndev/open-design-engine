@@ -190,9 +190,11 @@ else()
         # We are NOT in @opendesign/engine-source package, populate the package folder.
         if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
             set(ODE_PLATFORM_OS "darwin")
-            if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm64")
+            # Normally, this should be detected from CMAKE_SYSTEM_PROCESSOR, but
+            # it always outputs arm64 on arm builder.
+            if (${CMAKE_OSX_ARCHITECTURES} MATCHES "arm64")
                 set(ODE_PLATFORM_CPU "arm64")
-            elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES "x86_64")
+            elseif(${CMAKE_OSX_ARCHITECTURES} MATCHES "x86_64")
                 set(ODE_PLATFORM_CPU "x64")
             endif()
         endif()

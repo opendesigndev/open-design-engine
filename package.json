@@ -1,9 +1,18 @@
 {
     "name": "@opendesign/engine-source",
     "version": "x.y.z",
-    "main": "./build/npm/Release/target-specific/index.js",
+    "exports": "./build/npm/Release/target-specific/index.js",
+    "type": "module",
     "scripts": {
         "install": "node ode-napi/try-importing-prebuilt.mjs || cmake-js compile -O build/npm --CDODE_TEST_MODULES=OFF --CDODE_SKIA_GPU=OFF"
+    },
+    "peerDependencies": {
+        "@opendesign/engine-darwin-arm64": "*",
+        "@opendesign/engine-darwin-x64": "*"
+    },
+    "peerDependenciesMeta": {
+        "@opendesign/engine-darwin-arm64": { "optional": true },
+        "@opendesign/engine-darwin-x64": { "optional": true }
     },
     "dependencies": {
         "cmake-js": "^7.2.1"
