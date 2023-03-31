@@ -23,13 +23,10 @@ runs:
         fi
         cd ${{ inputs.directory }}
         pkg_name=`jq .name package.json -r`
-        json_exist=`npm view $pkg_name@$ODE_NPM_VERSION --json 2> /dev/null`
+        json_exist=`npm -s view $pkg_name@$ODE_NPM_VERSION || true 2> /dev/null`
         if ! [ -z "$json_exist" ]; then
           echo "Package $pkg_name with version $ODE_NPM_VERSION is already published. Skipping."
           exit 0
-        fi
-        if [ ${{ inputs.directory }} == "." ]; then
-          jq .version=$ODE_NPM_VERSION package.json
         fi
         pkg_json_version=`jq .version package.json -r`
         if [ "$ODE_NPM_VERSION" != "$pkg_json_version" ]; then
