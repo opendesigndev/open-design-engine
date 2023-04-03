@@ -77,8 +77,7 @@ int loadMissingFonts(const DesignEditorContext::Api &apiContext,
             continue;
         }
         const std::string pathStr = (std::string)fontDir+std::string("/")+ode_stringDeref(missingFonts.entries[i])+std::string(".ttf");
-        const ODE_StringRef path { pathStr.c_str(), static_cast<int>(strlen(path.data)) };
-        CHECK(ode_design_loadFontFile(apiContext.design, missingFonts.entries[i], path, ODE_StringRef()));
+        CHECK(ode_design_loadFontFile(apiContext.design, missingFonts.entries[i], ode_stringRef(pathStr), ODE_StringRef()));
     }
 
     return 0;

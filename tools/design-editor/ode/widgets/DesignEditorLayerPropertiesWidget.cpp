@@ -285,14 +285,26 @@ std::string layerPropName(const ODE_StringRef &layerId,
         (filterIndex.has_value() ? "-" + std::to_string(*filterIndex) : "");
 };
 
-void drawLayerInfo(const ODE_LayerList::Entry &layer) {
+void drawLayerInfo(const ODE_LayerList::Entry &layer,
+                   DesignEditorContext::Api &apiContext,
+                   ODE_LayerList &layerList) {
     ImGui::Text("%s", "ID:");
     ImGui::SameLine(100);
     ImGui::Text("%s", layer.id.data);
 
+    // Editable name
     ImGui::Text("%s", "Name:");
     ImGui::SameLine(100);
-    ImGui::Text("%s", layer.name.data);
+    char textBuffer[50] {};
+    strncpy(textBuffer, layer.name.data, sizeof(textBuffer)-1);
+    ImGui::InputText(layerPropName(layer.id, "layer-name").c_str(), textBuffer, 50);
+    if (ImGui::IsItemEdited()) {
+        changeProperty(octopus::LayerChange::Subject::LAYER, apiContext, layer.id, nonstd::nullopt, [&textBuffer](octopus::LayerChange::Values &values) {
+            values.name = textBuffer;
+        });
+        // Recreate the layer list, as the name of this layer has changed
+        ode_component_listLayers(apiContext.component, &layerList);
+    }
 
     ImGui::Text("%s", "Type:");
     ImGui::SameLine(100);
@@ -307,7 +319,7 @@ void drawLayerCommonProperties(const ODE_StringRef &layerId,
     ImGui::Text("Visible:");
     ImGui::SameLine(100);
     bool layerVisible = octopusLayer.visible;
-    if (ImGui::Checkbox(layerPropName(layerId, "visibility").c_str(), &layerVisible)) {
+    if (ImGui::Checkbox(layerPropName(layerId, "layer-visibility").c_str(), &layerVisible)) {
         changeProperty(octopus::LayerChange::Subject::LAYER, apiContext, layerId, nonstd::nullopt, [layerVisible](octopus::LayerChange::Values &values) {
             values.visible = layerVisible;
         });
@@ -316,7 +328,7 @@ void drawLayerCommonProperties(const ODE_StringRef &layerId,
     ImGui::Text("Opacity:");
     ImGui::SameLine(100);
     float layerOpacity = octopusLayer.opacity;
-    if (ImGui::SliderFloat(layerPropName(layerId, "opacity").c_str(), &layerOpacity, 0.0f, 1.0f)) {
+    if (ImGui::SliderFloat(layerPropName(layerId, "layer-opacity").c_str(), &layerOpacity, 0.0f, 1.0f)) {
         changeProperty(octopus::LayerChange::Subject::LAYER, apiContext, layerId, nonstd::nullopt, [layerOpacity](octopus::LayerChange::Values &values) {
             values.opacity = layerOpacity;
         });
@@ -325,7 +337,7 @@ void drawLayerCommonProperties(const ODE_StringRef &layerId,
     ImGui::Text("Blend mode:");
     ImGui::SameLine(100);
     const int blendModeI = static_cast<int>(octopusLayer.blendMode);
-    if (ImGui::BeginCombo(layerPropName(layerId, "blend-mode").c_str(), BLEND_MODES_STR[blendModeI])) {
+    if (ImGui::BeginCombo(layerPropName(layerId, "layer-blend-mode").c_str(), BLEND_MODES_STR[blendModeI])) {
         for (int bmI = 0; bmI < IM_ARRAYSIZE(BLEND_MODES_STR); bmI++) {
             const bool isSelected = (blendModeI == bmI);
             if (ImGui::Selectable(BLEND_MODES_STR[bmI], isSelected)) {
@@ -1188,7 +1200,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
     ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
 }
 
-void drawLayerPropertiesWidget(const ODE_LayerList &layerList,
+void drawLayerPropertiesWidget(ODE_LayerList &layerList,
                                DesignEditorContext::Api &apiContext,
                                DesignEditorContext::LayerSelection &layerSelectionContext) {
     ImGui::Begin("Selected Layer Properties");
@@ -1230,7 +1242,7 @@ void drawLayerPropertiesWidget(const ODE_LayerList &layerList,
 
             if (ImGui::CollapsingHeader(layerSectionHeader.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
                 // Layer info
-                drawLayerInfo(layer);
+                drawLayerInfo(layer, apiContext, layerList);
 
                 // Common layer properties
                 drawLayerCommonProperties(layer.id, octopusLayer, apiContext);

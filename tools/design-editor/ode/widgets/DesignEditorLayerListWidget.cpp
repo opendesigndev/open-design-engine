@@ -39,7 +39,11 @@ void drawLayerListRecursiveStep(const ODE_LayerList &layerList,
 
     const ODE_LayerList::Entry &rootLayer = layerList.entries[idx];
     const bool hasAnyChildren = (idx+1 < layerList.n) && areEq(layerList.entries[idx+1].parentId, rootLayer.id);
-    const std::string layerLabel = "["+layerTypeToShortString(rootLayer.type)+"] "+std::string(rootLayer.id.data);
+
+    const std::string layerLabel =
+        std::string("[")+layerTypeToShortString(rootLayer.type)+std::string("] ")+
+        ode_stringDeref(rootLayer.id)+std::string(" ")+
+        std::string("(")+ode_stringDeref(rootLayer.name)+std::string(")");
 
     const bool isSelected = std::find_if(selectedLayerIDs.begin(), selectedLayerIDs.end(), [&id = rootLayer.id](const ODE_StringRef &selectedLayerID)->bool {
         return strcmp(id.data, selectedLayerID.data) == 0;
