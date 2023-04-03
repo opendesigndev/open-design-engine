@@ -459,7 +459,7 @@ void drawLayerShapeStroke(int strokeI,
     ImGui::Text("Visible:");
     ImGui::SameLine(100);
     bool strokeVisible = octopusShapeStroke.visible;
-    if (ImGui::Checkbox(layerPropName(layerId, "stroke-visibility").c_str(), &strokeVisible)) {
+    if (ImGui::Checkbox(layerPropName(layerId, "shape-stroke-visibility", strokeI).c_str(), &strokeVisible)) {
         changeReplace(octopus::LayerChange::Subject::STROKE, apiContext, layerId, strokeI, nonstd::nullopt, [&octopusShapeStroke, strokeVisible](octopus::LayerChange::Values &values) {
             values.stroke = octopusShapeStroke;
             values.stroke->visible = strokeVisible;
@@ -470,7 +470,7 @@ void drawLayerShapeStroke(int strokeI,
     ImGui::Text("Thickess:");
     ImGui::SameLine(100);
     float strokeThickness = octopusShapeStroke.thickness;
-    if (ImGui::DragFloat(layerPropName(layerId, "shape-stroke-thickness").c_str(), &strokeThickness, 0.1f, 0.0f, 100.0f)) {
+    if (ImGui::DragFloat(layerPropName(layerId, "shape-stroke-thickness", strokeI).c_str(), &strokeThickness, 0.1f, 0.0f, 100.0f)) {
         changeReplace(octopus::LayerChange::Subject::STROKE, apiContext, layerId, strokeI, nonstd::nullopt, [&strokeThickness, &octopusShapeStroke](octopus::LayerChange::Values &values) {
             values.stroke = octopusShapeStroke;
             values.stroke->thickness = strokeThickness;
@@ -481,7 +481,7 @@ void drawLayerShapeStroke(int strokeI,
     ImGui::Text("Position:");
     ImGui::SameLine(100);
     const int strokePositionI = static_cast<int>(octopusShapeStroke.position);
-    if (ImGui::BeginCombo(layerPropName(layerId, "shape-stroke-position").c_str(), STROKE_POSITIONS_STR[strokePositionI])) {
+    if (ImGui::BeginCombo(layerPropName(layerId, "shape-stroke-position", strokeI).c_str(), STROKE_POSITIONS_STR[strokePositionI])) {
         for (int spI = 0; spI < IM_ARRAYSIZE(STROKE_POSITIONS_STR); spI++) {
             const bool isSelected = (strokePositionI == spI);
             if (ImGui::Selectable(STROKE_POSITIONS_STR[spI], isSelected)) {
@@ -502,7 +502,7 @@ void drawLayerShapeStroke(int strokeI,
     ImGui::SameLine(100);
     // TODO: What if shape stroke style is nullopt?
     const int strokeStyleI = static_cast<int>(octopusShapeStroke.style.has_value() ? *octopusShapeStroke.style : octopus::VectorStroke::Style::SOLID);
-    if (ImGui::BeginCombo(layerPropName(layerId, "shape-stroke-style").c_str(), STROKE_STYLES_STR[strokeStyleI])) {
+    if (ImGui::BeginCombo(layerPropName(layerId, "shape-stroke-style", strokeI).c_str(), STROKE_STYLES_STR[strokeStyleI])) {
         for (int ssI = 0; ssI < IM_ARRAYSIZE(STROKE_STYLES_STR); ssI++) {
             const bool isSelected = (strokeStyleI == ssI);
             if (ImGui::Selectable(STROKE_STYLES_STR[ssI], isSelected)) {
@@ -526,8 +526,8 @@ void drawLayerShapeStroke(int strokeI,
     }
     ImGui::Text("Color:");
     ImGui::SameLine(100);
-    if (ImGui::ColorPicker4(layerPropName(layerId, "shape-stroke-color").c_str(), (float*)&imColor, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview)) {
-        changeReplace(octopus::LayerChange::Subject::STROKE_FILL, apiContext, layerId, strokeI, nonstd::nullopt, [&imColor, &octopusShapeStrokeFill](octopus::LayerChange::Values &values) {
+    if (ImGui::ColorPicker4(layerPropName(layerId, "shape-stroke-color", strokeI).c_str(), (float*)&imColor, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview)) {
+        changeProperty(octopus::LayerChange::Subject::STROKE_FILL, apiContext, layerId, strokeI, [&imColor, &octopusShapeStrokeFill](octopus::LayerChange::Values &values) {
             values.fill = octopusShapeStrokeFill;
             values.fill->type = octopus::Fill::Type::COLOR;
             values.fill->color = toOctopusColor(imColor);
@@ -545,7 +545,7 @@ void drawLayerShapeFill(int fillI,
     ImGui::Text("Visible:");
     ImGui::SameLine(100);
     bool fillVisible = octopusFill.visible;
-    if (ImGui::Checkbox(layerPropName(layerId, "fill-visibility", fillI).c_str(), &fillVisible)) {
+    if (ImGui::Checkbox(layerPropName(layerId, "shape-fill-visibility", fillI).c_str(), &fillVisible)) {
         changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, fillVisible](octopus::LayerChange::Values &values) {
             values.fill = octopusFill;
             values.fill->visible = fillVisible;
@@ -556,7 +556,7 @@ void drawLayerShapeFill(int fillI,
     ImGui::Text("Blend mode:");
     ImGui::SameLine(100);
     const int blendModeI = static_cast<int>(octopusFill.blendMode);
-    if (ImGui::BeginCombo(layerPropName(layerId, "fill-blend-mode", fillI).c_str(), BLEND_MODES_STR[blendModeI])) {
+    if (ImGui::BeginCombo(layerPropName(layerId, "shape-fill-blend-mode", fillI).c_str(), BLEND_MODES_STR[blendModeI])) {
         for (int bmI = 0; bmI < IM_ARRAYSIZE(BLEND_MODES_STR); bmI++) {
             const bool isSelected = (blendModeI == bmI);
             if (ImGui::Selectable(BLEND_MODES_STR[bmI], isSelected)) {
@@ -576,7 +576,7 @@ void drawLayerShapeFill(int fillI,
     ImGui::Text("Type:");
     ImGui::SameLine(100);
     const int fillTypeI = static_cast<int>(octopusFill.type);
-    if (ImGui::BeginCombo(layerPropName(layerId, "fill-type", fillI).c_str(), FILL_TYPES_STR[fillTypeI])) {
+    if (ImGui::BeginCombo(layerPropName(layerId, "shape-fill-type", fillI).c_str(), FILL_TYPES_STR[fillTypeI])) {
         for (int ftI = 0; ftI < IM_ARRAYSIZE(FILL_TYPES_STR); ftI++) {
             const bool isSelected = (fillTypeI == ftI);
             if (ImGui::Selectable(FILL_TYPES_STR[ftI], isSelected)) {
@@ -620,7 +620,7 @@ void drawLayerShapeFill(int fillI,
 
             // TODO: What if fill gradient does not have a value?
             const int gradientTypeI = static_cast<int>(octopusFill.gradient.has_value() ? octopusFill.gradient->type : octopus::Gradient::Type::LINEAR);
-            if (ImGui::BeginCombo(layerPropName(layerId, "fill-gradient-type", fillI).c_str(), FILL_GRADIENT_TYPES_STR[gradientTypeI])) {
+            if (ImGui::BeginCombo(layerPropName(layerId, "shape-fill-gradient-type", fillI).c_str(), FILL_GRADIENT_TYPES_STR[gradientTypeI])) {
                 for (int gtI = 0; gtI < IM_ARRAYSIZE(FILL_GRADIENT_TYPES_STR); gtI++) {
                     const bool isSelected = (gradientTypeI == gtI);
                     if (ImGui::Selectable(FILL_GRADIENT_TYPES_STR[gtI], isSelected)) {
@@ -654,7 +654,7 @@ void drawLayerShapeFill(int fillI,
             ImGui::SameLine(100);
 
             const int imageRefTypeI = static_cast<int>(octopusFill.image.has_value() ? octopusFill.image->ref.type : octopus::ImageRef::Type::PATH);
-            if (ImGui::BeginCombo(layerPropName(layerId, "fill-image-ref-type", fillI).c_str(), IMAGE_REF_TYPES_STR[imageRefTypeI])) {
+            if (ImGui::BeginCombo(layerPropName(layerId, "shape-fill-image-ref-type", fillI).c_str(), IMAGE_REF_TYPES_STR[imageRefTypeI])) {
                 for (int irI = 0; irI < IM_ARRAYSIZE(IMAGE_REF_TYPES_STR); irI++) {
                     const bool isSelected = (imageRefTypeI == irI);
                     if (ImGui::Selectable(IMAGE_REF_TYPES_STR[irI], isSelected)) {
@@ -683,7 +683,7 @@ void drawLayerShapeFill(int fillI,
             strncpy(textBuffer, imageRefValue.c_str(), sizeof(textBuffer)-1);
             ImGui::Text("  Ref value:");
             ImGui::SameLine(100);
-            ImGui::InputText(layerPropName(layerId, "fill-image-ref-value", fillI).c_str(), textBuffer, 50);
+            ImGui::InputText(layerPropName(layerId, "shape-fill-image-ref-value", fillI).c_str(), textBuffer, 50);
             if (ImGui::IsItemEdited()) {
                 changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, &textBuffer](octopus::LayerChange::Values &values) {
                     values.fill = octopusFill;
@@ -705,7 +705,7 @@ void drawLayerShapeFill(int fillI,
             ImGui::SameLine(100);
 
             const int positioningLayoutI = static_cast<int>(octopusFill.positioning.has_value() ? octopusFill.positioning->layout : octopus::Fill::Positioning::Layout::STRETCH);
-            if (ImGui::BeginCombo(layerPropName(layerId, "fill-positioning-layout", fillI).c_str(), FILL_POSITIONING_LAYOUTS_STR[positioningLayoutI])) {
+            if (ImGui::BeginCombo(layerPropName(layerId, "shape-fill-positioning-layout", fillI).c_str(), FILL_POSITIONING_LAYOUTS_STR[positioningLayoutI])) {
                 for (int plI = 0; plI < IM_ARRAYSIZE(FILL_POSITIONING_LAYOUTS_STR); plI++) {
                     const bool isSelected = (positioningLayoutI == plI);
                     if (ImGui::Selectable(FILL_POSITIONING_LAYOUTS_STR[plI], isSelected)) {
@@ -731,7 +731,7 @@ void drawLayerShapeFill(int fillI,
             ImGui::SameLine(100);
 
             const int positioningOriginI = static_cast<int>(octopusFill.positioning.has_value() ? octopusFill.positioning->origin : octopus::Fill::Positioning::Origin::LAYER);
-            if (ImGui::BeginCombo(layerPropName(layerId, "fill-positioning-origin", fillI).c_str(), FILL_POSITIONING_ORIGINS_STR[positioningOriginI])) {
+            if (ImGui::BeginCombo(layerPropName(layerId, "shape-fill-positioning-origin", fillI).c_str(), FILL_POSITIONING_ORIGINS_STR[positioningOriginI])) {
                 for (int poI = 0; poI < IM_ARRAYSIZE(FILL_POSITIONING_ORIGINS_STR); poI++) {
                     const bool isSelected = (positioningOriginI == poI);
                     if (ImGui::Selectable(FILL_POSITIONING_ORIGINS_STR[poI], isSelected)) {
@@ -768,7 +768,7 @@ void drawLayerShapeFill(int fillI,
             ImGui::SameLine(100);
 
             bool filterVisible = (*octopusFill.filters)[ffI].visible;
-            if (ImGui::Checkbox(layerPropName(layerId, "fill-filter-visibility", fillI, ffI).c_str(), &filterVisible)) {
+            if (ImGui::Checkbox(layerPropName(layerId, "shape-fill-filter-visibility", fillI, ffI).c_str(), &filterVisible)) {
                 changeReplace(octopus::LayerChange::Subject::FILL_FILTER, apiContext, layerId, fillI, ffI, [fillFilter, filterVisible](octopus::LayerChange::Values &values) {
                     values.filter = fillFilter;
                     values.filter->visible = filterVisible;
@@ -804,7 +804,7 @@ void drawLayerShape(const ODE_StringRef &layerId,
 
     // Shape strokes
     const std::vector<octopus::Shape::Stroke> &octopusShapeStrokes = octopusShape.strokes;
-    if (ImGui::CollapsingHeader("Shape strokes (TODO)")) {
+    if (ImGui::CollapsingHeader("Shape strokes")) {
         ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
         ImGui::SameLine(415);
         if (ImGui::SmallButton(layerPropName(layerId, "shape-stroke-add", nonstd::nullopt, nonstd::nullopt, "+").c_str())) {
@@ -830,7 +830,7 @@ void drawLayerShape(const ODE_StringRef &layerId,
 
     // Shape Fills
     const std::vector<octopus::Fill> &octopusShapeFills = octopusShape.fills;
-    if (ImGui::CollapsingHeader("Shape fills (TODO)")) {
+    if (ImGui::CollapsingHeader("Shape fills")) {
         ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
         ImGui::SameLine(415);
         if (ImGui::SmallButton(layerPropName(layerId, "shape-fill-add", nonstd::nullopt, nonstd::nullopt, "+").c_str())) {
@@ -1251,7 +1251,7 @@ void drawLayerPropertiesWidget(const ODE_LayerList &layerList,
                 }
 
                 // Effects
-                if (ImGui::CollapsingHeader("Effects (TODO)")) {
+                if (ImGui::CollapsingHeader("Effects")) {
                     drawLayerEffects(layer.id, apiContext, octopusLayer.effects);
                 }
 
