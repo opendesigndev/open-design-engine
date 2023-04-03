@@ -20,10 +20,10 @@ bool TransformShader::initialize() {
         ODE_GLSL_FVARYING "vec2 texCoord;"
         "uniform sampler2D image;"
         "void main() {"
-            ODE_GLSL_FRAGCOLOR "= " ODE_GLSL_TEXTURE2D "(image, texCoord);"
+            ODE_GLSL_FRAGCOLOR "=" ODE_GLSL_TEXTURE2D "(image, texCoord);"
         "}\n"
     );
-    VertexShader vs("transform-fs");
+    VertexShader vs("transform-vs");
     const GLchar *vsrc[] = { ODE_GLOBAL_SHADER_PREAMBLE, vsSrc.string };
     const GLint vsln[] = { sizeof(ODE_GLOBAL_SHADER_PREAMBLE)-1, vsSrc.length };
     FragmentShader fs("transform-fs");

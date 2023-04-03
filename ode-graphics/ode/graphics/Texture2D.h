@@ -24,6 +24,7 @@ public:
     Texture2D(Texture2D &&orig);
     ~Texture2D();
     Texture2D &operator=(const Texture2D &) = delete;
+    Texture2D &operator=(Texture2D &&orig);
     /// Initializes the image data of the texture
     bool initialize(const BitmapConstRef &bitmap);
     /// Allocates the texture without setting its data

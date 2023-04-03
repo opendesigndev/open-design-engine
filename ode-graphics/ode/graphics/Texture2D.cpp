@@ -146,6 +146,25 @@ Texture2D::~Texture2D() {
     }
 }
 
+Texture2D &Texture2D::operator=(Texture2D &&orig) {
+    if (this != &orig) {
+        if (handle) {
+            glDeleteTextures(1, &handle);
+            ODE_CHECK_GL_ERROR();
+            //MemoryWatch::instance().registerChange(-(long long) memorySize_, true);
+            //LOG_OWN_ACTION(TEXTURE_DELETION, (int) memorySize_, "");
+        }
+        handle = orig.handle;
+        dims = orig.dims;
+        fmt = orig.fmt;
+        hasMipmaps = orig.hasMipmaps;
+        memorySize = orig.memorySize;
+        orig.handle = 0;
+        orig.memorySize = 0;
+    }
+    return *this;
+}
+
 bool Texture2D::initialize(PixelFormat format, const void *pixels, const Vector2i &dimensions) {
     if (!(dimensions.x > 0 && dimensions.y > 0 && dimensions.x <= GraphicsContext::getMaxTextureSize() && dimensions.y <= GraphicsContext::getMaxTextureSize()))
         return false;

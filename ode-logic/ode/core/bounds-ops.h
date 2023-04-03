@@ -2,9 +2,12 @@
 #pragma once
 
 #include "bounds.h"
+#include "TransformationMatrix.h"
 
 namespace ode {
 
+/// Transforms bounds by transformation matrix
+UnscaledBounds transformBounds(const UntransformedBounds &bounds, const TransformationMatrix &matrix);
 /// Scales unscaled bounds by scale
 ScaledBounds scaleBounds(const UnscaledBounds &bounds, double scale);
 

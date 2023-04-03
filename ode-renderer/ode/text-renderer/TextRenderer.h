@@ -3,6 +3,7 @@
 
 #include "../image/PlacedImage.h"
 #include "../frame-buffer-management/TextureFrameBufferManager.h"
+#include "shaders/SDFTextShader.h"
 #include "shaders/TransformShader.h"
 
 namespace ode {
@@ -16,6 +17,7 @@ public:
 private:
     TextureFrameBufferManager &tfbManager;
     Mesh &billboard;
+    SDFTextShader sdfShader;
     TransformShader transformShader;
 
     PlacedImagePtr transformImage(const PlacedImagePtr &image, const Matrix3x3d &transformation);
