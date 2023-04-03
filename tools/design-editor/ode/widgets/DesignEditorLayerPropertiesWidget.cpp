@@ -124,6 +124,21 @@ const octopus::Fill DEFAULT_FILL {
     nonstd::nullopt
 };
 
+const octopus::Shape::Stroke DEFAULT_SHAPE_STROKE {
+    {{ DEFAULT_FILL,
+        2.0,
+        octopus::Stroke::Position::CENTER },
+        true,
+        octopus::Shape::Stroke::Style::SOLID,
+        nonstd::nullopt,
+        nonstd::nullopt,
+        nonstd::nullopt,
+        nonstd::nullopt,
+        nonstd::nullopt },
+    nonstd::nullopt,
+    nonstd::nullopt,
+};
+
 
 std::string layerTypeToShortString(ODE_LayerType layerType) {
     switch (layerType) {
@@ -765,7 +780,6 @@ void drawLayerShapeFill(int fillI,
     ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
 }
 
-// TODO: Unsupported Subject SHAPE
 void drawLayerShape(const ODE_StringRef &layerId,
                     DesignEditorContext::Api &apiContext,
                     const octopus::Shape &octopusShape) {
@@ -788,21 +802,60 @@ void drawLayerShape(const ODE_StringRef &layerId,
         ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
     }
 
-    // Shape stroke
-    // TODO: What about multiple or no strokes ? -> INSERT / REPLACE / REMOVE
-    if (octopusShape.strokes.size() == 1 && ImGui::CollapsingHeader("Shape stroke (TODO)")) {
-        drawLayerShapeStroke(0, layerId, apiContext, octopusShape.strokes.front());
+    // Shape strokes
+    const std::vector<octopus::Shape::Stroke> &octopusShapeStrokes = octopusShape.strokes;
+    if (ImGui::CollapsingHeader("Shape strokes (TODO)")) {
+        ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
+        ImGui::SameLine(415);
+        if (ImGui::SmallButton(layerPropName(layerId, "shape-stroke-add", nonstd::nullopt, nonstd::nullopt, "+").c_str())) {
+            changeInsertBack(octopus::LayerChange::Subject::STROKE, apiContext, layerId, nonstd::nullopt, [](octopus::LayerChange::Values &values) {
+                values.stroke = DEFAULT_SHAPE_STROKE;
+            });
+        }
+        int strokeToRemove = -1;
+        for (size_t si = 0; si < octopusShapeStrokes.size(); ++si) {
+            ImGui::Text("Stroke #%i:", static_cast<int>(si));
+
+            ImGui::SameLine(415);
+            if (ImGui::SmallButton(layerPropName(layerId, "shape-stroke-remove", si, nonstd::nullopt, "-").c_str())) {
+                strokeToRemove = static_cast<int>(si);
+            }
+
+            drawLayerShapeStroke(static_cast<int>(si), layerId, apiContext, octopusShapeStrokes[si]);
+        }
+        if (strokeToRemove >= 0 && strokeToRemove < static_cast<int>(octopusShapeStrokes.size())) {
+            changeRemove(octopus::LayerChange::Subject::STROKE, apiContext, layerId, strokeToRemove, nonstd::nullopt);
+        }
     }
 
-    // Shape Fill
-    // TODO: What about multiple or no fills ? -> INSERT / REPLACE / REMOVE
-    if (octopusShape.fills.size() == 1 && ImGui::CollapsingHeader("Shape fill (TODO)")) {
-        drawLayerShapeFill(0, layerId, apiContext, octopusShape.fills.front());
+    // Shape Fills
+    const std::vector<octopus::Fill> &octopusShapeFills = octopusShape.fills;
+    if (ImGui::CollapsingHeader("Shape fills (TODO)")) {
+        ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
+        ImGui::SameLine(415);
+        if (ImGui::SmallButton(layerPropName(layerId, "shape-fill-add", nonstd::nullopt, nonstd::nullopt, "+").c_str())) {
+            changeInsertBack(octopus::LayerChange::Subject::FILL, apiContext, layerId, nonstd::nullopt, [](octopus::LayerChange::Values &values) {
+                values.fill = DEFAULT_FILL;
+            });
+        }
+        int fillToRemove = -1;
+        for (size_t fi = 0; fi < octopusShapeFills.size(); ++fi) {
+            ImGui::Text("Fill #%i:", static_cast<int>(fi));
+
+            ImGui::SameLine(415);
+            if (ImGui::SmallButton(layerPropName(layerId, "shape-fill-remove", fi, nonstd::nullopt, "-").c_str())) {
+                fillToRemove = static_cast<int>(fi);
+            }
+
+            drawLayerShapeFill(static_cast<int>(fi), layerId, apiContext, octopusShape.fills[fi]);
+        }
+        if (fillToRemove >= 0 && fillToRemove < static_cast<int>(octopusShape.fills.size())) {
+            changeRemove(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillToRemove, nonstd::nullopt);
+        }
     }
 }
 
 
-// TODO: Unsupported subject EFFECT
 void drawLayerEffects(const ODE_StringRef &layerId,
                       DesignEditorContext::Api &apiContext,
                       const std::vector<octopus::Effect> &octopusEffects) {
@@ -823,7 +876,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
         ImGui::Text("Effect #%i:", static_cast<int>(ei));
 
         ImGui::SameLine(415);
-        if (ImGui::SmallButton(layerPropName(layerId, "layer-effect-remove", ei, nonstd::nullopt, "-").c_str())) {
+        if (ImGui::SmallButton(layerPropName(layerId, "effect-remove", ei, nonstd::nullopt, "-").c_str())) {
             effectToRemove = static_cast<int>(ei);
         }
 
