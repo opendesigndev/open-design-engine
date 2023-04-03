@@ -356,7 +356,7 @@ int DesignEditorWindow::display() {
         drawControlsWidget();
 
         if (data->context.widgets.showToolbar) {
-            drawToolbarWidget(data->loadedOctopus.layerList, data->context.layerSelection, data->context.mode);
+            drawToolbarWidget(data->context.api, data->loadedOctopus.layerList, data->context.layerSelection, data->context.mode);
         }
         if (data->context.widgets.showLayerList) {
             drawLayerListWidget(data->loadedOctopus, data->context.layerSelection);

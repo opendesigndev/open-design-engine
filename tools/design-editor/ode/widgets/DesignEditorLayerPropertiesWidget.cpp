@@ -677,6 +677,7 @@ void drawLayerShapeFill(int fillI,
                 ImGui::EndCombo();
             }
 
+            // TODO: Add a file dialog button to load a new image (copy it to images directory)
             // Image ref value
             const std::string &imageRefValue = octopusFill.image.has_value() ? octopusFill.image->ref.value : "";
             char textBuffer[50] {};
@@ -854,7 +855,6 @@ void drawLayerShape(const ODE_StringRef &layerId,
         }
     }
 }
-
 
 void drawLayerEffects(const ODE_StringRef &layerId,
                       DesignEditorContext::Api &apiContext,

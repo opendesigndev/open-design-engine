@@ -8,9 +8,70 @@
 namespace {
 const ImU32 IM_COLOR_DARK_RED = 4278190233;
 const ImU32 IM_COLOR_LIGHT_BLUE = 4294941081;
+
+const octopus::Layer *findLayer(const octopus::Layer &layer, const std::string &layerId) {
+    if (layer.id == layerId) {
+        return &layer;
+    }
+    if (layer.mask.has_value()) {
+        const octopus::Layer *l = findLayer(*layer.mask, layerId);
+        if (l != nullptr) {
+            return l;
+        }
+    }
+    if (layer.layers.has_value()) {
+        for (const octopus::Layer &childLayer : *layer.layers) {
+            const octopus::Layer *l = findLayer(childLayer, layerId);
+            if (l != nullptr) {
+                return l;
+            }
+        }
+    }
+    return nullptr;
 }
 
-void drawToolbarWidget(const ODE_LayerList &layerList,
+std::optional<std::string> findParentLayerId(const ODE_LayerList &layerList, const ODE_StringRef &layerId) {
+    for (int i = 0; i < layerList.n; ++i) {
+        const ODE_LayerList::Entry &layer = layerList.entries[i];
+        if (strcmp(layerId.data, layer.id.data) == 0) {
+            return ode_stringDeref(layer.parentId);
+        }
+    }
+    return std::nullopt;
+}
+
+void addGroup(DesignEditorContext::Api &apiContext,
+              ODE_LayerList &layerList,
+              const DesignEditorContext::LayerSelection &layersSelectionContext,
+              const octopus::Octopus &newOctopusGroup) {
+    std::string octopusLayerJson;
+    octopus::Serializer::serialize(octopusLayerJson, *newOctopusGroup.content);
+
+    const std::optional<std::string> insertionLayerIdOpt = findParentLayerId(layerList, layersSelectionContext.layerIDs.front());
+    if (!insertionLayerIdOpt.has_value()) {
+        return;
+    }
+
+    ODE_ParseError parseError;
+    const ODE_Result result = ode_component_addLayer(apiContext.component, ode_stringRef(*insertionLayerIdOpt), {}, ode_stringRef(octopusLayerJson), &parseError);
+
+    if (result != ODE_RESULT_OK) {
+        return;
+    }
+
+    ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView);
+    ode_component_listLayers(apiContext.component, &layerList);
+
+    for (const ODE_StringRef &layerId : layersSelectionContext.layerIDs) {
+        // TODO: Remove original grouped layers when added support for removal
+        // ode_component_removeLayer(apiContext.component, layerId);
+    }
+}
+
+}
+
+void drawToolbarWidget(DesignEditorContext::Api &apiContext,
+                       ODE_LayerList &layerList,
                        const DesignEditorContext::LayerSelection &layersSelectionContext,
                        DesignEditorMode &mode) {
     ImGui::Begin("Toolbar");
@@ -46,25 +107,56 @@ void drawToolbarWidget(const ODE_LayerList &layerList,
     }
     ImGui::PopStyleColor(2);
 
-    ImGui::PushStyleColor(ImGuiCol_Button, IM_COLOR_LIGHT_BLUE);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COLOR_LIGHT_BLUE);
-    const bool canAddGroup = !layersSelectionContext.layerIDs.empty();
-    if (canAddGroup) {
-        if (ImGui::Button("Group")) {
+    if (layersSelectionContext.layerIDs.size() >= 2) {
+        ODE_String octopusString;
+        ode_component_getOctopus(apiContext.component, &octopusString);
 
+        octopus::Octopus componentOctopus;
+        octopus::Parser::parse(componentOctopus, octopusString.data);
+
+        if (componentOctopus.content.has_value()) {
+            ImGui::PushStyleColor(ImGuiCol_Button, IM_COLOR_LIGHT_BLUE);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COLOR_LIGHT_BLUE);
+
+            const std::optional<octopus::Octopus> newOctopusGroup = [&layerIDs = layersSelectionContext.layerIDs, &rootLayer = *componentOctopus.content]()->std::optional<octopus::Octopus> {
+
+                if (ImGui::Button("Group")) {
+                    ode::octopus_builder::GroupLayer group;
+                    for (const ODE_StringRef &layerId : layerIDs) {
+                        const octopus::Layer *layer = findLayer(rootLayer, ode_stringDeref(layerId));
+                        if (layer != nullptr) {
+                            group.add(*layer);
+                        }
+                    }
+                    return ode::octopus_builder::buildOctopus("Group (WIP)", group);
+                }
+
+                ImGui::SameLine();
+
+                if (ImGui::Button("Mask")) {
+                    const ODE_StringRef &maskLayerId = layerIDs.front();
+                    const octopus::Layer *maskLayer = findLayer(rootLayer, ode_stringDeref(maskLayerId));
+                    if (maskLayer != nullptr) {
+                        ode::octopus_builder::MaskGroupLayer maskGroup(octopus::MaskBasis::SOLID, *maskLayer);
+                        for (size_t li = 1; li < layerIDs.size(); li++) {
+                            const octopus::Layer *layer = findLayer(rootLayer, ode_stringDeref(layerIDs[li]));
+                            if (layer != nullptr) {
+                                maskGroup.add(*layer);
+                            }
+                        }
+                        return ode::octopus_builder::buildOctopus("Mask Group (WIP)", maskGroup);
+                    }
+                }
+
+                return std::nullopt;
+            } ();
+            if (newOctopusGroup.has_value()) {
+                addGroup(apiContext, layerList, layersSelectionContext, *newOctopusGroup);
+            }
+
+            ImGui::PopStyleColor(2);
         }
     }
-    ImGui::PopStyleColor(2);
-    ImGui::SameLine();
-
-    ImGui::PushStyleColor(ImGuiCol_Button, IM_COLOR_LIGHT_BLUE);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COLOR_LIGHT_BLUE);
-    const bool canAddMaskGroup = !layersSelectionContext.layerIDs.empty();
-    if (canAddMaskGroup) {
-        if (ImGui::Button("Mask")) {
-        }
-    }
-    ImGui::PopStyleColor(2);
 
     ImGui::End();
 }
