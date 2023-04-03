@@ -235,7 +235,7 @@ int changeRemove(octopus::LayerChange::Subject subject,
                  const ODE_StringRef &layerId,
                  const nonstd::optional<int> &index,
                  const nonstd::optional<int> &filterIndex) {
-    return applyLayerChange(subject, octopus::LayerChange::Op::REPLACE, apiContext, layerId, index, filterIndex, NO_LAYER_CHANGE);
+    return applyLayerChange(subject, octopus::LayerChange::Op::REMOVE, apiContext, layerId, index, filterIndex, NO_LAYER_CHANGE);
 }
 
 ImVec4 toImColor(const octopus::Color &color) {
@@ -1129,7 +1129,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
 
     }
     if (effectToRemove >= 0 && effectToRemove < static_cast<int>(octopusEffects.size())) {
-        changeRemove(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, nonstd::nullopt, effectToRemove);
+        changeRemove(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, effectToRemove, nonstd::nullopt);
     }
 
     ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
