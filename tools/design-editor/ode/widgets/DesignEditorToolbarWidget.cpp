@@ -68,6 +68,76 @@ void addGroup(DesignEditorContext::Api &apiContext,
     }
 }
 
+void drawGroupButtons(DesignEditorContext::Api &apiContext,
+                      ODE_LayerList &layerList,
+                      const DesignEditorContext::LayerSelection &layersSelectionContext) {
+    if (layersSelectionContext.layerIDs.size() < 2) {
+        return;
+    }
+
+    const std::optional<std::string> commonParentId = findParentLayerId(layerList, layersSelectionContext.layerIDs.front());
+    if (!commonParentId.has_value()) {
+        return;
+    }
+
+    const bool allSelectedLayersSameParent = std::all_of(layersSelectionContext.layerIDs.begin()+1, layersSelectionContext.layerIDs.end(), [&layerList, &commonParentId](const ODE_StringRef &layerId)->bool {
+        const std::optional<std::string> layerParentId = findParentLayerId(layerList, layerId);
+        return layerParentId.has_value() && *commonParentId == * layerParentId;
+    });
+    if (!allSelectedLayersSameParent) {
+        return;
+    }
+
+    ODE_String octopusString;
+    ode_component_getOctopus(apiContext.component, &octopusString);
+
+    octopus::Octopus componentOctopus;
+    octopus::Parser::parse(componentOctopus, octopusString.data);
+
+    if (componentOctopus.content.has_value()) {
+        ImGui::PushStyleColor(ImGuiCol_Button, IM_COLOR_LIGHT_BLUE);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COLOR_LIGHT_BLUE);
+
+        const std::optional<octopus::Octopus> newOctopusGroup = [&layerIDs = layersSelectionContext.layerIDs, &rootLayer = *componentOctopus.content]()->std::optional<octopus::Octopus> {
+
+            if (ImGui::Button("Group")) {
+                ode::octopus_builder::GroupLayer group;
+                for (const ODE_StringRef &layerId : layerIDs) {
+                    const octopus::Layer *layer = findLayer(rootLayer, ode_stringDeref(layerId));
+                    if (layer != nullptr) {
+                        group.add(*layer);
+                    }
+                }
+                return ode::octopus_builder::buildOctopus("Group (WIP)", group);
+            }
+
+            ImGui::SameLine();
+
+            if (ImGui::Button("Mask")) {
+                const ODE_StringRef &maskLayerId = layerIDs.front();
+                const octopus::Layer *maskLayer = findLayer(rootLayer, ode_stringDeref(maskLayerId));
+                if (maskLayer != nullptr) {
+                    ode::octopus_builder::MaskGroupLayer maskGroup(octopus::MaskBasis::SOLID, *maskLayer);
+                    for (size_t li = 1; li < layerIDs.size(); li++) {
+                        const octopus::Layer *layer = findLayer(rootLayer, ode_stringDeref(layerIDs[li]));
+                        if (layer != nullptr) {
+                            maskGroup.add(*layer);
+                        }
+                    }
+                    return ode::octopus_builder::buildOctopus("Mask Group (WIP)", maskGroup);
+                }
+            }
+
+            return std::nullopt;
+        } ();
+        if (newOctopusGroup.has_value()) {
+            addGroup(apiContext, layerList, layersSelectionContext, *newOctopusGroup);
+        }
+
+        ImGui::PopStyleColor(2);
+    }
+}
+
 }
 
 void drawToolbarWidget(DesignEditorContext::Api &apiContext,
@@ -107,56 +177,8 @@ void drawToolbarWidget(DesignEditorContext::Api &apiContext,
     }
     ImGui::PopStyleColor(2);
 
-    if (layersSelectionContext.layerIDs.size() >= 2) {
-        ODE_String octopusString;
-        ode_component_getOctopus(apiContext.component, &octopusString);
-
-        octopus::Octopus componentOctopus;
-        octopus::Parser::parse(componentOctopus, octopusString.data);
-
-        if (componentOctopus.content.has_value()) {
-            ImGui::PushStyleColor(ImGuiCol_Button, IM_COLOR_LIGHT_BLUE);
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COLOR_LIGHT_BLUE);
-
-            const std::optional<octopus::Octopus> newOctopusGroup = [&layerIDs = layersSelectionContext.layerIDs, &rootLayer = *componentOctopus.content]()->std::optional<octopus::Octopus> {
-
-                if (ImGui::Button("Group")) {
-                    ode::octopus_builder::GroupLayer group;
-                    for (const ODE_StringRef &layerId : layerIDs) {
-                        const octopus::Layer *layer = findLayer(rootLayer, ode_stringDeref(layerId));
-                        if (layer != nullptr) {
-                            group.add(*layer);
-                        }
-                    }
-                    return ode::octopus_builder::buildOctopus("Group (WIP)", group);
-                }
-
-                ImGui::SameLine();
-
-                if (ImGui::Button("Mask")) {
-                    const ODE_StringRef &maskLayerId = layerIDs.front();
-                    const octopus::Layer *maskLayer = findLayer(rootLayer, ode_stringDeref(maskLayerId));
-                    if (maskLayer != nullptr) {
-                        ode::octopus_builder::MaskGroupLayer maskGroup(octopus::MaskBasis::SOLID, *maskLayer);
-                        for (size_t li = 1; li < layerIDs.size(); li++) {
-                            const octopus::Layer *layer = findLayer(rootLayer, ode_stringDeref(layerIDs[li]));
-                            if (layer != nullptr) {
-                                maskGroup.add(*layer);
-                            }
-                        }
-                        return ode::octopus_builder::buildOctopus("Mask Group (WIP)", maskGroup);
-                    }
-                }
-
-                return std::nullopt;
-            } ();
-            if (newOctopusGroup.has_value()) {
-                addGroup(apiContext, layerList, layersSelectionContext, *newOctopusGroup);
-            }
-
-            ImGui::PopStyleColor(2);
-        }
-    }
+    // Draw group and mask group buttons, handle the logic
+    drawGroupButtons(apiContext, layerList, layersSelectionContext);
 
     ImGui::End();
 }
