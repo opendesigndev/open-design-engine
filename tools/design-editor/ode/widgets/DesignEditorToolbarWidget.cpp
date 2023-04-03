@@ -45,7 +45,26 @@ void drawToolbarWidget(const ODE_LayerList &layerList,
         mode = DesignEditorMode::ADD_TEXT;
     }
     ImGui::PopStyleColor(2);
+
+    ImGui::PushStyleColor(ImGuiCol_Button, IM_COLOR_LIGHT_BLUE);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COLOR_LIGHT_BLUE);
+    const bool canAddGroup = !layersSelectionContext.layerIDs.empty();
+    if (canAddGroup) {
+        if (ImGui::Button("Group")) {
+
+        }
+    }
+    ImGui::PopStyleColor(2);
     ImGui::SameLine();
+
+    ImGui::PushStyleColor(ImGuiCol_Button, IM_COLOR_LIGHT_BLUE);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COLOR_LIGHT_BLUE);
+    const bool canAddMaskGroup = !layersSelectionContext.layerIDs.empty();
+    if (canAddMaskGroup) {
+        if (ImGui::Button("Mask")) {
+        }
+    }
+    ImGui::PopStyleColor(2);
 
     ImGui::End();
 }
