@@ -304,7 +304,7 @@ int DesignEditorWindow::display() {
                 if (result == ODE_RESULT_OK) {
                     loadMissingFonts(data->context.api, fontDirectory);
 
-                    const ODE_Transformation translation { 1, 0, 0, 1, mousePosImageSpace.x, mousePosImageSpace.y };
+                    const ODE_Transformation translation { 1, 0, 0, 1, std::round(mousePosImageSpace.x), std::round(mousePosImageSpace.y) };
                     ode_component_listLayers(data->context.api.component, &data->loadedOctopus.layerList);
                     const ODE_StringRef insertedLayerId = lastChildLayerId(data->loadedOctopus.layerList, insertionLayerId);
                     if (insertedLayerId.data!=nullptr && insertedLayerId.length>=0) {
