@@ -75,7 +75,7 @@ bool CanvasShader::initializeFragmentShader(FragmentShader &fragmentShader) cons
         "        float hit = highlightRectangles[i][0][1];\n"
         "        float hib = highlightRectangles[i][1][1];\n"
         "        if (srcCoord.x>hil && srcCoord.x<hir && srcCoord.y>hit && srcCoord.y<hib) {\n"
-        "            gl_FragColor = mix(vec4(0.5,0.5,0.5,1.0), gl_FragColor, 0.7);\n"
+        "            gl_FragColor = mix(vec4(0.5,0.5,0.5,1.0), gl_FragColor, 0.8);\n"
         "        }\n"
         "    }\n"
         "    if (ignoreAlpha) {\n"
