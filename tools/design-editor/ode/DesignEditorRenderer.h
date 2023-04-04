@@ -17,7 +17,7 @@ public:
                                    const ScaledBounds &placement,
                                    int selectedDisplayMode,
                                    const AnnotationRectangleOpt &selectionRectangle,
-                                   const AnnotationRectangleOpt &highlightRectangle);
+                                   const AnnotationRectangles &highlightRectangles);
 
 private:
     void bind();

@@ -91,16 +91,15 @@ void drawDesignViewWidget(const DesignEditorContext::Api &apiContext,
                 std::max(rectStart.y, rectEnd.y) };
         }
 
-        AnnotationRectangleOpt highlightRectangle = std::nullopt;
-        // TODO: Add support for multiple highlight rectangle
-        if (layerSelectionContext.layerIDs.size() == 1) {
+        AnnotationRectangles highlightRectangles;
+        for (const ODE_StringRef &layerId : layerSelectionContext.layerIDs) {
             ODE_LayerMetrics topLayerMetrics;
             ode_component_getLayerMetrics(apiContext.component, topLayerId, &topLayerMetrics);
             const ODE_Rectangle &topLayerBounds = topLayerMetrics.logicalBounds;
             const float w = topLayerBounds.b.x - topLayerBounds.a.x;
             const float h = topLayerBounds.b.y - topLayerBounds.a.y;
             ODE_LayerMetrics layerMetrics;
-            ode_component_getLayerMetrics(apiContext.component, layerSelectionContext.layerIDs.front(), &layerMetrics);
+            ode_component_getLayerMetrics(apiContext.component, layerId, &layerMetrics);
             ODE_Rectangle layerBounds = layerMetrics.graphicalBounds;
             const float trX = layerMetrics.transformation.matrix[4];
             const float trY = layerMetrics.transformation.matrix[5];
@@ -108,15 +107,15 @@ void drawDesignViewWidget(const DesignEditorContext::Api &apiContext,
             layerBounds.a.y += trY;
             layerBounds.b.x += trX;
             layerBounds.b.y += trY;
-            highlightRectangle = ode::Rectangle<float> {
+            highlightRectangles.emplace_back(ode::Rectangle<float> {
                 std::max(0.0f, static_cast<float>(layerBounds.a.x) / w),
                 std::max(0.0f, static_cast<float>(layerBounds.a.y) / h),
                 std::min(1.0f, static_cast<float>(layerBounds.b.x) / w),
                 std::min(1.0f, static_cast<float>(layerBounds.b.y) / h),
-            };
+            });
         }
 
-        texturesContext.designImageTexture = renderer.blendImageToTexture(std::move(bitmap), placement, 2, selectionRectangle, highlightRectangle);
+        texturesContext.designImageTexture = renderer.blendImageToTexture(std::move(bitmap), placement, 2, selectionRectangle, highlightRectangles);
 
         drawImGuiWidgetTexture(texturesContext.designImageTexture->getInternalGLHandle(),
                                texturesContext.designImageTexture->dimensions().x,
