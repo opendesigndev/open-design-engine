@@ -210,8 +210,8 @@ const octopus::Effect DEFAULT_EFFECT {
 const octopus::Filter DEFAULT_FILL_FILTER {
     octopus::Filter::Type::OPACITY_MULTIPLIER,
     true,
-    1.0,
-    1.0,
+    2.0,
+    2.0,
     octopus::ColorAdjustment { 1.0,0,0,0,0,0,0 } // Adjust hue
 };
 
