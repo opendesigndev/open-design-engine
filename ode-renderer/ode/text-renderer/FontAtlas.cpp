@@ -17,9 +17,6 @@
 
 namespace ode {
 
-// TODO
-extern std::map<odtr::FontSpecifier, FontAtlas> GLOBAL_FONT_ATLAS_STORAGE;
-
 FontAtlas::FontHandleHolder::FontHandleHolder() : handle(nullptr) { }
 
 FontAtlas::FontHandleHolder::FontHandleHolder(FT_Face ftFace) : handle(msdfgen::adoptFreetypeFont(ftFace)) { }
@@ -74,7 +71,7 @@ void FontAtlas::TextureStorage::put(int x, int y, const msdfgen::BitmapConstRef<
     texture.put(Vector2i(x, y), byteBitmap);
 }
 
-FontAtlas::FontAtlas() : atlas(msdf_atlas::ImmediateAtlasGenerator<float, 1, &msdf_atlas::psdfGenerator, TextureStorage>(FONT_ATLAS_INITIAL_SIZE, FONT_ATLAS_INITIAL_SIZE)) { }
+FontAtlas::FontAtlas() : atlas(msdf_atlas::ImmediateAtlasGenerator<float, 1, &msdf_atlas::psdfGenerator, TextureStorage>(FONT_ATLAS_INITIAL_SIZE, FONT_ATLAS_INITIAL_SIZE)), baseScale(1./MSDF_ATLAS_DEFAULT_EM_SIZE) { }
 
 bool FontAtlas::initialize(const odtr::FontSpecifier &fontSpecifier) {
     if (fontHandle)
@@ -83,6 +80,9 @@ bool FontAtlas::initialize(const odtr::FontSpecifier &fontSpecifier) {
     if (!(faceItem && faceItem->face))
         return false;
     fontHandle = FontHandleHolder(faceItem->face->getFtFace());
+    msdfgen::FontMetrics fontMetrics;
+    if (msdfgen::getFontMetrics(fontMetrics, fontHandle))
+        baseScale = 1./fontMetrics.emSize;
     return true;
 }
 
@@ -97,7 +97,7 @@ double FontAtlas::getGlyphQuad(GlyphQuad &output, unsigned glyphIndex) {
         return FONT_ATLAS_PIXEL_RANGE/FONT_ATLAS_SCALE;
     }
     msdf_atlas::GlyphGeometry glyph;
-    if (!glyph.load(fontHandle, 1, msdfgen::GlyphIndex(glyphIndex)))
+    if (!glyph.load(fontHandle, baseScale, msdfgen::GlyphIndex(glyphIndex)))
         return 0;
     glyph.wrapBox(FONT_ATLAS_SCALE, FONT_ATLAS_PIXEL_RANGE/FONT_ATLAS_SCALE, FONT_ATLAS_MITER_LIMIT);
     atlas.add(&glyph, 1, false);

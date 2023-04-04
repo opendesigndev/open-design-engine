@@ -9,10 +9,12 @@
 
 namespace ode {
 
+class TextRenderer;
+
 class TextMesh : public TextShapeHolder::RendererData {
 
 public:
-    static std::unique_ptr<TextMesh> build(odtr::TextShapeHandle handle);
+    static std::unique_ptr<TextMesh> build(TextRenderer &parent, odtr::TextShapeHandle handle);
 
     void draw(Uniform &vec2TexCoordFactor, int textureUnit) const;
 

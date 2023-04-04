@@ -14,7 +14,7 @@ ShaderProgram::~ShaderProgram() {
     //LOG_OWN_ACTION(SHADER_DELETION, 1, "");
 }
 
-bool ShaderProgram::initialize(const VertexShader *vertexShader, const FragmentShader *fragmentShader) {
+bool ShaderProgram::initialize(const VertexShader *vertexShader, const FragmentShader *fragmentShader, const char *const *attribOrder) {
     if (ready || !(vertexShader && fragmentShader && *vertexShader && *fragmentShader))
         return false;
     if (!handle)
@@ -23,6 +23,10 @@ bool ShaderProgram::initialize(const VertexShader *vertexShader, const FragmentS
         return false;
     glAttachShader(handle, vertexShader->handle);
     glAttachShader(handle, fragmentShader->handle);
+    if (attribOrder) {
+        for (GLuint i = 0; *attribOrder; ++i, ++attribOrder)
+            glBindAttribLocation(handle, i, *attribOrder);
+    }
     glLinkProgram(handle);
     ODE_CHECK_GL_ERROR();
     GLint status = GL_FALSE;

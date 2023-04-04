@@ -1,6 +1,8 @@
 
 #pragma once
 
+// PRIVATE - do not include in public headers
+
 #include <map>
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -51,6 +53,7 @@ private:
 
     msdf_atlas::DynamicAtlas<msdf_atlas::ImmediateAtlasGenerator<float, 1, &msdf_atlas::psdfGenerator, TextureStorage> > atlas;
     std::map<unsigned, GlyphQuad> glyphQuads;
+    double baseScale;
 
 };
 

@@ -4,10 +4,9 @@
 #include <open-design-text-renderer/PlacedTextData.h>
 
 #include "FontAtlas.h"
+#include "TextRenderer.h"
 
 namespace ode {
-
-extern std::map<odtr::FontSpecifier, FontAtlas> GLOBAL_FONT_ATLAS_STORAGE;
 
 static const int TEXT_VERTEX_ATTRIBUTES[] = {
     2, // coord
@@ -43,7 +42,7 @@ static void generateQuadVertices(std::vector<float> &meshData, const FontAtlas::
     generateVertex(meshData, quad.planeBounds.a, quad.atlasBounds.a, fColor, outputRange);
 }
 
-std::unique_ptr<TextMesh> TextMesh::build(odtr::TextShapeHandle handle) {
+std::unique_ptr<TextMesh> TextMesh::build(TextRenderer &parent, odtr::TextShapeHandle handle) {
     const odtr::PlacedTextData *placedText = odtr::getShapedText(TEXT_RENDERER_CONTEXT, handle);
     if (!placedText)
         return nullptr; // error
@@ -52,7 +51,7 @@ std::unique_ptr<TextMesh> TextMesh::build(odtr::TextShapeHandle handle) {
     int quadCount = 0;
     for (const odtr::PlacedGlyphsPerFont::value_type &fontGlyphs : placedText->glyphs) {
         int segmentStart = 6*quadCount;
-        FontAtlas &fontAtlas = GLOBAL_FONT_ATLAS_STORAGE[fontGlyphs.first];
+        FontAtlas &fontAtlas = parent.fontAtlas(fontGlyphs.first);
         if (!fontAtlas.initialize(fontGlyphs.first))
             continue; // error
         for (const odtr::PlacedGlyph &glyph : fontGlyphs.second) {

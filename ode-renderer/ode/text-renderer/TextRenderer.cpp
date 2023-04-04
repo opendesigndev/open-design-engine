@@ -7,9 +7,6 @@
 
 namespace ode {
 
-// TODO move to context
-std::map<odtr::FontSpecifier, FontAtlas> GLOBAL_FONT_ATLAS_STORAGE;
-
 // TODO delete when text transformations are implemented properly
 static TransformationMatrix animationTransform(Component &component, const LayerInstanceSpecifier &layer, double time) {
     TransformationMatrix result = TransformationMatrix::identity;
@@ -32,7 +29,13 @@ TextRenderer::TextRenderer(GraphicsContext &gc, TextureFrameBufferManager &tfbMa
     #endif
 }
 
+TextRenderer::~TextRenderer() = default;
+
 #ifdef ODE_REALTIME_TEXT_RENDERER
+
+FontAtlas &TextRenderer::fontAtlas(const odtr::FontSpecifier &fontSpecifier) {
+    return fontAtlases[fontSpecifier];
+}
 
 PlacedImagePtr TextRenderer::drawLayerText(Component &component, const LayerInstanceSpecifier &layer, const ScaledBounds &visibleBounds, double scale, double time) {
     if (Result<TextShapeHolder *, DesignError> shape = component.getLayerTextShape(layer->id)) {
@@ -42,7 +45,7 @@ PlacedImagePtr TextRenderer::drawLayerText(Component &component, const LayerInst
             return nullptr; // TODO report
         TextMesh *textMesh = static_cast<TextMesh *>(shape.value()->rendererData.get());
         if (!textMesh) {
-            std::unique_ptr<TextMesh> textMeshHolder = TextMesh::build(*shape.value());
+            std::unique_ptr<TextMesh> textMeshHolder = TextMesh::build(*this, *shape.value());
             if (!textMeshHolder)
                 return nullptr;
             textMesh = textMeshHolder.get();

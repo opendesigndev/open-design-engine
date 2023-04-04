@@ -19,7 +19,7 @@ jobs:
           # Personal token with read-only access to liboctopus and open-design-text-renderer
           # https://github.com/organizations/opendesigndev/settings/personal-access-tokens/39049
           token: ${{ secrets.ODE_REPOS_TOKEN }}
-          submodules: true
+          submodules: recursive
       - uses: ./.github/actions/determine-version
         with:
           github_token: ${{ github.token }}

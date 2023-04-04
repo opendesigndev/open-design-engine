@@ -6,6 +6,13 @@ namespace ode {
 SDFTextShader::SDFTextShader() = default;
 
 bool SDFTextShader::initialize() {
+    const char *const attribs[] = {
+        "coord",
+        "texCoord",
+        "color",
+        "outputRange",
+        nullptr
+    };
     const StringLiteral vsSrc = ODE_STRLIT(
         ODE_GLSL_VATTRIB "vec2 coord;"
         ODE_GLSL_VATTRIB "vec2 texCoord;"
@@ -34,7 +41,7 @@ bool SDFTextShader::initialize() {
             "return max(min(x.r, x.g), min(max(x.r, x.g), x.b));"
         "}"
         "void main() {"
-            "float sd = median(" ODE_GLSL_TEXTURE2D "(sdf, vTexCoord))-0.5;"
+            "float sd = median(" ODE_GLSL_TEXTURE2D "(sdf, vTexCoord).rgb)-0.5;"
             "float alpha = clamp(screenPxRange*sd+0.5, 0.0, 1.0);"
             ODE_GLSL_FRAGCOLOR "= alpha*vColor;"
         "}\n"
@@ -49,7 +56,7 @@ bool SDFTextShader::initialize() {
         return false;
     if (!fs.initialize(fsrc, fsln, sizeof(fsrc)/sizeof(*fsrc)))
         return false;
-    if (!shader.initialize(&vs, &fs))
+    if (!shader.initialize(&vs, &fs, attribs))
         return false;
     unifTransformation = shader.getUniform("transformation");
     unifSDF = shader.getUniform("sdf");
