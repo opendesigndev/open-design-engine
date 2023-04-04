@@ -167,6 +167,17 @@ const octopus::Shape::Stroke DEFAULT_SHAPE_STROKE {
 
 const octopus::Color DEFAULT_EFFECT_COLOR { 0.0, 0.0, 0.0, 1.0 };
 
+const octopus::Fill DEFAULT_EFFECT_FILL {
+    octopus::Fill::Type::COLOR,
+    true,
+    octopus::BlendMode::NORMAL,
+    DEFAULT_EFFECT_COLOR,
+    nonstd::nullopt,
+    nonstd::nullopt,
+    nonstd::nullopt,
+    nonstd::nullopt
+};
+
 const octopus::Shadow DEFAULT_EFFECT_SHADOW {
     octopus::Vec2 { 0.0, 0.0 },
     5.0,
@@ -183,6 +194,26 @@ const octopus::Shadow DEFAULT_EFFECT_GLOW {
 
 const double DEFAULT_EFFECT_BLUR = 2.0;
 
+const octopus::Effect DEFAULT_EFFECT {
+    octopus::Effect::Type::OVERLAY,
+    octopus::EffectBasis::FILL,
+    true,
+    octopus::BlendMode::NORMAL,
+    DEFAULT_EFFECT_FILL,
+    nonstd::nullopt,
+    nonstd::nullopt,
+    nonstd::nullopt,
+    nonstd::nullopt,
+    nonstd::nullopt,
+};
+
+const octopus::Filter DEFAULT_FILL_FILTER {
+    octopus::Filter::Type::OPACITY_MULTIPLIER,
+    true,
+    1.0,
+    1.0,
+    octopus::ColorAdjustment { 1.0,0,0,0,0,0,0 } // Adjust hue
+};
 
 std::string layerTypeToShortString(ODE_LayerType layerType) {
     switch (layerType) {
@@ -836,15 +867,25 @@ void drawLayerShapeFill(int fillI,
         // TODO: Positioning transform?
     }
 
-    // TODO: Fill filters - only turn on / off ?
-    if (octopusFill.filters.has_value()) {
-        ImGui::Text("Filters:");
+    // Fill filters
+    ImGui::Text("Filters:");
+    ImGui::SameLine(415);
+    if (ImGui::SmallButton(layerPropName(layerId, "shape-fill-filter-add", fillI, nonstd::nullopt, "+").c_str())) {
+        changeInsertBack(octopus::LayerChange::Subject::FILL_FILTER, apiContext, layerId, nonstd::nullopt, [](octopus::LayerChange::Values &values) {
+            values.filter = DEFAULT_FILL_FILTER;
+        });
+    }
+
+    if (octopusFill.filters.has_value() && !octopusFill.filters->empty()) {
+        const std::vector<octopus::Filter> &octopusFillFilters = *octopusFill.filters;
+        int fillFilterToRemove = -1;
+
         for (int ffI = 0; ffI < static_cast<int>(octopusFill.filters->size()); ffI++) {
             const octopus::Filter &fillFilter = (*octopusFill.filters)[ffI];
 
             ImGui::Text("  Filter #%i:", ffI);
-            ImGui::SameLine(100);
 
+            ImGui::SameLine(100);
             bool filterVisible = (*octopusFill.filters)[ffI].visible;
             if (ImGui::Checkbox(layerPropName(layerId, "shape-fill-filter-visibility", fillI, ffI).c_str(), &filterVisible)) {
                 changeReplace(octopus::LayerChange::Subject::FILL_FILTER, apiContext, layerId, fillI, ffI, [fillFilter, filterVisible](octopus::LayerChange::Values &values) {
@@ -852,6 +893,15 @@ void drawLayerShapeFill(int fillI,
                     values.filter->visible = filterVisible;
                 });
             }
+
+            ImGui::SameLine(415);
+            if (ImGui::SmallButton(layerPropName(layerId, "shape-fill-filter-remove", fillI, ffI, "-").c_str())) {
+                fillFilterToRemove = static_cast<int>(ffI);
+            }
+        }
+
+        if (fillFilterToRemove >= 0 && fillFilterToRemove < static_cast<int>(octopusFillFilters.size())) {
+            changeRemove(octopus::LayerChange::Subject::FILL_FILTER, apiContext, layerId, fillI, fillFilterToRemove);
         }
     }
 
@@ -941,10 +991,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
     ImGui::SameLine(415);
     if (ImGui::SmallButton(layerPropName(layerId, "effect-add", nonstd::nullopt, nonstd::nullopt, "+").c_str())) {
         changeInsertBack(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, nonstd::nullopt, [](octopus::LayerChange::Values &values) {
-            octopus::Effect newEffect;
-            newEffect.type = octopus::Effect::Type::OVERLAY;
-            newEffect.overlay = DEFAULT_FILL;
-            values.effect = newEffect;
+            values.effect = DEFAULT_EFFECT;
         });
     }
     int effectToRemove = -1;
@@ -1067,7 +1114,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
             {
                 const octopus::Fill &octopusEffectOverlay = octopusEffect.overlay.has_value() ? *octopusEffect.overlay : DEFAULT_FILL;
                 if (octopusEffectOverlay.type != octopus::Fill::Type::COLOR) {
-                    // TODO: Handle other effect overlay types ?
+                    ImGui::Text("Unsupported overlay effect type.");
                     break;
                 }
 
@@ -1262,9 +1309,6 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                 break;
             }
         }
-
-        // TODO: effect fill filters
-
     }
     if (effectToRemove >= 0 && effectToRemove < static_cast<int>(octopusEffects.size())) {
         changeRemove(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, effectToRemove, nonstd::nullopt);
