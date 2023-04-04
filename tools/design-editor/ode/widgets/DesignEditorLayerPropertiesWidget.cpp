@@ -181,7 +181,7 @@ const octopus::Shadow DEFAULT_EFFECT_GLOW {
     DEFAULT_EFFECT_COLOR
 };
 
-const double DEFAULT_EFFECT_BLUR = 10.0;
+const double DEFAULT_EFFECT_BLUR = 2.0;
 
 
 std::string layerTypeToShortString(ODE_LayerType layerType) {
