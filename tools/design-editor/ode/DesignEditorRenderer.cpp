@@ -33,7 +33,8 @@ DesignEditorRenderer::DesignEditorRenderer() : sharedVertexShader("diagnostics-s
 TexturePtr DesignEditorRenderer::blendImageToTexture(Bitmap &&bitmap,
                                                      const ScaledBounds &placement,
                                                      int selectedDisplayMode,
-                                                     const SelectionRectangleOpt &selectionRectangle) {
+                                                     const AnnotationRectangleOpt &selectionRectangle,
+                                                     const AnnotationRectangleOpt &highlightRectangle) {
     const bool ignoreAlpha = selectedDisplayMode == 3;
 
     ImagePtr image = Image::fromBitmap(bitmap, Image::NORMAL);
@@ -52,7 +53,7 @@ TexturePtr DesignEditorRenderer::blendImageToTexture(Bitmap &&bitmap,
     glViewport(0, 0, bounds.dimensions().x, bounds.dimensions().y);
     clearColorBuffer(selectedDisplayMode);
 
-    canvasShader.bind(sBounds, sBounds, 0, bounds.dimensions(), selectionRectangle, ignoreAlpha);
+    canvasShader.bind(sBounds, sBounds, 0, bounds.dimensions(), selectionRectangle, highlightRectangle, ignoreAlpha);
 
     // Draw the image texture to framebuffer blended on top of the background
     texture->bind(0);

@@ -431,7 +431,7 @@ void drawLayerText(const ODE_StringRef &layerId,
     float fontSize = defaultTextStyle.fontSize.has_value() ? *defaultTextStyle.fontSize : 0.0;
     ImGui::Text("Font size:");
     ImGui::SameLine(100);
-    if (ImGui::DragFloat(layerPropName(layerId, "text-font-size").c_str(), &fontSize, 0.1f, 0.0f, 100.0f)) {
+    if (ImGui::DragFloat(layerPropName(layerId, "text-font-size").c_str(), &fontSize, 0.1f, 0.0f, 10000.0f)) {
         changeProperty(octopus::LayerChange::Subject::TEXT, apiContext, layerId, nonstd::nullopt, [&fontSize, &defaultTextStyle](octopus::LayerChange::Values &values) {
             values.defaultStyle = defaultTextStyle;
             values.defaultStyle->fontSize = fontSize;

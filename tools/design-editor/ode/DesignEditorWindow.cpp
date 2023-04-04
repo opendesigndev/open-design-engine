@@ -361,7 +361,7 @@ int DesignEditorWindow::display() {
             drawLayerListWidget(data->loadedOctopus, data->context.layerSelection);
         }
         if (data->context.widgets.showDesignView) {
-            drawDesignViewWidget(data->context.api.bitmap, *data->renderer, data->context.textures, data->context.canvas);
+            drawDesignViewWidget(data->context.api, *data->renderer, data->context.textures, data->context.canvas, data->context.layerSelection, data->loadedOctopus.layerList.entries[0].id);
         }
         if (data->context.widgets.showLayerProperties) {
             drawLayerPropertiesWidget(data->loadedOctopus.layerList, data->context.api, data->context.layerSelection);

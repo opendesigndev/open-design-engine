@@ -58,14 +58,16 @@ void drawImGuiWidgetTexture(GLuint textureHandle,
 
 }
 
-void drawDesignViewWidget(const ODE_Bitmap &bmp,
+void drawDesignViewWidget(const DesignEditorContext::Api &apiContext,
                           DesignEditorRenderer &renderer,
                           DesignEditorContext::Textures &texturesContext,
-                          DesignEditorContext::Canvas &canvasContext) {
+                          DesignEditorContext::Canvas &canvasContext,
+                          const DesignEditorContext::LayerSelection &layerSelectionContext,
+                          const ODE_StringRef &topLayerId) {
     ImGui::Begin("Interactive Design View");
 
-    if (bmp.width > 0 && bmp.height > 0) {
-        ode::Bitmap bitmap(PixelFormat::PREMULTIPLIED_RGBA, reinterpret_cast<const void*>(bmp.pixels), bmp.width, bmp.height);
+    if (apiContext.bitmap.width > 0 && apiContext.bitmap.height > 0) {
+        ode::Bitmap bitmap(PixelFormat::PREMULTIPLIED_RGBA, reinterpret_cast<const void*>(apiContext.bitmap.pixels), apiContext.bitmap.width, apiContext.bitmap.height);
 
         const ScaledBounds placement {0,0,static_cast<double>(bitmap.width()),static_cast<double>(bitmap.height())};
 
@@ -76,7 +78,7 @@ void drawDesignViewWidget(const ODE_Bitmap &bmp,
             };
         };
 
-        SelectionRectangleOpt selectionRectangle = std::nullopt;
+        AnnotationRectangleOpt selectionRectangle = std::nullopt;
         if (canvasContext.mouseClickPos.has_value() &&
             canvasContext.mouseDragPos.has_value()) {
             const ImVec2 rectStart = toCanvasSpace(*canvasContext.mouseClickPos);
@@ -89,7 +91,32 @@ void drawDesignViewWidget(const ODE_Bitmap &bmp,
                 std::max(rectStart.y, rectEnd.y) };
         }
 
-        texturesContext.designImageTexture = renderer.blendImageToTexture(std::move(bitmap), placement, 2, selectionRectangle);
+        AnnotationRectangleOpt highlightRectangle = std::nullopt;
+        // TODO: Add support for multiple highlight rectangle
+        if (layerSelectionContext.layerIDs.size() == 1) {
+            ODE_LayerMetrics topLayerMetrics;
+            ode_component_getLayerMetrics(apiContext.component, topLayerId, &topLayerMetrics);
+            const ODE_Rectangle &topLayerBounds = topLayerMetrics.logicalBounds;
+            const float w = topLayerBounds.b.x - topLayerBounds.a.x;
+            const float h = topLayerBounds.b.y - topLayerBounds.a.y;
+            ODE_LayerMetrics layerMetrics;
+            ode_component_getLayerMetrics(apiContext.component, layerSelectionContext.layerIDs.front(), &layerMetrics);
+            ODE_Rectangle layerBounds = layerMetrics.graphicalBounds;
+            const float trX = layerMetrics.transformation.matrix[4];
+            const float trY = layerMetrics.transformation.matrix[5];
+            layerBounds.a.x += trX;
+            layerBounds.a.y += trY;
+            layerBounds.b.x += trX;
+            layerBounds.b.y += trY;
+            highlightRectangle = ode::Rectangle<float> {
+                std::max(0.0f, static_cast<float>(layerBounds.a.x) / w),
+                std::max(0.0f, static_cast<float>(layerBounds.a.y) / h),
+                std::min(1.0f, static_cast<float>(layerBounds.b.x) / w),
+                std::min(1.0f, static_cast<float>(layerBounds.b.y) / h),
+            };
+        }
+
+        texturesContext.designImageTexture = renderer.blendImageToTexture(std::move(bitmap), placement, 2, selectionRectangle, highlightRectangle);
 
         drawImGuiWidgetTexture(texturesContext.designImageTexture->getInternalGLHandle(),
                                texturesContext.designImageTexture->dimensions().x,

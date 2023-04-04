@@ -16,7 +16,8 @@ public:
     TexturePtr blendImageToTexture(Bitmap &&bitmap,
                                    const ScaledBounds &placement,
                                    int selectedDisplayMode,
-                                   const SelectionRectangleOpt &selectionRectangle);
+                                   const AnnotationRectangleOpt &selectionRectangle,
+                                   const AnnotationRectangleOpt &highlightRectangle);
 
 private:
     void bind();

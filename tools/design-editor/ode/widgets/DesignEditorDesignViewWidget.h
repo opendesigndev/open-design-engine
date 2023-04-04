@@ -5,7 +5,9 @@
 #include "../DesignEditorContext.h"
 
 /// Draw DE Design View widget
-void drawDesignViewWidget(const ODE_Bitmap &bmp,
+void drawDesignViewWidget(const DesignEditorContext::Api &apiContext,
                           DesignEditorRenderer &renderer,
                           DesignEditorContext::Textures &texturesContext,
-                          DesignEditorContext::Canvas &canvasContext);
+                          DesignEditorContext::Canvas &canvasContext,
+                          const DesignEditorContext::LayerSelection &layerSelectionContext,
+                          const ODE_StringRef &topLayerId);
