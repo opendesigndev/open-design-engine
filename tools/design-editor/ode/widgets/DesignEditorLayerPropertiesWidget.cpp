@@ -113,11 +113,30 @@ const std::map<int, const char*> EFFECT_BASIS_MAP {
     { 8, "BACKGROUND" },
 };
 
+const octopus::Color DEFAULT_FILL_COLOR {
+    1.0f, 1.0f, 1.0f, 1.0f
+};
+const octopus::Color DEFAULT_FILL_GRADIENT_COLOR_0 { 0.0f, 0.0f, 0.0f, 0.0f };
+const octopus::Color DEFAULT_FILL_GRADIENT_COLOR_1 { 0.0f, 0.0f, 0.0f, 1.0f };
+
+const octopus::Gradient DEFAULT_FILL_GRADIENT {
+    octopus::Gradient::Type::LINEAR,
+    std::vector<octopus::Gradient::ColorStop> {
+        octopus::Gradient::ColorStop { 0.0, octopus::Gradient::Interpolation::LINEAR, 0.0, DEFAULT_FILL_GRADIENT_COLOR_0 },
+        octopus::Gradient::ColorStop { 1.0, octopus::Gradient::Interpolation::LINEAR, 1.00, DEFAULT_FILL_GRADIENT_COLOR_1 },
+    },
+};
+
+const octopus::Image DEFAULT_FILL_IMAGE {
+    octopus::ImageRef { octopus::ImageRef::Type::PATH, "" },
+    nonstd::nullopt
+};
+
 const octopus::Fill DEFAULT_FILL {
     octopus::Fill::Type::COLOR,
     true,
     octopus::BlendMode::NORMAL,
-    octopus::Color{1.0f,1.0f,1.0f,1.0f},
+    DEFAULT_FILL_COLOR,
     nonstd::nullopt,
     nonstd::nullopt,
     nonstd::nullopt,
@@ -552,7 +571,8 @@ void drawLayerShapeStroke(int strokeI,
 void drawLayerShapeFill(int fillI,
                         const ODE_StringRef &layerId,
                         DesignEditorContext::Api &apiContext,
-                        const octopus::Fill &octopusFill) {
+                        const octopus::Fill &octopusFill,
+                        const ODE_LayerMetrics &layerMetrics) {
     // Visibility
     ImGui::Text("Visible:");
     ImGui::SameLine(100);
@@ -592,9 +612,32 @@ void drawLayerShapeFill(int fillI,
         for (int ftI = 0; ftI < IM_ARRAYSIZE(FILL_TYPES_STR); ftI++) {
             const bool isSelected = (fillTypeI == ftI);
             if (ImGui::Selectable(FILL_TYPES_STR[ftI], isSelected)) {
-                changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, ftI](octopus::LayerChange::Values &values) {
+                changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, ftI, &layerMetrics](octopus::LayerChange::Values &values) {
                     values.fill = octopusFill;
                     values.fill->type = static_cast<octopus::Fill::Type>(ftI);
+                    switch (values.fill->type) {
+                        case octopus::Fill::Type::COLOR:
+                            if (!octopusFill.color.has_value()) {
+                                values.fill->color = DEFAULT_FILL_COLOR;
+                            }
+                            break;
+                        case octopus::Fill::Type::GRADIENT:
+                            if (!octopusFill.gradient.has_value()) {
+                                // TODO: Correct fill positioning
+                                values.fill->gradient = DEFAULT_FILL_GRADIENT;
+                                values.fill->positioning = octopus::Fill::Positioning {
+                                    octopus::Fill::Positioning::Layout::STRETCH,
+                                    octopus::Fill::Positioning::Origin::LAYER,
+                                    {  },
+                                };
+                            }
+                            break;
+                        case octopus::Fill::Type::IMAGE:
+                            if (!octopusFill.image.has_value()) {
+                                values.fill->image = DEFAULT_FILL_IMAGE;
+                            }
+                            break;
+                    }
                 });
             }
             if (isSelected) {
@@ -795,7 +838,8 @@ void drawLayerShapeFill(int fillI,
 
 void drawLayerShape(const ODE_StringRef &layerId,
                     DesignEditorContext::Api &apiContext,
-                    const octopus::Shape &octopusShape) {
+                    const octopus::Shape &octopusShape,
+                    const ODE_LayerMetrics &layerMetrics) {
     // Rounded corner radius (for rectangles)
     {
         const bool isRectangle = (octopusShape.path.has_value() && octopusShape.path->type == octopus::Path::Type::RECTANGLE);
@@ -860,7 +904,7 @@ void drawLayerShape(const ODE_StringRef &layerId,
                 fillToRemove = static_cast<int>(fi);
             }
 
-            drawLayerShapeFill(static_cast<int>(fi), layerId, apiContext, octopusShape.fills[fi]);
+            drawLayerShapeFill(static_cast<int>(fi), layerId, apiContext, octopusShape.fills[fi], layerMetrics);
         }
         if (fillToRemove >= 0 && fillToRemove < static_cast<int>(octopusShape.fills.size())) {
             changeRemove(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillToRemove, nonstd::nullopt);
@@ -1259,7 +1303,7 @@ void drawLayerPropertiesWidget(ODE_LayerList &layerList,
                 // Shape
                 const bool isShapeLayer = (layer.type == ODE_LAYER_TYPE_SHAPE && octopusLayer.type == octopus::Layer::Type::SHAPE && octopusLayer.shape.has_value());
                 if (isShapeLayer) {
-                    drawLayerShape(layer.id, apiContext, *octopusLayer.shape);
+                    drawLayerShape(layer.id, apiContext, *octopusLayer.shape, layerMetrics);
                 }
 
                 // Effects
