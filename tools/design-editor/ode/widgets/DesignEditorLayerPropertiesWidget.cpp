@@ -116,6 +116,9 @@ const std::map<int, const char*> EFFECT_BASIS_MAP {
 const octopus::Color DEFAULT_FILL_COLOR {
     1.0f, 1.0f, 1.0f, 1.0f
 };
+const octopus::Color DEFAULT_STROKE_FILL_COLOR {
+    0.0f, 0.0f, 0.0f, 1.0f
+};
 const octopus::Color DEFAULT_FILL_GRADIENT_COLOR_0 { 0.0f, 0.0f, 0.0f, 0.0f };
 const octopus::Color DEFAULT_FILL_GRADIENT_COLOR_1 { 0.0f, 0.0f, 0.0f, 1.0f };
 
@@ -143,10 +146,14 @@ const octopus::Fill DEFAULT_FILL {
     nonstd::nullopt
 };
 
+const octopus::Stroke DEFAULT_STROKE {
+    DEFAULT_FILL,
+    2.0,
+    octopus::Stroke::Position::CENTER
+};
+
 const octopus::Shape::Stroke DEFAULT_SHAPE_STROKE {
-    {{ DEFAULT_FILL,
-        2.0,
-        octopus::Stroke::Position::CENTER },
+    { DEFAULT_STROKE,
         true,
         octopus::Shape::Stroke::Style::SOLID,
         nonstd::nullopt,
@@ -157,6 +164,24 @@ const octopus::Shape::Stroke DEFAULT_SHAPE_STROKE {
     nonstd::nullopt,
     nonstd::nullopt,
 };
+
+const octopus::Color DEFAULT_EFFECT_COLOR { 0.0, 0.0, 0.0, 1.0 };
+
+const octopus::Shadow DEFAULT_EFFECT_SHADOW {
+    octopus::Vec2 { 0.0, 0.0 },
+    5.0,
+    5.0,
+    DEFAULT_EFFECT_COLOR
+};
+
+const octopus::Shadow DEFAULT_EFFECT_GLOW {
+    octopus::Vec2 { 0.0, 0.0 },
+    5.0,
+    5.0,
+    DEFAULT_EFFECT_COLOR
+};
+
+const double DEFAULT_EFFECT_BLUR = 10.0;
 
 
 std::string layerTypeToShortString(ODE_LayerType layerType) {
@@ -669,7 +694,6 @@ void drawLayerShapeFill(int fillI,
         case octopus::Fill::Type::GRADIENT:
         {
             // Gradient
-            // TODO: Gradient stops?
             ImGui::Text("Gradient:");
             ImGui::SameLine(100);
 
@@ -696,8 +720,6 @@ void drawLayerShapeFill(int fillI,
                 }
                 ImGui::EndCombo();
             }
-
-            // TODO: Gradient Color stops?
             break;
         }
         case octopus::Fill::Type::IMAGE:
@@ -754,64 +776,64 @@ void drawLayerShapeFill(int fillI,
                 });
             }
 
-            // TODO: Image ref subsection?
-
-            // Image positioning layout
-            ImGui::Text("  Pos. Layout:");
-            ImGui::SameLine(100);
-
-            const int positioningLayoutI = static_cast<int>(octopusFill.positioning.has_value() ? octopusFill.positioning->layout : octopus::Fill::Positioning::Layout::STRETCH);
-            if (ImGui::BeginCombo(layerPropName(layerId, "shape-fill-positioning-layout", fillI).c_str(), FILL_POSITIONING_LAYOUTS_STR[positioningLayoutI])) {
-                for (int plI = 0; plI < IM_ARRAYSIZE(FILL_POSITIONING_LAYOUTS_STR); plI++) {
-                    const bool isSelected = (positioningLayoutI == plI);
-                    if (ImGui::Selectable(FILL_POSITIONING_LAYOUTS_STR[plI], isSelected)) {
-                        changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, plI](octopus::LayerChange::Values &values) {
-                            values.fill = octopusFill;
-                            if (values.fill->positioning.has_value()) {
-                                values.fill->positioning->layout = static_cast<octopus::Fill::Positioning::Layout>(plI);
-                            } else {
-                                values.fill->positioning = octopus::Fill::Positioning { static_cast<octopus::Fill::Positioning::Layout>(plI), octopus::Fill::Positioning::Origin::LAYER,
-                                };
-                            }
-                        });
-                    }
-                    if (isSelected) {
-                        ImGui::SetItemDefaultFocus();
-                    }
-                }
-                ImGui::EndCombo();
-            }
-
-            // Image positioning origin
-            ImGui::Text("  Pos. Orig.:");
-            ImGui::SameLine(100);
-
-            const int positioningOriginI = static_cast<int>(octopusFill.positioning.has_value() ? octopusFill.positioning->origin : octopus::Fill::Positioning::Origin::LAYER);
-            if (ImGui::BeginCombo(layerPropName(layerId, "shape-fill-positioning-origin", fillI).c_str(), FILL_POSITIONING_ORIGINS_STR[positioningOriginI])) {
-                for (int poI = 0; poI < IM_ARRAYSIZE(FILL_POSITIONING_ORIGINS_STR); poI++) {
-                    const bool isSelected = (positioningOriginI == poI);
-                    if (ImGui::Selectable(FILL_POSITIONING_ORIGINS_STR[poI], isSelected)) {
-                        changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, poI](octopus::LayerChange::Values &values) {
-                            values.fill = octopusFill;
-                            if (values.fill->positioning.has_value()) {
-                                values.fill->positioning->origin = static_cast<octopus::Fill::Positioning::Origin>(poI);
-                            } else {
-                                values.fill->positioning = octopus::Fill::Positioning { octopus::Fill::Positioning::Layout::STRETCH, static_cast<octopus::Fill::Positioning::Origin>(poI),
-                                };
-                            }
-                        });
-                    }
-                    if (isSelected) {
-                        ImGui::SetItemDefaultFocus();
-                    }
-                }
-                ImGui::EndCombo();
-            }
-
-            // TODO: Positioning transform?
-
             break;
         }
+    }
+
+    if (octopusFill.type == octopus::Fill::Type::GRADIENT || octopusFill.type == octopus::Fill::Type::IMAGE) {
+        // Image positioning layout
+        ImGui::Text("  Pos. Layout:");
+        ImGui::SameLine(100);
+
+        const int positioningLayoutI = static_cast<int>(octopusFill.positioning.has_value() ? octopusFill.positioning->layout : octopus::Fill::Positioning::Layout::STRETCH);
+        if (ImGui::BeginCombo(layerPropName(layerId, "shape-fill-positioning-layout", fillI).c_str(), FILL_POSITIONING_LAYOUTS_STR[positioningLayoutI])) {
+            for (int plI = 0; plI < IM_ARRAYSIZE(FILL_POSITIONING_LAYOUTS_STR); plI++) {
+                const bool isSelected = (positioningLayoutI == plI);
+                if (ImGui::Selectable(FILL_POSITIONING_LAYOUTS_STR[plI], isSelected)) {
+                    changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, plI](octopus::LayerChange::Values &values) {
+                        values.fill = octopusFill;
+                        if (values.fill->positioning.has_value()) {
+                            values.fill->positioning->layout = static_cast<octopus::Fill::Positioning::Layout>(plI);
+                        } else {
+                            values.fill->positioning = octopus::Fill::Positioning { static_cast<octopus::Fill::Positioning::Layout>(plI), octopus::Fill::Positioning::Origin::LAYER,
+                            };
+                        }
+                    });
+                }
+                if (isSelected) {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+        }
+
+        // Image positioning origin
+        ImGui::Text("  Pos. Orig.:");
+        ImGui::SameLine(100);
+
+        const int positioningOriginI = static_cast<int>(octopusFill.positioning.has_value() ? octopusFill.positioning->origin : octopus::Fill::Positioning::Origin::LAYER);
+        if (ImGui::BeginCombo(layerPropName(layerId, "shape-fill-positioning-origin", fillI).c_str(), FILL_POSITIONING_ORIGINS_STR[positioningOriginI])) {
+            for (int poI = 0; poI < IM_ARRAYSIZE(FILL_POSITIONING_ORIGINS_STR); poI++) {
+                const bool isSelected = (positioningOriginI == poI);
+                if (ImGui::Selectable(FILL_POSITIONING_ORIGINS_STR[poI], isSelected)) {
+                    changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, poI](octopus::LayerChange::Values &values) {
+                        values.fill = octopusFill;
+                        if (values.fill->positioning.has_value()) {
+                            values.fill->positioning->origin = static_cast<octopus::Fill::Positioning::Origin>(poI);
+                        } else {
+                            values.fill->positioning = octopus::Fill::Positioning { octopus::Fill::Positioning::Layout::STRETCH, static_cast<octopus::Fill::Positioning::Origin>(poI),
+                            };
+                        }
+                    });
+                }
+                if (isSelected) {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+        }
+
+        // TODO: Positioning transform?
     }
 
     // TODO: Fill filters - only turn on / off ?
@@ -998,7 +1020,39 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                     changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, nonstd::nullopt, [&octopusEffect, etI](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
                         values.effect->type = static_cast<octopus::Effect::Type>(etI);
-                        // TODO: Fill in reasonable default values when a type changes to a previously unused type
+                        switch (values.effect->type) {
+                            case octopus::Effect::Type::OVERLAY:
+                                if (!octopusEffect.overlay.has_value()) {
+                                    values.effect->overlay = DEFAULT_FILL;
+                                }
+                                break;
+                            case octopus::Effect::Type::STROKE:
+                                if (!octopusEffect.stroke.has_value()) {
+                                    values.effect->stroke = DEFAULT_STROKE;
+                                }
+                                break;
+                            case octopus::Effect::Type::DROP_SHADOW:
+                            case octopus::Effect::Type::INNER_SHADOW:
+                                if (!octopusEffect.shadow.has_value()) {
+                                    values.effect->shadow = DEFAULT_EFFECT_SHADOW;
+                                }
+                                break;
+                            case octopus::Effect::Type::OUTER_GLOW:
+                            case octopus::Effect::Type::INNER_GLOW:
+                                if (!octopusEffect.glow.has_value()) {
+                                    values.effect->glow = DEFAULT_EFFECT_GLOW;
+                                }
+                                break;
+                            case octopus::Effect::Type::GAUSSIAN_BLUR:
+                            case octopus::Effect::Type::BOUNDED_BLUR:
+                            case octopus::Effect::Type::BLUR:
+                                if (!octopusEffect.blur.has_value()) {
+                                    values.effect->blur = DEFAULT_EFFECT_BLUR;
+                                }
+                                break;
+                            case octopus::Effect::Type::OTHER:
+                                break;
+                        }
                     });
                 }
                 if (isSelected) {
@@ -1011,12 +1065,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
         switch (octopusEffect.type) {
             case octopus::Effect::Type::OVERLAY:
             {
-                if (!octopusEffect.overlay.has_value()) {
-                    // TODO: Can overlay be undefined ?
-                    break;
-                }
-
-                const octopus::Fill &octopusEffectOverlay = *octopusEffect.overlay;
+                const octopus::Fill &octopusEffectOverlay = octopusEffect.overlay.has_value() ? *octopusEffect.overlay : DEFAULT_FILL;
                 if (octopusEffectOverlay.type != octopus::Fill::Type::COLOR) {
                     // TODO: Handle other effect overlay types ?
                     break;
@@ -1040,12 +1089,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
             }
             case octopus::Effect::Type::STROKE:
             {
-                if (!octopusEffect.stroke.has_value()) {
-                    // TODO: Can stroke be undefined ?
-                    break;
-                }
-
-                const octopus::Stroke &octopusEffectStroke = *octopusEffect.stroke;
+                const octopus::Stroke &octopusEffectStroke = octopusEffect.stroke.has_value() ? *octopusEffect.stroke : DEFAULT_STROKE;
                 const octopus::Fill &octopusEffectStrokeFill = octopusEffectStroke.fill;
 
                 // Thickness
@@ -1080,8 +1124,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                 }
 
                 // Color
-                // TODO: What if effect stroke type other than COLOR?
-                ImVec4 imColor = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+                ImVec4 imColor = toImColor(DEFAULT_STROKE_FILL_COLOR);
                 if (octopusEffectStrokeFill.type == octopus::Fill::Type::COLOR && octopusEffectStrokeFill.color.has_value()) {
                     imColor = toImColor(*octopusEffectStrokeFill.color);
                 }
@@ -1100,18 +1143,13 @@ void drawLayerEffects(const ODE_StringRef &layerId,
             case octopus::Effect::Type::DROP_SHADOW:
             case octopus::Effect::Type::INNER_SHADOW:
             {
-                if (!octopusEffect.shadow.has_value()) {
-                    // TODO: Can shadow be undefined ?
-                    break;
-                }
-
-                const octopus::Shadow &octopusEffectShadow = *octopusEffect.shadow;
+                const octopus::Shadow &octopusEffectShadow = octopusEffect.shadow.has_value() ? *octopusEffect.shadow : DEFAULT_EFFECT_SHADOW;
 
                 // Effect shadow offset
                 ImGui::Text("Offset:");
                 ImGui::SameLine(100);
                 Vector2f shadowOffset { static_cast<float>(octopusEffectShadow.offset.x), static_cast<float>(octopusEffectShadow.offset.y) };
-                if (ImGui::DragFloat2(layerPropName(layerId, "effect-shadow-offset", ei).c_str(), &shadowOffset.x, 0.05f, 0.0f, 100.0f)) {
+                if (ImGui::DragFloat2(layerPropName(layerId, "effect-shadow-offset", ei).c_str(), &shadowOffset.x, 0.05f, -1000.0f, 1000.0f)) {
                     changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, nonstd::nullopt, [&octopusEffect, &shadowOffset](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
                         values.effect->shadow->offset.x = shadowOffset.x;
@@ -1123,7 +1161,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                 ImGui::Text("Blur:");
                 ImGui::SameLine(100);
                 float shadowBlur = octopusEffectShadow.blur;
-                if (ImGui::DragFloat(layerPropName(layerId, "effect-shadow-blur", ei).c_str(), &shadowBlur, 0.1f, 0.0f, 100.0f)) {
+                if (ImGui::DragFloat(layerPropName(layerId, "effect-shadow-blur", ei).c_str(), &shadowBlur, 0.1f, -1000.0f, 1000.0f)) {
                     changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, nonstd::nullopt, [&shadowBlur, &octopusEffect](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
                         values.effect->shadow->blur = shadowBlur;
@@ -1156,12 +1194,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
             case octopus::Effect::Type::OUTER_GLOW:
             case octopus::Effect::Type::INNER_GLOW:
             {
-                if (!octopusEffect.glow.has_value()) {
-                    // TODO: Can glow be undefined ?
-                    break;
-                }
-
-                const octopus::Shadow &octopusEffectGlow = *octopusEffect.glow;
+                const octopus::Shadow &octopusEffectGlow = octopusEffect.glow.has_value() ? *octopusEffect.glow : DEFAULT_EFFECT_GLOW;
 
                 // Effect shadow offset
                 ImGui::Text("Offset:");
@@ -1213,13 +1246,9 @@ void drawLayerEffects(const ODE_StringRef &layerId,
             case octopus::Effect::Type::BOUNDED_BLUR:
             case octopus::Effect::Type::BLUR:
             {
-                if (!octopusEffect.blur.has_value()) {
-                    // TODO: Can blur be undefined ?
-                    break;
-                }
                 ImGui::Text("Blur:");
                 ImGui::SameLine(100);
-                float blurAmount = *octopusEffect.blur;
+                float blurAmount = octopusEffect.blur.has_value() ? *octopusEffect.blur : DEFAULT_EFFECT_BLUR;
                 if (ImGui::DragFloat(layerPropName(layerId, "effect-blur-amount", ei).c_str(), &blurAmount, 0.1f, 0.0f, 100.0f)) {
                     changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, nonstd::nullopt, [&octopusEffect, blurAmount](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
