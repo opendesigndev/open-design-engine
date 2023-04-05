@@ -14,7 +14,7 @@ jobs:
           submodules: true
       - uses: ./.github/actions/determine-version
         with:
-          has_publish_label: ${{ contains(github.event.pull_request.labels.*.name, 'ci:npm-publish') }}
+          github_token: ${{ github.token }}
           ref_name: ${{ github.ref_name }}
           ref: ${{ github.ref }}
       - run: |
