@@ -83,6 +83,22 @@ int loadMissingFonts(const DesignEditorContext::Api &apiContext,
     return 0;
 }
 
+std::optional<std::string> findAvailableLayerId(const std::string &prefix, const ODE_LayerList &layerList) {
+    for (int i = 0; i < std::numeric_limits<int>::max(); ++i) {
+        const std::string layerId = prefix + "_" + std::to_string(i);
+        bool idAlreadyInUse = false;
+        for (int j = 0; j < layerList.n && !idAlreadyInUse; ++j) {
+            if (layerId == ode_stringDeref(layerList.entries[j].id)) {
+                idAlreadyInUse = true;
+            }
+        }
+        if (!idAlreadyInUse) {
+            return layerId;
+        }
+    }
+    return std::nullopt;
+}
+
 }
 
 struct DesignEditorWindow::Internal {
@@ -274,10 +290,15 @@ int DesignEditorWindow::display() {
                 data->context.mode == DesignEditorMode::ADD_TEXT) {
                 const Vector2f newLayerSize { 100, 50 };
 
-                const octopus::Octopus octopus = [mode = data->context.mode, &newLayerSize]()->octopus::Octopus {
+                const octopus::Octopus octopus = [mode = data->context.mode, &layerList = data->loadedOctopus.layerList, &newLayerSize]()->octopus::Octopus {
                     if (mode == DesignEditorMode::ADD_RECTANGLE) {
                         ode::octopus_builder::ShapeLayer rectangleShape(0, 0, newLayerSize.x, newLayerSize.y);
                         rectangleShape.setColor(Color(0.5, 0.5, 0.5, 1.0));
+                        const std::optional<std::string> idOpt = findAvailableLayerId("SHAPE", layerList);
+                        if (idOpt.has_value()) {
+                            rectangleShape.id = *idOpt;
+                            rectangleShape.name = *idOpt;
+                        }
                         return ode::octopus_builder::buildOctopus("Rectangle", rectangleShape);
 
                     } else if (mode == DesignEditorMode::ADD_ELLIPSE) {
@@ -285,11 +306,21 @@ int DesignEditorWindow::display() {
                         const std::string ratio = std::to_string(newLayerSize.x / newLayerSize.y);
                         ode::octopus_builder::ShapeLayer ellipseShape(0, 0, newLayerSize.x, newLayerSize.y);
                         ellipseShape.setPath("M 0,0 a " + ratio + " 1 0 0 0 " + w + " 0 a " + ratio + " 1 0 0 0 -" + w + " 0");
+                        const std::optional<std::string> idOpt = findAvailableLayerId("ELLIPSE", layerList);
+                        if (idOpt.has_value()) {
+                            ellipseShape.id = *idOpt;
+                            ellipseShape.name = *idOpt;
+                        }
                         return ode::octopus_builder::buildOctopus("Ellipse", ellipseShape);
 
                     } else {
                         ode::octopus_builder::TextLayer textShape("Text");
                         textShape.setColor(Color(0.5, 0.5, 0.5, 1.0));
+                        const std::optional<std::string> idOpt = findAvailableLayerId("TEXT", layerList);
+                        if (idOpt.has_value()) {
+                            textShape.id = *idOpt;
+                            textShape.name = *idOpt;
+                        }
                         return ode::octopus_builder::buildOctopus("Text", textShape);
                     }
                 } ();
