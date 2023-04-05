@@ -8,11 +8,9 @@
 #include <ode-logic.h>
 #include <ode-renderer.h>
 
-using namespace ode;
+#include "DesignEditorUIValues.h"
 
-namespace {
-const ImU32 IM_COLOR_LIGHT_BLUE = 4294941081;
-}
+using namespace ode;
 
 namespace {
 

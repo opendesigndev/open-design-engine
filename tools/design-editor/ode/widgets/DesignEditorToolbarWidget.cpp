@@ -5,40 +5,10 @@
 
 #include <ode-diagnostics.h>
 
+#include "DesignEditorUIHelpers.h"
+#include "DesignEditorUIValues.h"
+
 namespace {
-const ImU32 IM_COLOR_DARK_RED = 4278190233;
-const ImU32 IM_COLOR_LIGHT_BLUE = 4294941081;
-
-const octopus::Layer *findLayer(const octopus::Layer &layer, const std::string &layerId) {
-    if (layer.id == layerId) {
-        return &layer;
-    }
-    if (layer.mask.has_value()) {
-        const octopus::Layer *l = findLayer(*layer.mask, layerId);
-        if (l != nullptr) {
-            return l;
-        }
-    }
-    if (layer.layers.has_value()) {
-        for (const octopus::Layer &childLayer : *layer.layers) {
-            const octopus::Layer *l = findLayer(childLayer, layerId);
-            if (l != nullptr) {
-                return l;
-            }
-        }
-    }
-    return nullptr;
-}
-
-std::optional<std::string> findParentLayerId(const ODE_LayerList &layerList, const ODE_StringRef &layerId) {
-    for (int i = 0; i < layerList.n; ++i) {
-        const ODE_LayerList::Entry &layer = layerList.entries[i];
-        if (strcmp(layerId.data, layer.id.data) == 0) {
-            return ode_stringDeref(layer.parentId);
-        }
-    }
-    return std::nullopt;
-}
 
 void addGroup(DesignEditorContext::Api &apiContext,
               ODE_LayerList &layerList,

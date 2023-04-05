@@ -6,11 +6,12 @@
 #include <octopus/layer-change.h>
 #include <ode-essentials.h>
 
+#include "DesignEditorUIHelpers.h"
+#include "DesignEditorUIValues.h"
+
 using namespace ode;
 
 namespace {
-
-const ImU32 IM_COLOR_DARK_RED = 4278190233;
 
 const char *BLEND_MODES_STR[] = {
     "NORMAL",
@@ -215,53 +216,6 @@ const octopus::Filter DEFAULT_FILL_FILTER {
     octopus::ColorAdjustment { 1.0,0,0,0,0,0,0 } // Adjust hue
 };
 
-std::string layerTypeToShortString(ODE_LayerType layerType) {
-    switch (layerType) {
-        case ODE_LAYER_TYPE_UNSPECIFIED: return "-";
-        case ODE_LAYER_TYPE_SHAPE: return "S";
-        case ODE_LAYER_TYPE_TEXT: return "T";
-        case ODE_LAYER_TYPE_GROUP: return "G";
-        case ODE_LAYER_TYPE_MASK_GROUP: return "M";
-        case ODE_LAYER_TYPE_COMPONENT_REFERENCE: return "CR";
-        case ODE_LAYER_TYPE_COMPONENT_INSTANCE: return "CI";
-    }
-    return "-";
-}
-
-std::string layerTypeToString(ODE_LayerType layerType) {
-    switch (layerType) {
-        case ODE_LAYER_TYPE_UNSPECIFIED: return "-";
-        case ODE_LAYER_TYPE_SHAPE: return "Shape";
-        case ODE_LAYER_TYPE_TEXT: return "Text";
-        case ODE_LAYER_TYPE_GROUP: return "Group";
-        case ODE_LAYER_TYPE_MASK_GROUP: return "Mask Group";
-        case ODE_LAYER_TYPE_COMPONENT_REFERENCE: return "Component Reference";
-        case ODE_LAYER_TYPE_COMPONENT_INSTANCE: return "Component Instance";
-    }
-    return "-";
-}
-
-const octopus::Layer *findLayer(const octopus::Layer &layer, const std::string &layerId) {
-    if (layer.id == layerId) {
-        return &layer;
-    }
-    if (layer.mask.has_value()) {
-        const octopus::Layer *l = findLayer(*layer.mask, layerId);
-        if (l != nullptr) {
-            return l;
-        }
-    }
-    if (layer.layers.has_value()) {
-        for (const octopus::Layer &childLayer : *layer.layers) {
-            const octopus::Layer *l = findLayer(childLayer, layerId);
-            if (l != nullptr) {
-                return l;
-            }
-        }
-    }
-    return nullptr;
-}
-
 using LayerChangeFunction = std::function<void(octopus::LayerChange::Values &)>;
 const LayerChangeFunction NO_LAYER_CHANGE = [](octopus::LayerChange::Values &) {};
 
@@ -328,26 +282,6 @@ int changeRemove(octopus::LayerChange::Subject subject,
     return applyLayerChange(subject, octopus::LayerChange::Op::REMOVE, apiContext, layerId, index, filterIndex, NO_LAYER_CHANGE);
 }
 
-ImVec4 toImColor(const octopus::Color &color) {
-    return ImVec4 {
-        static_cast<float>(color.r),
-        static_cast<float>(color.g),
-        static_cast<float>(color.b),
-        static_cast<float>(color.a),
-    };
-}
-
-octopus::Color toOctopusColor(const ImVec4 &color) {
-    return octopus::Color {
-        static_cast<double>(color.x),
-        static_cast<double>(color.y),
-        static_cast<double>(color.z),
-        static_cast<double>(color.w),
-    };
-}
-
-}
-
 std::string layerPropName(const ODE_StringRef &layerId,
                           const char *invisibleId,
                           const nonstd::optional<int> &index = nonstd::nullopt,
@@ -359,6 +293,8 @@ std::string layerPropName(const ODE_StringRef &layerId,
         (index.has_value() ? "-" + std::to_string(*index) : "") +
         (filterIndex.has_value() ? "-" + std::to_string(*filterIndex) : "");
 };
+
+}
 
 void drawLayerInfo(const ODE_LayerList::Entry &layer,
                    DesignEditorContext::Api &apiContext,
@@ -463,6 +399,7 @@ void drawLayerTransformation(const ODE_StringRef &layerId,
         }
     }
 
+    // TODO: Fix transformation scale and rotation
     ImGui::Text("Scale:");
     ImGui::SameLine(100);
     if (ImGui::DragFloat2(layerPropName(layerId, "blend-scale").c_str(), &scale.x, 0.05f, 0.0f, 100.0f)) {
@@ -554,7 +491,7 @@ void drawLayerShapeStroke(int strokeI,
     }
 
     // Thickness
-    ImGui::Text("Thickess:");
+    ImGui::Text("Thickness:");
     ImGui::SameLine(100);
     float strokeThickness = octopusShapeStroke.thickness;
     if (ImGui::DragFloat(layerPropName(layerId, "shape-stroke-thickness", strokeI).c_str(), &strokeThickness, 0.1f, 0.0f, 100.0f)) {
@@ -587,7 +524,6 @@ void drawLayerShapeStroke(int strokeI,
     // Style (dashing)
     ImGui::Text("Dashing:");
     ImGui::SameLine(100);
-    // TODO: What if shape stroke style is nullopt?
     const int strokeStyleI = static_cast<int>(octopusShapeStroke.style.has_value() ? *octopusShapeStroke.style : octopus::VectorStroke::Style::SOLID);
     if (ImGui::BeginCombo(layerPropName(layerId, "shape-stroke-style", strokeI).c_str(), STROKE_STYLES_STR[strokeStyleI])) {
         for (int ssI = 0; ssI < IM_ARRAYSIZE(STROKE_STYLES_STR); ssI++) {
@@ -606,7 +542,6 @@ void drawLayerShapeStroke(int strokeI,
     }
 
     // Color
-    // TODO: What if shape stroke type other than COLOR?
     ImVec4 imColor = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
     if (octopusShapeStrokeFill.type == octopus::Fill::Type::COLOR && octopusShapeStrokeFill.color.has_value()) {
         imColor = toImColor(*octopusShapeStrokeFill.color);

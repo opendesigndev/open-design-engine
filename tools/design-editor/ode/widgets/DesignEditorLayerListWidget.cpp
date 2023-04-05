@@ -7,23 +7,10 @@
 
 #include <ode/logic-api.h>
 
+#include "DesignEditorUIHelpers.h"
+#include "DesignEditorUIValues.h"
+
 namespace {
-
-const ImU32 IM_COLOR_WHITE = 4294967295;
-const ImU32 IM_COLOR_LIGHT_BLUE = 4294941081;
-
-std::string layerTypeToShortString(ODE_LayerType layerType) {
-    switch (layerType) {
-        case ODE_LAYER_TYPE_UNSPECIFIED: return "-";
-        case ODE_LAYER_TYPE_SHAPE: return "S";
-        case ODE_LAYER_TYPE_TEXT: return "T";
-        case ODE_LAYER_TYPE_GROUP: return "G";
-        case ODE_LAYER_TYPE_MASK_GROUP: return "M";
-        case ODE_LAYER_TYPE_COMPONENT_REFERENCE: return "CR";
-        case ODE_LAYER_TYPE_COMPONENT_INSTANCE: return "CI";
-    }
-    return "-";
-}
 
 void drawLayerListRecursiveStep(const ODE_LayerList &layerList,
                                 int idx,
