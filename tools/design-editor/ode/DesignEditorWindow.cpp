@@ -351,6 +351,11 @@ int DesignEditorWindow::display() {
             }
         }
 
+        if (data->context.canvas.isMouseOver) {
+            const ODE_Vector2 mousePosImageSpace = toImageSpace(ImGui::GetMousePos());
+            ImGui::SetTooltip("[%.2f, %.2f]", mousePosImageSpace.x, mousePosImageSpace.y);
+        }
+
         // ODE DesignEditor controls window
         drawControlsWidget();
 
