@@ -1,6 +1,8 @@
 
 #include "TextMesh.h"
 
+#ifdef ODE_REALTIME_TEXT_RENDERER
+
 #include <open-design-text-renderer/PlacedTextData.h>
 
 #include "FontAtlas.h"
@@ -42,7 +44,8 @@ static void generateQuadVertices(std::vector<float> &meshData, const FontAtlas::
     generateVertex(meshData, quad.planeBounds.a, quad.atlasBounds.a, fColor, outputRange);
 }
 
-std::unique_ptr<TextMesh> TextMesh::build(TextRenderer &parent, odtr::TextShapeHandle handle) {
+std::unique_ptr<TextMesh> TextMesh::build(TextRenderer *parent, odtr::TextShapeHandle handle) {
+    ODE_ASSERT(parent);
     const odtr::PlacedTextData *placedText = odtr::getShapedText(TEXT_RENDERER_CONTEXT, handle);
     if (!placedText)
         return nullptr; // error
@@ -51,8 +54,8 @@ std::unique_ptr<TextMesh> TextMesh::build(TextRenderer &parent, odtr::TextShapeH
     int quadCount = 0;
     for (const odtr::PlacedGlyphsPerFont::value_type &fontGlyphs : placedText->glyphs) {
         int segmentStart = 6*quadCount;
-        FontAtlas &fontAtlas = parent.fontAtlas(fontGlyphs.first);
-        if (!fontAtlas.initialize(fontGlyphs.first))
+        FontAtlas &fontAtlas = parent->fontAtlas(fontGlyphs.first);
+        if (!fontAtlas.initialize(parent, fontGlyphs.first))
             continue; // error
         for (const odtr::PlacedGlyph &glyph : fontGlyphs.second) {
             FontAtlas::GlyphQuad quad;
@@ -91,3 +94,5 @@ void TextMesh::draw(Uniform &vec2TexCoordFactor, int textureUnit) const {
 }
 
 }
+
+#endif

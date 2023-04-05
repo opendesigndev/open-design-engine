@@ -34,7 +34,7 @@ static TransformationMatrix animationTransform(Component &component, const Layer
 
 Renderer::Renderer(GraphicsContext &gc) :
     gc(gc),
-    textRenderer(gc, tfbManager, billboard),
+    textRenderer(gc, tfbManager, billboard, blitShader),
     effectRenderer(gc, tfbManager, billboard, blitShader),
     compositingShaderRes(CompositingShader::prepare()),
     fillShaderRes(FillShader::prepare())

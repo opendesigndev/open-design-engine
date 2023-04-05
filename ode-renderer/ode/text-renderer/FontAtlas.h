@@ -3,6 +3,8 @@
 
 // PRIVATE - do not include in public headers
 
+#ifdef ODE_REALTIME_TEXT_RENDERER
+
 #include <map>
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -13,6 +15,8 @@
 
 namespace ode {
 
+class TextRenderer;
+
 class FontAtlas {
 
 public:
@@ -21,7 +25,7 @@ public:
     };
 
     FontAtlas();
-    bool initialize(const odtr::FontSpecifier &fontSpecifier);
+    bool initialize(TextRenderer *parentRenderer, const odtr::FontSpecifier &fontSpecifier);
     const Texture2D *getTexture() const;
     // Returns emRange on success, 0 on failure
     double getGlyphQuad(GlyphQuad &output, unsigned glyphIndex);
@@ -43,6 +47,8 @@ private:
     class TextureStorage {
         Texture2D texture;
     public:
+        // TODO improve
+        mutable TextRenderer *parentRenderer;
         TextureStorage();
         TextureStorage(int width, int height);
         TextureStorage(TextureStorage &&orig, int width, int height);
@@ -58,3 +64,5 @@ private:
 };
 
 }
+
+#endif

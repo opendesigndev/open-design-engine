@@ -21,7 +21,7 @@ static TransformationMatrix animationTransform(Component &component, const Layer
     return result;
 }
 
-TextRenderer::TextRenderer(GraphicsContext &gc, TextureFrameBufferManager &tfbManager, Mesh &billboard) : tfbManager(tfbManager), billboard(billboard) {
+TextRenderer::TextRenderer(GraphicsContext &gc, TextureFrameBufferManager &tfbManager, Mesh &billboard, BlitShader &blitShader) : tfbManager(tfbManager), billboard(billboard), blitShader(blitShader) {
     #ifdef ODE_REALTIME_TEXT_RENDERER
         sdfShader.initialize(false);
     #else
@@ -45,7 +45,7 @@ PlacedImagePtr TextRenderer::drawLayerText(Component &component, const LayerInst
             return nullptr; // TODO report
         TextMesh *textMesh = static_cast<TextMesh *>(shape.value()->rendererData.get());
         if (!textMesh) {
-            std::unique_ptr<TextMesh> textMeshHolder = TextMesh::build(*this, *shape.value());
+            std::unique_ptr<TextMesh> textMeshHolder = TextMesh::build(this, *shape.value());
             if (!textMeshHolder)
                 return nullptr;
             textMesh = textMeshHolder.get();
@@ -184,5 +184,20 @@ PlacedImagePtr TextRenderer::transformImage(const PlacedImagePtr &image, const M
 }
 
 #endif
+
+void TextRenderer::blitTexture(Texture2D &dst, const Texture2D &src) {
+    if (!(dst.dimensions().x > 0 && dst.dimensions().y > 0 && src.dimensions().x > 0 && src.dimensions().y > 0))
+        return;
+    ScaledBounds srcBounds(0, 0, src.dimensions().x, src.dimensions().y);
+    FrameBuffer fb;
+    fb.setOutput(&dst);
+    fb.bind();
+    glViewport(0, 0, dst.dimensions().x, dst.dimensions().y);
+    blitShader.bind(PixelBounds(Vector2i(), dst.dimensions()), srcBounds, srcBounds);
+    src.bind(BlitShader::UNIT_IN);
+    billboard.draw();
+    fb.unbind();
+    fb.unsetOutput(&dst);
+}
 
 }

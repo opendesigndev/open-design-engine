@@ -1,6 +1,8 @@
 
 #include "FontAtlas.h"
 
+#ifdef ODE_REALTIME_TEXT_RENDERER
+
 // TODO
 #include "../../../open-design-text-renderer/src/text-renderer/Context.h"
 #include "../../../open-design-text-renderer/src/text-renderer/Face.h"
@@ -8,6 +10,7 @@
 #include "../../../open-design-text-renderer/src/fonts/FaceTable.h"
 
 #include <ode/text-renderer/text-renderer-instance.h>
+#include "TextRenderer.h"
 
 #define FONT_ATLAS_INITIAL_SIZE 256
 
@@ -44,22 +47,24 @@ FontAtlas::FontHandleHolder::operator msdfgen::FontHandle *() {
     return handle;
 }
 
-FontAtlas::TextureStorage::TextureStorage() = default;
+FontAtlas::TextureStorage::TextureStorage() : parentRenderer(nullptr) { }
 
-FontAtlas::TextureStorage::TextureStorage(int width, int height) : texture(FilterMode::LINEAR) {
+FontAtlas::TextureStorage::TextureStorage(int width, int height) : texture(FilterMode::LINEAR), parentRenderer(nullptr) {
     texture.initialize(PixelFormat::R, Vector2i(width, height));
 }
 
-FontAtlas::TextureStorage::TextureStorage(TextureStorage &&orig, int width, int height) {
+FontAtlas::TextureStorage::TextureStorage(TextureStorage &&orig, int width, int height) : parentRenderer(orig.parentRenderer) {
     if (orig.texture.dimensions().x >= width && orig.texture.dimensions().y >= height) {
         texture = (Texture2D &&) orig.texture;
         return;
     }
     texture.initialize(PixelFormat::R, Vector2i(width, height));
-    // TODO copy texture from orig.texture
+    ODE_ASSERT(parentRenderer);
+    if (parentRenderer)
+        parentRenderer->blitTexture(texture, orig.texture);
 }
 
-FontAtlas::TextureStorage::TextureStorage(TextureStorage &&orig, int width, int height, const msdf_atlas::Remap *remapping, int count) {
+FontAtlas::TextureStorage::TextureStorage(TextureStorage &&orig, int width, int height, const msdf_atlas::Remap *remapping, int count) : parentRenderer(orig.parentRenderer) {
     ODE_ASSERT(!"Not implemented - make sure to never call DynamicAtlas::add with allowRearrange = true");
 }
 
@@ -77,7 +82,8 @@ void FontAtlas::TextureStorage::put(int x, int y, const msdfgen::BitmapConstRef<
 
 FontAtlas::FontAtlas() : atlas(msdf_atlas::ImmediateAtlasGenerator<float, 1, &msdf_atlas::psdfGenerator, TextureStorage>(FONT_ATLAS_INITIAL_SIZE, FONT_ATLAS_INITIAL_SIZE)), baseScale(1./MSDF_ATLAS_DEFAULT_EM_SIZE) { }
 
-bool FontAtlas::initialize(const odtr::FontSpecifier &fontSpecifier) {
+bool FontAtlas::initialize(TextRenderer *parentRenderer, const odtr::FontSpecifier &fontSpecifier) {
+    atlas.atlasGenerator().atlasStorage().parentRenderer = parentRenderer;
     if (fontHandle)
         return true;
     const odtr::FaceTable::Item *faceItem = TEXT_RENDERER_CONTEXT->getFontManager().facesTable().getFaceItem(fontSpecifier.faceId);
@@ -114,3 +120,5 @@ double FontAtlas::getGlyphQuad(GlyphQuad &output, unsigned glyphIndex) {
 }
 
 }
+
+#endif
