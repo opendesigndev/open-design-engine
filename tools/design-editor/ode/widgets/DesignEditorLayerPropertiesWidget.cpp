@@ -124,11 +124,13 @@ const octopus::Color DEFAULT_STROKE_FILL_COLOR {
 const octopus::Color DEFAULT_FILL_GRADIENT_COLOR_0 { 0.0f, 0.0f, 0.0f, 0.0f };
 const octopus::Color DEFAULT_FILL_GRADIENT_COLOR_1 { 0.0f, 0.0f, 0.0f, 1.0f };
 
+const octopus::Gradient::ColorStop DEFAULT_FILL_GRADIENT_COLOR_STOP_0 { 0.0, octopus::Gradient::Interpolation::LINEAR, 0.0, DEFAULT_FILL_GRADIENT_COLOR_0 };
+const octopus::Gradient::ColorStop DEFAULT_FILL_GRADIENT_COLOR_STOP_1 { 1.0, octopus::Gradient::Interpolation::LINEAR, 1.0, DEFAULT_FILL_GRADIENT_COLOR_1 };
 const octopus::Gradient DEFAULT_FILL_GRADIENT {
     octopus::Gradient::Type::LINEAR,
     std::vector<octopus::Gradient::ColorStop> {
-        octopus::Gradient::ColorStop { 0.0, octopus::Gradient::Interpolation::LINEAR, 0.0, DEFAULT_FILL_GRADIENT_COLOR_0 },
-        octopus::Gradient::ColorStop { 1.0, octopus::Gradient::Interpolation::LINEAR, 1.00, DEFAULT_FILL_GRADIENT_COLOR_1 },
+        DEFAULT_FILL_GRADIENT_COLOR_STOP_0,
+        DEFAULT_FILL_GRADIENT_COLOR_STOP_1,
     },
 };
 
@@ -688,9 +690,7 @@ void drawLayerShapeFill(int fillI,
                             if (values.fill->gradient.has_value()) {
                                 values.fill->gradient->type = static_cast<octopus::Gradient::Type>(gtI);
                             } else {
-                                values.fill->gradient = octopus::Gradient { static_cast<octopus::Gradient::Type>(gtI),
-                                    std::vector<octopus::Gradient::ColorStop> {}
-                                };
+                                values.fill->gradient = DEFAULT_FILL_GRADIENT;
                             }
                         });
                     }
@@ -699,6 +699,51 @@ void drawLayerShapeFill(int fillI,
                     }
                 }
                 ImGui::EndCombo();
+            }
+
+            // Color stops
+            ImVec4 imColor0 = toImColor(DEFAULT_FILL_GRADIENT_COLOR_0);
+            if (octopusFill.gradient.has_value()) {
+                imColor0 = toImColor(octopusFill.gradient->stops.front().color);
+            }
+            ImGui::Text(" Color #0:");
+            ImGui::SameLine(100);
+            if (ImGui::ColorPicker4(layerPropName(layerId, "shape-fill-gradient-color-0", fillI).c_str(), (float*)&imColor0, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview)) {
+                changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&imColor0, &octopusFill](octopus::LayerChange::Values &values) {
+                    values.fill = octopusFill;
+                    if (!values.fill->gradient.has_value()) {
+                        values.fill->gradient = DEFAULT_FILL_GRADIENT;
+                    }
+                    if (values.fill->gradient->stops.size() < 2) {
+                        values.fill->gradient->stops = {
+                            DEFAULT_FILL_GRADIENT_COLOR_STOP_0,
+                            DEFAULT_FILL_GRADIENT_COLOR_STOP_1
+                        };
+                    }
+                    values.fill->gradient->stops.front().color = toOctopusColor(imColor0);
+                });
+            }
+
+            ImVec4 imColor1 = toImColor(DEFAULT_FILL_GRADIENT_COLOR_1);
+            if (octopusFill.gradient.has_value()) {
+                imColor1 = toImColor(octopusFill.gradient->stops.back().color);
+            }
+            ImGui::Text(" Color #1:");
+            ImGui::SameLine(100);
+            if (ImGui::ColorPicker4(layerPropName(layerId, "shape-fill-gradient-color-1", fillI).c_str(), (float*)&imColor1, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview)) {
+                changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&imColor1, &octopusFill](octopus::LayerChange::Values &values) {
+                    values.fill = octopusFill;
+                    if (!values.fill->gradient.has_value()) {
+                        values.fill->gradient = DEFAULT_FILL_GRADIENT;
+                    }
+                    if (values.fill->gradient->stops.size() < 2) {
+                        values.fill->gradient->stops = {
+                            DEFAULT_FILL_GRADIENT_COLOR_STOP_0,
+                            DEFAULT_FILL_GRADIENT_COLOR_STOP_1
+                        };
+                    }
+                    values.fill->gradient->stops.back().color = toOctopusColor(imColor1);
+                });
             }
             break;
         }
