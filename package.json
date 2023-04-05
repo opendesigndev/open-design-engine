@@ -7,10 +7,12 @@
         "install": "node ode-napi/try-importing-prebuilt.mjs || cmake-js compile -O build/npm --CDODE_TEST_MODULES=OFF --CDODE_SKIA_GPU=OFF"
     },
     "peerDependencies": {
+        "@opendesign/engine-linux-x64": "*",
         "@opendesign/engine-darwin-arm64": "*",
         "@opendesign/engine-darwin-x64": "*"
     },
     "peerDependenciesMeta": {
+        "@opendesign/engine-linux-x64": { "optional": true },
         "@opendesign/engine-darwin-arm64": { "optional": true },
         "@opendesign/engine-darwin-x64": { "optional": true }
     },

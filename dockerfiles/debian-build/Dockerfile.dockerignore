@@ -2,3 +2,4 @@
 /third-party
 /.git
 /.github
+/dockerfiles/debian-build/Dockerfile

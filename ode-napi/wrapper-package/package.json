@@ -5,6 +5,7 @@
         "@opendesign/engine-wasm": "${ODE_NPM_VERSION}"
     },
     "optionalDependencies": {
+        "@opendesign/engine-linux-x64": "${ODE_NPM_VERSION}",
         "@opendesign/engine-darwin-arm64": "${ODE_NPM_VERSION}",
         "@opendesign/engine-darwin-x64": "${ODE_NPM_VERSION}",
         "@opendesign/engine-source": "${ODE_NPM_VERSION}"
