@@ -400,7 +400,7 @@ int DesignEditorWindow::display() {
             drawDesignViewWidget(data->context.api, *data->renderer, data->context.textures, data->context.canvas, data->context.layerSelection, data->loadedOctopus.layerList.entries[0].id);
         }
         if (data->context.widgets.showLayerProperties) {
-            drawLayerPropertiesWidget(data->loadedOctopus.layerList, data->context.api, data->context.layerSelection);
+            drawLayerPropertiesWidget(data->context.api, data->loadedOctopus, data->context.layerSelection, data->context.fileDialog);
         }
 
         if (data->context.widgets.showImGuiDebugger) {
@@ -477,21 +477,21 @@ void DesignEditorWindow::drawControlsWidget() {
     // Open "Open Octopus File" file dialog on button press
     if (ImGui::Button("Open Octopus File")) {
         const char* filters = ".json";
-        ImGuiFileDialog::Instance()->OpenDialog("ChooseOctopusFileDlgKey", "Choose Octopus *.json File", filters, data->context.fileDialog.filePath, data->context.fileDialog.fileName);
+        ImGuiFileDialog::Instance()->OpenDialog("ChooseOctopusFileDlgKey", "Choose Octopus *.json File", filters, data->context.fileDialog.octopusFilePath, data->context.fileDialog.octopusFileName);
     }
 
     if (data->loadedOctopus.isLoaded()) {
         // Open "Save Graphiz File" file dialog on button press
         if (ImGui::Button("Save Octopus File")) {
             const char* filters = ".json";
-            ImGuiFileDialog::Instance()->OpenDialog("SaveOctopusFileDlgKey", "Save as *.json", filters, data->context.fileDialog.filePath, data->context.fileDialog.fileName);
+            ImGuiFileDialog::Instance()->OpenDialog("SaveOctopusFileDlgKey", "Save as *.json", filters, data->context.fileDialog.octopusFilePath, data->context.fileDialog.octopusFileName);
         }
     }
 
     // Display "Open Octopus File" file dialog
     if (ImGuiFileDialog::Instance()->Display("ChooseOctopusFileDlgKey")) {
-        data->context.fileDialog.filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
-        data->context.fileDialog.fileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
+        data->context.fileDialog.octopusFilePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+        data->context.fileDialog.octopusFileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
 
         if (ImGuiFileDialog::Instance()->IsOk()) {
             const std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
@@ -509,8 +509,8 @@ void DesignEditorWindow::drawControlsWidget() {
     if (data->loadedOctopus.isLoaded()) {
         // Display "Save Octopus File" file dialog
         if (ImGuiFileDialog::Instance()->Display("SaveOctopusFileDlgKey")) {
-            data->context.fileDialog.filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
-            data->context.fileDialog.fileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
+            data->context.fileDialog.octopusFilePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+            data->context.fileDialog.octopusFileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
 
             if (ImGuiFileDialog::Instance()->IsOk()) {
                 const std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();

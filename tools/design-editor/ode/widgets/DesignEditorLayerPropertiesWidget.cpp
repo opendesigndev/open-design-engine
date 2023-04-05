@@ -2,6 +2,7 @@
 #include "DesignEditorLayerPropertiesWidget.h"
 
 #include <imgui.h>
+#include <ImGuiFileDialog.h>
 
 #include <octopus/layer-change.h>
 #include <ode-essentials.h>
@@ -562,6 +563,8 @@ void drawLayerShapeStroke(int strokeI,
 void drawLayerShapeFill(int fillI,
                         const ODE_StringRef &layerId,
                         DesignEditorContext::Api &apiContext,
+                        DesignEditorContext::FileDialog &fileDialogContext,
+                        DesignEditorLoadedOctopus &loadedOctopus,
                         const octopus::Fill &octopusFill,
                         const ODE_LayerMetrics &layerMetrics) {
     double defaultGradientFillPositioningTransform[6] {
@@ -703,6 +706,48 @@ void drawLayerShapeFill(int fillI,
         case octopus::Fill::Type::IMAGE:
         {
             ImGui::Text("Image:");
+
+            // Open "Open Image File" file dialog
+            ImGui::SameLine(100);
+            if (ImGui::Button("Load image file")) {
+                const char* filters = ".png, .jpeg";
+                ImGuiFileDialog::Instance()->OpenDialog("ChooseImageFileDlgKey", "Choose an image file", filters, fileDialogContext.imageFilePath, fileDialogContext.imageFileName);
+            }
+
+            // Display "Open Octopus File" file dialog
+            if (ImGuiFileDialog::Instance()->Display("ChooseImageFileDlgKey")) {
+                fileDialogContext.imageFilePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+                fileDialogContext.imageFileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
+
+                if (ImGuiFileDialog::Instance()->IsOk()) {
+                    const std::string filePath = ImGuiFileDialog::Instance()->GetFilePathName();
+                    const std::string fileName = ((FilePath)filePath).filename();
+                    const std::string destDir = (std::string)loadedOctopus.filePath.parent();
+                    // Copy the file to images directory
+                    std::vector<byte> fileContents;
+                    const bool isRead = readFile(filePath, fileContents);
+                    if (isRead) {
+                        const std::string imageLocation = destDir+"/images/"+fileName;
+                        const bool isCopied = writeFile(imageLocation, fileContents);
+                        if (isCopied) {
+                            changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, &imageLocation](octopus::LayerChange::Values &values) {
+                                values.fill = octopusFill;
+                                if (values.fill->image.has_value()) {
+                                    values.fill->image->ref.type = octopus::ImageRef::Type::PATH;
+                                    values.fill->image->ref.value = imageLocation;
+                                } else {
+                                    values.fill->image = octopus::Image {
+                                        octopus::ImageRef { octopus::ImageRef::Type::PATH, imageLocation },
+                                        nonstd::nullopt
+                                    };
+                                }
+                            });
+                        }
+                    }
+                }
+
+                ImGuiFileDialog::Instance()->Close();
+            }
 
             // Image ref value
             ImGui::Text("  Ref type:");
@@ -918,6 +963,8 @@ void drawLayerShapeFill(int fillI,
 
 void drawLayerShape(const ODE_StringRef &layerId,
                     DesignEditorContext::Api &apiContext,
+                    DesignEditorContext::FileDialog &fileDialogContext,
+                    DesignEditorLoadedOctopus &loadedOctopus,
                     const octopus::Shape &octopusShape,
                     const ODE_LayerMetrics &layerMetrics) {
     // Rounded corner radius (for rectangles)
@@ -984,7 +1031,7 @@ void drawLayerShape(const ODE_StringRef &layerId,
                 fillToRemove = static_cast<int>(fi);
             }
 
-            drawLayerShapeFill(static_cast<int>(fi), layerId, apiContext, octopusShape.fills[fi], layerMetrics);
+            drawLayerShapeFill(static_cast<int>(fi), layerId, apiContext, fileDialogContext, loadedOctopus, octopusShape.fills[fi], layerMetrics);
         }
         if (fillToRemove >= 0 && fillToRemove < static_cast<int>(octopusShape.fills.size())) {
             changeRemove(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillToRemove, nonstd::nullopt);
@@ -1368,9 +1415,10 @@ void drawLayerEffects(const ODE_StringRef &layerId,
     ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
 }
 
-void drawLayerPropertiesWidget(ODE_LayerList &layerList,
-                               DesignEditorContext::Api &apiContext,
-                               DesignEditorContext::LayerSelection &layerSelectionContext) {
+void drawLayerPropertiesWidget(DesignEditorContext::Api &apiContext,
+                               DesignEditorLoadedOctopus &loadedOctopus,
+                               DesignEditorContext::LayerSelection &layerSelectionContext,
+                               DesignEditorContext::FileDialog &fileDialogContext) {
     ImGui::Begin("Selected Layer Properties");
 
     if (apiContext.component.ptr == nullptr) {
@@ -1388,6 +1436,8 @@ void drawLayerPropertiesWidget(ODE_LayerList &layerList,
         ImGui::End();
         return;
     }
+
+    ODE_LayerList &layerList = loadedOctopus.layerList;
 
     for (int i = 0; i < layerList.n; ++i) {
         const ODE_LayerList::Entry &layer = layerList.entries[i];
@@ -1427,7 +1477,7 @@ void drawLayerPropertiesWidget(ODE_LayerList &layerList,
                 // Shape
                 const bool isShapeLayer = (layer.type == ODE_LAYER_TYPE_SHAPE && octopusLayer.type == octopus::Layer::Type::SHAPE && octopusLayer.shape.has_value());
                 if (isShapeLayer) {
-                    drawLayerShape(layer.id, apiContext, *octopusLayer.shape, layerMetrics);
+                    drawLayerShape(layer.id, apiContext, fileDialogContext, loadedOctopus, *octopusLayer.shape, layerMetrics);
                 }
 
                 // Effects

@@ -49,8 +49,10 @@ struct DesignEditorContext {
 
     /// State of the file dialog
     struct FileDialog {
-        std::string filePath = ".";
-        std::string fileName;
+        std::string octopusFilePath = ".";
+        std::string octopusFileName;
+        std::string imageFilePath = ".";
+        std::string imageFileName;
     } fileDialog;
 
     /// Textures used by the design editor
