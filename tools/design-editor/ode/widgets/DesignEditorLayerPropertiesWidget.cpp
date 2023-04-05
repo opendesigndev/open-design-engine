@@ -1333,7 +1333,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                         }
 
                         ImGui::SameLine(415);
-                        if (ImGui::SmallButton(layerPropName(layerId, "effectfilter-remove", ei, efI, "-").c_str())) {
+                        if (ImGui::SmallButton(layerPropName(layerId, "effect-filter-remove", ei, efI, "-").c_str())) {
                             effectFilterToRemove = static_cast<int>(efI);
                         }
                     }
