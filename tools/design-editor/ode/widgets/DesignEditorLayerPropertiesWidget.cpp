@@ -1302,6 +1302,49 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                         values.effect->blur = blurAmount;
                     });
                 }
+
+                // Effect filters (only for blurs)
+                ImGui::Text("Filters:");
+                ImGui::SameLine(415);
+                if (ImGui::SmallButton(layerPropName(layerId, "effect-filter-add", ei, nonstd::nullopt, "+").c_str())) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, nonstd::nullopt, [&octopusEffect](octopus::LayerChange::Values &values) {
+                        values.effect = octopusEffect;
+                        if (values.effect->filters.has_value()) {
+                            values.effect->filters->emplace_back(DEFAULT_FILL_FILTER);
+                        } else {
+                            values.effect->filters = { DEFAULT_FILL_FILTER };
+                        }
+                    });
+                }
+
+                if (octopusEffect.filters.has_value() && !octopusEffect.filters->empty()) {
+                    int effectFilterToRemove = -1;
+
+                    for (int efI = 0; efI < static_cast<int>(octopusEffect.filters->size()); efI++) {
+                        ImGui::Text("  Filter #%i:", efI);
+                        ImGui::SameLine(100);
+
+                        bool effectFilterVisible = (*octopusEffect.filters)[efI].visible;
+                        if (ImGui::Checkbox(layerPropName(layerId, "effect-filter-visibility", ei, efI).c_str(), &effectFilterVisible)) {
+                            changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, nonstd::nullopt, [&octopusEffect, efI, effectFilterVisible](octopus::LayerChange::Values &values) {
+                                values.effect = octopusEffect;
+                                (*values.effect->filters)[efI].visible = effectFilterVisible;
+                            });
+                        }
+
+                        ImGui::SameLine(415);
+                        if (ImGui::SmallButton(layerPropName(layerId, "effectfilter-remove", ei, efI, "-").c_str())) {
+                            effectFilterToRemove = static_cast<int>(efI);
+                        }
+                    }
+
+                    if (effectFilterToRemove >= 0 && effectFilterToRemove < static_cast<int>(octopusEffect.filters->size())) {
+                        changeReplace(octopus::LayerChange::Subject::EFFECT, apiContext, layerId, ei, nonstd::nullopt, [&octopusEffect, effectFilterToRemove](octopus::LayerChange::Values &values) {
+                            values.effect = octopusEffect;
+                            values.effect->filters->erase(values.effect->filters->begin()+effectFilterToRemove);
+                        });
+                    }
+                }
                 break;
             }
             case octopus::Effect::Type::OTHER:
