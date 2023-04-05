@@ -307,9 +307,9 @@ void drawLayerInfo(const ODE_LayerList::Entry &layer,
     // Editable name
     ImGui::Text("%s", "Name:");
     ImGui::SameLine(100);
-    char textBuffer[50] {};
+    char textBuffer[255] {};
     strncpy(textBuffer, layer.name.data, sizeof(textBuffer)-1);
-    ImGui::InputText(layerPropName(layer.id, "layer-name").c_str(), textBuffer, 50);
+    ImGui::InputText(layerPropName(layer.id, "layer-name").c_str(), textBuffer, 255);
     if (ImGui::IsItemEdited()) {
         changeProperty(octopus::LayerChange::Subject::LAYER, apiContext, layer.id, nonstd::nullopt, [&textBuffer](octopus::LayerChange::Values &values) {
             values.name = textBuffer;
@@ -429,11 +429,11 @@ void drawLayerText(const ODE_StringRef &layerId,
     const octopus::TextStyle &defaultTextStyle = octopusText.defaultStyle;
 
     // Text value
-    char textBuffer[50] {};
+    char textBuffer[255] {};
     strncpy(textBuffer, octopusText.value.c_str(), sizeof(textBuffer)-1);
     ImGui::Text("Text value:");
     ImGui::SameLine(100);
-    ImGui::InputText(layerPropName(layerId, "text-value").c_str(), textBuffer, 50);
+    ImGui::InputText(layerPropName(layerId, "text-value").c_str(), textBuffer, 255);
     if (ImGui::IsItemEdited()) {
         changeProperty(octopus::LayerChange::Subject::TEXT, apiContext, layerId, nonstd::nullopt, [&textBuffer](octopus::LayerChange::Values &values) {
             values.value = textBuffer;
@@ -678,7 +678,6 @@ void drawLayerShapeFill(int fillI,
             ImGui::Text("Gradient:");
             ImGui::SameLine(100);
 
-            // TODO: What if fill gradient does not have a value?
             const int gradientTypeI = static_cast<int>(octopusFill.gradient.has_value() ? octopusFill.gradient->type : octopus::Gradient::Type::LINEAR);
             if (ImGui::BeginCombo(layerPropName(layerId, "shape-fill-gradient-type", fillI).c_str(), FILL_GRADIENT_TYPES_STR[gradientTypeI])) {
                 for (int gtI = 0; gtI < IM_ARRAYSIZE(FILL_GRADIENT_TYPES_STR); gtI++) {
@@ -777,14 +776,13 @@ void drawLayerShapeFill(int fillI,
                 ImGui::EndCombo();
             }
 
-            // TODO: Add a file dialog button to load a new image (copy it to images directory)
             // Image ref value
             const std::string &imageRefValue = octopusFill.image.has_value() ? octopusFill.image->ref.value : "";
-            char textBuffer[50] {};
+            char textBuffer[255] {};
             strncpy(textBuffer, imageRefValue.c_str(), sizeof(textBuffer)-1);
             ImGui::Text("  Ref value:");
             ImGui::SameLine(100);
-            ImGui::InputText(layerPropName(layerId, "shape-fill-image-ref-value", fillI).c_str(), textBuffer, 50);
+            ImGui::InputText(layerPropName(layerId, "shape-fill-image-ref-value", fillI).c_str(), textBuffer, 255);
             if (ImGui::IsItemEdited()) {
                 changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, &textBuffer](octopus::LayerChange::Values &values) {
                     values.fill = octopusFill;
