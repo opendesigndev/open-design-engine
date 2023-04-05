@@ -564,8 +564,11 @@ void drawLayerShapeFill(int fillI,
                         DesignEditorContext::Api &apiContext,
                         const octopus::Fill &octopusFill,
                         const ODE_LayerMetrics &layerMetrics) {
-    double defaultFillPositioningTransform[6] {
+    double defaultGradientFillPositioningTransform[6] {
         0, layerMetrics.logicalBounds.b.y, -layerMetrics.logicalBounds.b.y, 0, layerMetrics.logicalBounds.b.x/2.0, 0
+    };
+    double defaultImageFillPositioningTransform[6] {
+        layerMetrics.logicalBounds.b.x, 0, 0, layerMetrics.logicalBounds.b.y, 0, 0
     };
 
     // Visibility
@@ -607,7 +610,7 @@ void drawLayerShapeFill(int fillI,
         for (int ftI = 0; ftI < IM_ARRAYSIZE(FILL_TYPES_STR); ftI++) {
             const bool isSelected = (fillTypeI == ftI);
             if (ImGui::Selectable(FILL_TYPES_STR[ftI], isSelected)) {
-                changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, ftI, &defaultFillPositioningTransform](octopus::LayerChange::Values &values) {
+                changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, ftI, &defaultGradientFillPositioningTransform, &defaultImageFillPositioningTransform](octopus::LayerChange::Values &values) {
                     values.fill = octopusFill;
                     values.fill->type = static_cast<octopus::Fill::Type>(ftI);
                     switch (values.fill->type) {
@@ -624,12 +627,17 @@ void drawLayerShapeFill(int fillI,
                                     octopus::Fill::Positioning::Layout::STRETCH,
                                     octopus::Fill::Positioning::Origin::LAYER,
                                 };
-                                memcpy(values.fill->positioning->transform, defaultFillPositioningTransform, sizeof(defaultFillPositioningTransform));
+                                memcpy(values.fill->positioning->transform, defaultGradientFillPositioningTransform, sizeof(defaultGradientFillPositioningTransform));
                             }
                             break;
                         case octopus::Fill::Type::IMAGE:
                             if (!octopusFill.image.has_value()) {
                                 values.fill->image = DEFAULT_FILL_IMAGE;
+                                values.fill->positioning = octopus::Fill::Positioning {
+                                    octopus::Fill::Positioning::Layout::STRETCH,
+                                    octopus::Fill::Positioning::Origin::LAYER,
+                                };
+                                memcpy(values.fill->positioning->transform, defaultImageFillPositioningTransform, sizeof(defaultImageFillPositioningTransform));
                             }
                             break;
                     }
@@ -760,14 +768,14 @@ void drawLayerShapeFill(int fillI,
             for (int plI = 0; plI < IM_ARRAYSIZE(FILL_POSITIONING_LAYOUTS_STR); plI++) {
                 const bool isSelected = (positioningLayoutI == plI);
                 if (ImGui::Selectable(FILL_POSITIONING_LAYOUTS_STR[plI], isSelected)) {
-                    changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, plI, &defaultFillPositioningTransform](octopus::LayerChange::Values &values) {
+                    changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, plI, &defaultGradientFillPositioningTransform](octopus::LayerChange::Values &values) {
                         values.fill = octopusFill;
                         if (values.fill->positioning.has_value()) {
                             values.fill->positioning->layout = static_cast<octopus::Fill::Positioning::Layout>(plI);
                         } else {
                             values.fill->positioning = octopus::Fill::Positioning { static_cast<octopus::Fill::Positioning::Layout>(plI), octopus::Fill::Positioning::Origin::LAYER,
                             };
-                            memcpy(values.fill->positioning->transform, defaultFillPositioningTransform, sizeof(defaultFillPositioningTransform));
+                            memcpy(values.fill->positioning->transform, defaultGradientFillPositioningTransform, sizeof(defaultGradientFillPositioningTransform));
                         }
                     });
                 }
@@ -787,14 +795,14 @@ void drawLayerShapeFill(int fillI,
             for (int poI = 0; poI < IM_ARRAYSIZE(FILL_POSITIONING_ORIGINS_STR); poI++) {
                 const bool isSelected = (positioningOriginI == poI);
                 if (ImGui::Selectable(FILL_POSITIONING_ORIGINS_STR[poI], isSelected)) {
-                    changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, poI, &defaultFillPositioningTransform](octopus::LayerChange::Values &values) {
+                    changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, poI, &defaultGradientFillPositioningTransform](octopus::LayerChange::Values &values) {
                         values.fill = octopusFill;
                         if (values.fill->positioning.has_value()) {
                             values.fill->positioning->origin = static_cast<octopus::Fill::Positioning::Origin>(poI);
                         } else {
                             values.fill->positioning = octopus::Fill::Positioning { octopus::Fill::Positioning::Layout::STRETCH, static_cast<octopus::Fill::Positioning::Origin>(poI),
                             };
-                            memcpy(values.fill->positioning->transform, defaultFillPositioningTransform, sizeof(defaultFillPositioningTransform));
+                            memcpy(values.fill->positioning->transform, defaultGradientFillPositioningTransform, sizeof(defaultGradientFillPositioningTransform));
                         }
                     });
                 }
@@ -809,7 +817,7 @@ void drawLayerShapeFill(int fillI,
         ImGui::Text("  Pos. tr.:");
         ImGui::SameLine(100);
 
-        const auto positioningTransform = octopusFill.positioning.has_value() ? octopusFill.positioning->transform : defaultFillPositioningTransform;
+        const auto positioningTransform = octopusFill.positioning.has_value() ? octopusFill.positioning->transform : defaultGradientFillPositioningTransform;
         float posTr03[4] {
             static_cast<float>(positioningTransform[0]),
             static_cast<float>(positioningTransform[1]),
@@ -817,7 +825,7 @@ void drawLayerShapeFill(int fillI,
             static_cast<float>(positioningTransform[3]),
         };
         if (ImGui::DragFloat4(layerPropName(layerId, "shape-fill-positioning-transform-03", fillI).c_str(), posTr03, 0.1f, -1000.0f, 1000.0f)) {
-            changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, &posTr03, &defaultFillPositioningTransform](octopus::LayerChange::Values &values) {
+            changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, &posTr03, &defaultGradientFillPositioningTransform](octopus::LayerChange::Values &values) {
                 values.fill = octopusFill;
                 if (octopusFill.positioning.has_value()) {
                     values.fill->positioning->transform[0] = posTr03[0];
@@ -833,8 +841,8 @@ void drawLayerShapeFill(int fillI,
                     values.fill->positioning->transform[1] = posTr03[1];
                     values.fill->positioning->transform[2] = posTr03[2];
                     values.fill->positioning->transform[3] = posTr03[3];
-                    values.fill->positioning->transform[4] = defaultFillPositioningTransform[4];
-                    values.fill->positioning->transform[5] = defaultFillPositioningTransform[5];
+                    values.fill->positioning->transform[4] = defaultGradientFillPositioningTransform[4];
+                    values.fill->positioning->transform[5] = defaultGradientFillPositioningTransform[5];
                 }
             });
         }
@@ -846,7 +854,7 @@ void drawLayerShapeFill(int fillI,
             static_cast<float>(positioningTransform[5]),
         };
         if (ImGui::DragFloat2(layerPropName(layerId, "shape-fill-positioning-transform-45", fillI).c_str(), posTr45, 0.1f, -1000.0f, 1000.0f)) {
-            changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, &posTr45, &defaultFillPositioningTransform](octopus::LayerChange::Values &values) {
+            changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, &posTr45, &defaultGradientFillPositioningTransform](octopus::LayerChange::Values &values) {
                 values.fill = octopusFill;
                 if (octopusFill.positioning.has_value()) {
                     values.fill->positioning->transform[4] = posTr45[0];
@@ -856,10 +864,10 @@ void drawLayerShapeFill(int fillI,
                         octopus::Fill::Positioning::Layout::STRETCH,
                         octopus::Fill::Positioning::Origin::LAYER,
                     };
-                    values.fill->positioning->transform[0] = defaultFillPositioningTransform[0];
-                    values.fill->positioning->transform[1] = defaultFillPositioningTransform[1];
-                    values.fill->positioning->transform[2] = defaultFillPositioningTransform[2];
-                    values.fill->positioning->transform[3] = defaultFillPositioningTransform[3];
+                    values.fill->positioning->transform[0] = defaultGradientFillPositioningTransform[0];
+                    values.fill->positioning->transform[1] = defaultGradientFillPositioningTransform[1];
+                    values.fill->positioning->transform[2] = defaultGradientFillPositioningTransform[2];
+                    values.fill->positioning->transform[3] = defaultGradientFillPositioningTransform[3];
                     values.fill->positioning->transform[4] = posTr45[0];
                     values.fill->positioning->transform[5] = posTr45[1];
                 }
