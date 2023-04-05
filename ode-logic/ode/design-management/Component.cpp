@@ -280,8 +280,8 @@ DesignError Component::modifyLayer(const std::string &id, const octopus::LayerCh
                 break;
             case octopus::LayerChange::Subject::FILL:
                 {
-                    if (!layer.shape.has_value()) {
-                        return DesignError::SHAPE_LAYER_ERROR;
+                    if (layer.type != octopus::Layer::Type::SHAPE || !layer.shape.has_value()) {
+                        return DesignError::WRONG_LAYER_TYPE;
                     }
                     std::vector<octopus::Fill> &octopusFills = layer.shape->fills;
                     switch (layerChange.op) {
@@ -291,9 +291,8 @@ DesignError Component::modifyLayer(const std::string &id, const octopus::LayerCh
                             if (layerChange.index.has_value() && layerChange.values.fill.has_value()) {
                                 if (octopusFills.size() > *layerChange.index) {
                                     octopusFills[*layerChange.index] = *layerChange.values.fill;
-                                    // TODO: Composition change?
-                                    if (COMPOSITION_CHANGE > changeLevel)
-                                        changeLevel = COMPOSITION_CHANGE;
+                                    if (VISUAL_CHANGE > changeLevel)
+                                        changeLevel = VISUAL_CHANGE;
                                 }
                             }
                             break;
@@ -304,9 +303,8 @@ DesignError Component::modifyLayer(const std::string &id, const octopus::LayerCh
                                     return DesignError::UNKNOWN_ERROR;
                                 }
                                 octopusFills.insert(layerChange.index.has_value() ? octopusFills.begin()+*layerChange.index : octopusFills.end(), *layerChange.values.fill);
-                                // TODO: Composition change?
-                                if (COMPOSITION_CHANGE > changeLevel)
-                                    changeLevel = COMPOSITION_CHANGE;
+                                if (VISUAL_CHANGE > changeLevel)
+                                    changeLevel = VISUAL_CHANGE;
                             }
                             break;
                         case octopus::LayerChange::Op::REMOVE:
@@ -315,17 +313,16 @@ DesignError Component::modifyLayer(const std::string &id, const octopus::LayerCh
                                 return DesignError::UNKNOWN_ERROR;
                             }
                             octopusFills.erase(octopusFills.begin()+*layerChange.index);
-                            // TODO: Composition change?
-                            if (COMPOSITION_CHANGE > changeLevel)
-                                changeLevel = COMPOSITION_CHANGE;
+                            if (VISUAL_CHANGE > changeLevel)
+                                changeLevel = VISUAL_CHANGE;
                             break;
                     }
                 }
                 break;
             case octopus::LayerChange::Subject::STROKE:
                 {
-                    if (!layer.shape.has_value()) {
-                        return DesignError::SHAPE_LAYER_ERROR;
+                    if (layer.type != octopus::Layer::Type::SHAPE || !layer.shape.has_value()) {
+                        return DesignError::WRONG_LAYER_TYPE;
                     }
                     std::vector<octopus::Shape::Stroke> &octopusStrokes = layer.shape->strokes;
                     switch (layerChange.op) {
@@ -341,8 +338,8 @@ DesignError Component::modifyLayer(const std::string &id, const octopus::LayerCh
                                     if (layerChange.values.path.has_value()) {
                                         octopusStrokes[*layerChange.index].path = layerChange.values.path;
                                     }
-                                    if (COMPOSITION_CHANGE > changeLevel)
-                                        changeLevel = COMPOSITION_CHANGE;
+                                    if (BOUNDS_CHANGE > changeLevel)
+                                        changeLevel = BOUNDS_CHANGE;
                                 }
                             }
                             break;
@@ -354,9 +351,8 @@ DesignError Component::modifyLayer(const std::string &id, const octopus::LayerCh
                                 }
                                 auto strokeIt = octopusStrokes.insert(layerChange.index.has_value() ? octopusStrokes.begin()+*layerChange.index : octopusStrokes.end(), octopus::Shape::Stroke());
                                 *strokeIt = *layerChange.values.stroke;
-                                // TODO: Composition change?
-                                if (COMPOSITION_CHANGE > changeLevel)
-                                    changeLevel = COMPOSITION_CHANGE;
+                                if (BOUNDS_CHANGE > changeLevel)
+                                    changeLevel = BOUNDS_CHANGE;
                             }
                             break;
                         case octopus::LayerChange::Op::REMOVE:
@@ -365,17 +361,16 @@ DesignError Component::modifyLayer(const std::string &id, const octopus::LayerCh
                                 return DesignError::UNKNOWN_ERROR;
                             }
                             octopusStrokes.erase(octopusStrokes.begin()+*layerChange.index);
-                            // TODO: Composition change?
-                            if (COMPOSITION_CHANGE > changeLevel)
-                                changeLevel = COMPOSITION_CHANGE;
+                            if (BOUNDS_CHANGE > changeLevel)
+                                changeLevel = BOUNDS_CHANGE;
                             break;
                     }
                 }
                 break;
             case octopus::LayerChange::Subject::STROKE_FILL:
                 {
-                    if (!layer.shape.has_value()) {
-                        return DesignError::SHAPE_LAYER_ERROR;
+                    if (layer.type != octopus::Layer::Type::SHAPE || !layer.shape.has_value()) {
+                        return DesignError::WRONG_LAYER_TYPE;
                     }
                     std::vector<octopus::Shape::Stroke> &octopusStrokes = layer.shape->strokes;
                     switch (layerChange.op) {
@@ -399,9 +394,8 @@ DesignError Component::modifyLayer(const std::string &id, const octopus::LayerCh
                             if (layerChange.index.has_value() && layerChange.values.effect.has_value()) {
                                 if (octopusEffects.size() > *layerChange.index) {
                                     octopusEffects[*layerChange.index] = *layerChange.values.effect;
-                                    // TODO: Composition change?
-                                    if (COMPOSITION_CHANGE > changeLevel)
-                                        changeLevel = COMPOSITION_CHANGE;
+                                    if (VISUAL_CHANGE > changeLevel)
+                                        changeLevel = VISUAL_CHANGE;
                                 }
                             }
                             break;
@@ -412,9 +406,8 @@ DesignError Component::modifyLayer(const std::string &id, const octopus::LayerCh
                                     return DesignError::UNKNOWN_ERROR;
                                 }
                                 octopusEffects.insert(layerChange.index.has_value() ? octopusEffects.begin()+*layerChange.index : octopusEffects.end(), *layerChange.values.effect);
-                                // TODO: Composition change?
-                                if (COMPOSITION_CHANGE > changeLevel)
-                                    changeLevel = COMPOSITION_CHANGE;
+                                if (VISUAL_CHANGE > changeLevel)
+                                    changeLevel = VISUAL_CHANGE;
                             }
                             break;
                         case octopus::LayerChange::Op::REMOVE:
@@ -423,9 +416,8 @@ DesignError Component::modifyLayer(const std::string &id, const octopus::LayerCh
                                 return DesignError::UNKNOWN_ERROR;
                             }
                             octopusEffects.erase(octopusEffects.begin()+*layerChange.index);
-                            // TODO: Composition change?
-                            if (COMPOSITION_CHANGE > changeLevel)
-                                changeLevel = COMPOSITION_CHANGE;
+                            if (VISUAL_CHANGE > changeLevel)
+                                changeLevel = VISUAL_CHANGE;
                             break;
                     }
                 }
@@ -437,6 +429,8 @@ DesignError Component::modifyLayer(const std::string &id, const octopus::LayerCh
                         case octopus::LayerChange::Op::PROPERTY_CHANGE:
                             if (layerChange.index.has_value() && layerChange.values.fill.has_value() && octopusEffects.size() > *layerChange.index) {
                                 octopusEffects[*layerChange.index].overlay = *layerChange.values.fill;
+                                if (VISUAL_CHANGE > changeLevel)
+                                    changeLevel = VISUAL_CHANGE;
                             }
                             break;
                         default:
@@ -445,17 +439,52 @@ DesignError Component::modifyLayer(const std::string &id, const octopus::LayerCh
                 }
                 break;
             case octopus::LayerChange::Subject::FILL_FILTER:
-            {
-                if (!layer.shape.has_value()) {
-                    return DesignError::SHAPE_LAYER_ERROR;
-                }
-                std::vector<octopus::Fill> &octopusFills = layer.shape->fills;
-                switch (layerChange.op) {
-                    case octopus::LayerChange::Op::PROPERTY_CHANGE:
-                        break;
-                    case octopus::LayerChange::Op::REPLACE:
-                        {
+                {
+                    if (layer.type != octopus::Layer::Type::SHAPE || !layer.shape.has_value()) {
+                        return DesignError::WRONG_LAYER_TYPE;
+                    }
+                    std::vector<octopus::Fill> &octopusFills = layer.shape->fills;
+                    switch (layerChange.op) {
+                        case octopus::LayerChange::Op::PROPERTY_CHANGE:
+                            break;
+                        case octopus::LayerChange::Op::REPLACE:
+                            {
+                                if (layerChange.values.filter.has_value()) {
+                                    if (!layerChange.index.has_value() || octopusFills.size() <= *layerChange.index) {
+                                        // TODO: New error layer change invalid index
+                                        return DesignError::UNKNOWN_ERROR;
+                                    }
+                                    nonstd::optional<std::vector<octopus::Filter>> &octopusFillFilters = octopusFills[*layerChange.index].filters;
+                                    if (!octopusFillFilters.has_value() || octopusFillFilters->size() <= *layerChange.filterIndex) {
+                                        // TODO: New error layer change invalid index
+                                        return DesignError::UNKNOWN_ERROR;
+                                    }
+                                    (*octopusFillFilters)[*layerChange.filterIndex] = *layerChange.values.filter;
+                                    if (VISUAL_CHANGE > changeLevel)
+                                        changeLevel = VISUAL_CHANGE;
+                                }
+                            }
+                            break;
+                        case octopus::LayerChange::Op::INSERT:
                             if (layerChange.values.filter.has_value()) {
+                                if (layerChange.index.has_value() && octopusFills.size() <= *layerChange.index) {
+                                    // TODO: New error layer change invalid index
+                                    return DesignError::UNKNOWN_ERROR;
+                                }
+                                nonstd::optional<std::vector<octopus::Filter>> &octopusFillFilters = octopusFills[*layerChange.index].filters;
+                                if (octopusFillFilters.has_value()) {
+                                    octopusFillFilters->insert(layerChange.filterIndex.has_value() ? octopusFillFilters->begin()+*layerChange.filterIndex : octopusFillFilters->end(), *layerChange.values.filter);
+                                } else {
+                                    octopusFills[*layerChange.index].filters = std::vector<octopus::Filter> {
+                                        *layerChange.values.filter
+                                    };
+                                }
+                                if (VISUAL_CHANGE > changeLevel)
+                                    changeLevel = VISUAL_CHANGE;
+                            }
+                            break;
+                        case octopus::LayerChange::Op::REMOVE:
+                            {
                                 if (!layerChange.index.has_value() || octopusFills.size() <= *layerChange.index) {
                                     // TODO: New error layer change invalid index
                                     return DesignError::UNKNOWN_ERROR;
@@ -465,54 +494,27 @@ DesignError Component::modifyLayer(const std::string &id, const octopus::LayerCh
                                     // TODO: New error layer change invalid index
                                     return DesignError::UNKNOWN_ERROR;
                                 }
-                                (*octopusFillFilters)[*layerChange.filterIndex] = *layerChange.values.filter;
-                                // TODO: Composition change?
-                                if (COMPOSITION_CHANGE > changeLevel)
-                                    changeLevel = COMPOSITION_CHANGE;
+                                octopusFillFilters->erase(octopusFillFilters->begin()+*layerChange.filterIndex);
+                                if (VISUAL_CHANGE > changeLevel)
+                                    changeLevel = VISUAL_CHANGE;
                             }
-                        }
-                        break;
-                    case octopus::LayerChange::Op::INSERT:
-                        if (layerChange.values.filter.has_value()) {
-                            if (layerChange.index.has_value() && octopusFills.size() <= *layerChange.index) {
-                                // TODO: New error layer change invalid index
-                                return DesignError::UNKNOWN_ERROR;
-                            }
-                            nonstd::optional<std::vector<octopus::Filter>> &octopusFillFilters = octopusFills[*layerChange.index].filters;
-                            if (octopusFillFilters.has_value()) {
-                                octopusFillFilters->insert(layerChange.filterIndex.has_value() ? octopusFillFilters->begin()+*layerChange.filterIndex : octopusFillFilters->end(), *layerChange.values.filter);
-                            } else {
-                                octopusFills[*layerChange.index].filters = std::vector<octopus::Filter> {
-                                    *layerChange.values.filter
-                                };
-                            }
-                            // TODO: Composition change?
-                            if (COMPOSITION_CHANGE > changeLevel)
-                                changeLevel = COMPOSITION_CHANGE;
-                        }
-                        break;
-                    case octopus::LayerChange::Op::REMOVE:
-                        {
-                            if (!layerChange.index.has_value() || octopusFills.size() <= *layerChange.index) {
-                                // TODO: New error layer change invalid index
-                                return DesignError::UNKNOWN_ERROR;
-                            }
-                            nonstd::optional<std::vector<octopus::Filter>> &octopusFillFilters = octopusFills[*layerChange.index].filters;
-                            if (!octopusFillFilters.has_value() || octopusFillFilters->size() <= *layerChange.filterIndex) {
-                                // TODO: New error layer change invalid index
-                                return DesignError::UNKNOWN_ERROR;
-                            }
-                            octopusFillFilters->erase(octopusFillFilters->begin()+*layerChange.filterIndex);
-                            // TODO: Composition change?
-                            if (COMPOSITION_CHANGE > changeLevel)
-                                changeLevel = COMPOSITION_CHANGE;
-                        }
-                        break;
+                            break;
+                    }
                 }
-            }
-            break;
+                break;
             case octopus::LayerChange::Subject::STROKE_FILL_FILTER:
+                {
+                    if (layer.type != octopus::Layer::Type::SHAPE || !layer.shape.has_value()) {
+                        return DesignError::WRONG_LAYER_TYPE;
+                    }
+                    // TODO: Stroke fill filter
+                }
+                break;
             case octopus::LayerChange::Subject::EFFECT_FILL_FILTER:
+                {
+                    // TODO: Effect fill filter
+                }
+                break;
             default:
                 return DesignError::NOT_IMPLEMENTED;
         }
