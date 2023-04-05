@@ -15,7 +15,7 @@ public:
     SDFTextShader();
     SDFTextShader(const SDFTextShader &) = delete;
     SDFTextShader &operator=(const SDFTextShader &) = delete;
-    bool initialize();
+    bool initialize(bool multiChannel);
     bool ready() const;
     void bind(const PixelBounds &viewport, const Matrix3x3f &transformation);
     Uniform &texCoordFactorUniform();

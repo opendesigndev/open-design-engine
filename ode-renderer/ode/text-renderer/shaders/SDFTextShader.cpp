@@ -5,7 +5,7 @@ namespace ode {
 
 SDFTextShader::SDFTextShader() = default;
 
-bool SDFTextShader::initialize() {
+bool SDFTextShader::initialize(bool multiChannel) {
     const char *const attribs[] = {
         "coord",
         "texCoord",
@@ -32,16 +32,21 @@ bool SDFTextShader::initialize() {
             "screenPxRange = rangeFactor*outputRange;"
         "}\n"
     );
+    StringLiteral fsMacros = (multiChannel ? ODE_STRLIT(
+        "float median(vec3 x) {"
+            "return max(min(x.r, x.g), min(max(x.r, x.g), x.b));"
+        "}\n"
+        "#define SDF_SAMPLE(t, c) (median(" ODE_GLSL_TEXTURE2D "(t, c).rgb)-0.5)\n"
+    ) : ODE_STRLIT(
+        "#define SDF_SAMPLE(t, c) (" ODE_GLSL_TEXTURE2D "(t, c).r-0.5)\n"
+    ));
     const StringLiteral fsSrc = ODE_STRLIT(
         ODE_GLSL_FVARYING "vec2 vTexCoord;"
         ODE_GLSL_FVARYING "vec4 vColor;" // may be flat
         ODE_GLSL_FVARYING "float screenPxRange;" // may be flat
         "uniform sampler2D sdf;"
-        "float median(vec3 x) {"
-            "return max(min(x.r, x.g), min(max(x.r, x.g), x.b));"
-        "}"
         "void main() {"
-            "float sd = median(" ODE_GLSL_TEXTURE2D "(sdf, vTexCoord).rgb)-0.5;"
+            "float sd = SDF_SAMPLE(sdf, vTexCoord);"
             "float alpha = clamp(screenPxRange*sd+0.5, 0.0, 1.0);"
             ODE_GLSL_FRAGCOLOR "= alpha*vColor;"
         "}\n"
@@ -50,8 +55,8 @@ bool SDFTextShader::initialize() {
     const GLchar *vsrc[] = { ODE_GLOBAL_SHADER_PREAMBLE, vsSrc.string };
     const GLint vsln[] = { sizeof(ODE_GLOBAL_SHADER_PREAMBLE)-1, vsSrc.length };
     FragmentShader fs("msdf-fs");
-    const GLchar *fsrc[] = { ODE_GLOBAL_SHADER_PREAMBLE, fsSrc.string };
-    const GLint fsln[] = { sizeof(ODE_GLOBAL_SHADER_PREAMBLE)-1, fsSrc.length };
+    const GLchar *fsrc[] = { ODE_GLOBAL_SHADER_PREAMBLE, fsMacros.string, fsSrc.string };
+    const GLint fsln[] = { sizeof(ODE_GLOBAL_SHADER_PREAMBLE)-1, fsMacros.length, fsSrc.length };
     if (!vs.initialize(vsrc, vsln, sizeof(vsrc)/sizeof(*vsrc)))
         return false;
     if (!fs.initialize(fsrc, fsln, sizeof(fsrc)/sizeof(*fsrc)))

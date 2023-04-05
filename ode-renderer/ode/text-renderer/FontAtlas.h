@@ -45,8 +45,8 @@ private:
     public:
         TextureStorage();
         TextureStorage(int width, int height);
-        TextureStorage(const TextureStorage &orig, int width, int height);
-        TextureStorage(const TextureStorage &orig, int width, int height, const msdf_atlas::Remap *remapping, int count);
+        TextureStorage(TextureStorage &&orig, int width, int height);
+        TextureStorage(TextureStorage &&orig, int width, int height, const msdf_atlas::Remap *remapping, int count);
         const Texture2D *get() const;
         void put(int x, int y, const msdfgen::BitmapConstRef<float, 1> &subBitmap);
     };

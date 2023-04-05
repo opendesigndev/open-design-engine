@@ -50,12 +50,16 @@ FontAtlas::TextureStorage::TextureStorage(int width, int height) : texture(Filte
     texture.initialize(PixelFormat::R, Vector2i(width, height));
 }
 
-FontAtlas::TextureStorage::TextureStorage(const TextureStorage &orig, int width, int height) {
+FontAtlas::TextureStorage::TextureStorage(TextureStorage &&orig, int width, int height) {
+    if (orig.texture.dimensions().x >= width && orig.texture.dimensions().y >= height) {
+        texture = (Texture2D &&) orig.texture;
+        return;
+    }
     texture.initialize(PixelFormat::R, Vector2i(width, height));
     // TODO copy texture from orig.texture
 }
 
-FontAtlas::TextureStorage::TextureStorage(const TextureStorage &orig, int width, int height, const msdf_atlas::Remap *remapping, int count) {
+FontAtlas::TextureStorage::TextureStorage(TextureStorage &&orig, int width, int height, const msdf_atlas::Remap *remapping, int count) {
     ODE_ASSERT(!"Not implemented - make sure to never call DynamicAtlas::add with allowRearrange = true");
 }
 
@@ -103,6 +107,8 @@ double FontAtlas::getGlyphQuad(GlyphQuad &output, unsigned glyphIndex) {
     atlas.add(&glyph, 1, false);
     glyph.getQuadPlaneBounds(output.planeBounds.a.x, output.planeBounds.a.y, output.planeBounds.b.x, output.planeBounds.b.y);
     glyph.getQuadAtlasBounds(output.atlasBounds.a.x, output.atlasBounds.a.y, output.atlasBounds.b.x, output.atlasBounds.b.y);
+    output.planeBounds.a.y = -output.planeBounds.a.y;
+    output.planeBounds.b.y = -output.planeBounds.b.y;
     glyphQuads.insert(it, std::make_pair(glyphIndex, output));
     return FONT_ATLAS_PIXEL_RANGE/FONT_ATLAS_SCALE;
 }

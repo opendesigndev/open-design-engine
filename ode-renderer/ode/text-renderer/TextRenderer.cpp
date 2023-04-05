@@ -23,7 +23,7 @@ static TransformationMatrix animationTransform(Component &component, const Layer
 
 TextRenderer::TextRenderer(GraphicsContext &gc, TextureFrameBufferManager &tfbManager, Mesh &billboard) : tfbManager(tfbManager), billboard(billboard) {
     #ifdef ODE_REALTIME_TEXT_RENDERER
-        sdfShader.initialize();
+        sdfShader.initialize(false);
     #else
         transformShader.initialize();
     #endif
@@ -71,9 +71,12 @@ PlacedImagePtr TextRenderer::drawLayerText(Component &component, const LayerInst
         glViewport(0, 0, pxBounds.dimensions().x, pxBounds.dimensions().y);
         glClearColor(0, 0, 0, 0);
         glClear(GL_COLOR_BUFFER_BIT);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
         sdfShader.bind(pxBounds, Matrix3x3f(Matrix3x3d(transformation)));
         textMesh->draw(sdfShader.texCoordFactorUniform(), SDFTextShader::UNIT_IN);
         billboard.draw();
+        glDisable(GL_BLEND);
         outTex->unbind();
         return PlacedImagePtr(Image::fromTexture(outTex, Image::PREMULTIPLIED), pxBounds);
     }
