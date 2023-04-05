@@ -614,12 +614,13 @@ void drawLayerShapeFill(int fillI,
                             break;
                         case octopus::Fill::Type::GRADIENT:
                             if (!octopusFill.gradient.has_value()) {
-                                // TODO: Correct fill positioning
+                                const ODE_Rectangle &bounds = layerMetrics.logicalBounds;
+                                // Top to bottom transparent to black gradient
                                 values.fill->gradient = DEFAULT_FILL_GRADIENT;
                                 values.fill->positioning = octopus::Fill::Positioning {
                                     octopus::Fill::Positioning::Layout::STRETCH,
                                     octopus::Fill::Positioning::Origin::LAYER,
-                                    {  },
+                                    { 0,bounds.b.y,-bounds.b.y,0,bounds.b.x/2.0,0 },
                                 };
                             }
                             break;
