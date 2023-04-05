@@ -1,6 +1,5 @@
 name: Mac OS build
-on:
-  push
+on: push
 
 jobs:
   macos:
@@ -12,9 +11,9 @@ jobs:
     runs-on: [self-hosted, macOS, "${{ matrix.arch }}"]
     steps:
       #- name: Install prerequisites
-      #  run: brew install automake autoconf autoconf-archive git node
+      #  run: brew install automake autoconf autoconf-archive git node gh
       - name: Setup env
-        # The runner has: brew automake autoconf autoconf-archive git cmake
+        # The runner has: brew automake autoconf autoconf-archive git cmake node gh
         run: echo "PATH=/opt/homebrew/bin:$PATH" >> $GITHUB_ENV
       - uses: actions/checkout@v3
         with:
@@ -29,10 +28,9 @@ jobs:
           echo "ARCH_LOWER=`echo ${{ matrix.arch }} | tr '[:upper:]' '[:lower:]'`" >> ${GITHUB_ENV}
       - uses: ./.github/actions/determine-version
         with:
-          has_publish_label: ${{ contains(github.event.pull_request.labels.*.name, 'ci:npm-publish') }}
+          github_token: ${{ github.token }}
           ref_name: ${{ github.ref_name }}
           ref: ${{ github.ref }}
-
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v10

@@ -1,8 +1,8 @@
 name: Determine npm version
 
 inputs:
-  has_publish_label:
-    description: "contains(inputs.event.pull_request.labels.*.name, 'ci:npm-publish')"
+  github_token:
+    description: "github.token"
     required: true
   ref_name:
     description: "github.ref_name"
@@ -28,6 +28,7 @@ runs:
         else
           echo "ODE_NPM_VERSION=$BASE_VERSION-`git show -s --format=%h/%cs | tr -d - | tr / -`" >> $GITHUB_ENV
         fi
-    - shell: bash
-      if: inputs.has_publish_label || (inputs.event_name == 'push' && (inputs.ref == 'refs/heads/main' || startsWith(inputs.ref, 'refs/tags/')))
-      run: echo "ODE_SHOULD_PUBLISH_TO_NPM=true" >> $GITHUB_ENV
+        LABELS=`GH_TOKEN="${{ inputs.github_token }}" gh pr view "${{ inputs.ref_name }}" --json labels --jq '.labels.[].name'`
+        if grep 'ci:npm-publish' <<< $LABELS; then
+          echo "ODE_SHOULD_PUBLISH_TO_NPM=true" >> $GITHUB_ENV
+        fi
