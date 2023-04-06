@@ -98,3 +98,7 @@ bool isImGuiMultiselectKeyModifierPressed() {
         ImGui::IsKeyDown(ImGuiKey_LeftSuper) || ImGui::IsKeyDown(ImGuiKey_RightCtrl) ||
         ImGui::IsKeyDown(ImGuiKey_RightShift) || ImGui::IsKeyDown(ImGuiKey_RightSuper);
 }
+
+bool isRectangleIntersection(const ODE_Rectangle &r1, const ODE_Rectangle &r2) {
+    return (!(r1.b.x < r2.a.x || r2.b.x < r1.a.x || r1.b.y < r2.a.y || r2.b.y < r1.a.y));
+}

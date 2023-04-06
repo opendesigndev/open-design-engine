@@ -20,3 +20,5 @@ ImVec4 toImColor(const octopus::Color &color);
 octopus::Color toOctopusColor(const ImVec4 &color);
 
 bool isImGuiMultiselectKeyModifierPressed();
+
+bool isRectangleIntersection(const ODE_Rectangle &r1, const ODE_Rectangle &r2);

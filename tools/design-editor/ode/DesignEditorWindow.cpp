@@ -172,6 +172,28 @@ struct DesignEditorWindow::Internal {
         CHECK(ode_destroyEngine(apiContext.engine));
         return 0;
     }
+
+    ODE_Vector2 toImageSpace(const ImVec2 &posInScreenSpace) {
+        // TODO: Is image space position from top layer bounds correct ?
+        const ODE_StringRef &topLayerId = loadedOctopus.layerList.entries[0].id;
+
+        const ImVec2 inCanvasSpace = ImVec2 {
+            (posInScreenSpace.x - context.canvas.bbMin.x) / context.canvas.bbSize.x,
+            (posInScreenSpace.y - context.canvas.bbMin.y) / context.canvas.bbSize.y,
+        };
+
+        ODE_LayerMetrics topLayerMetrics;
+        ode_component_getLayerMetrics(context.api.component, topLayerId, &topLayerMetrics);
+
+        const ODE_Rectangle &topLayerBounds = topLayerMetrics.logicalBounds;
+        const ODE_Vector2 imageSpacePosition {
+            inCanvasSpace.x * topLayerBounds.b.x,
+            inCanvasSpace.y * topLayerBounds.b.y
+        };
+
+        return imageSpacePosition;
+    }
+
 };
 
 
@@ -241,28 +263,9 @@ int DesignEditorWindow::display() {
             }
         }
 
-        // TODO: Is image space position from top layer bounds correct ?
-        const auto toImageSpace = [&canvas = data->context.canvas, &component = data->context.api.component, &topLayerID = data->loadedOctopus.layerList.entries[0].id](const ImVec2 &posInScreenSpace)->ODE_Vector2 {
-            const ImVec2 inCanvasSpace = ImVec2 {
-                (posInScreenSpace.x - canvas.bbMin.x) / canvas.bbSize.x,
-                (posInScreenSpace.y - canvas.bbMin.y) / canvas.bbSize.y,
-            };
-
-            ODE_LayerMetrics topLayerMetrics;
-            ode_component_getLayerMetrics(component, topLayerID, &topLayerMetrics);
-
-            const ODE_Rectangle &topLayerBounds = topLayerMetrics.logicalBounds;
-            const ODE_Vector2 imageSpacePosition {
-                inCanvasSpace.x * topLayerBounds.b.x,
-                inCanvasSpace.y * topLayerBounds.b.y
-            };
-
-            return imageSpacePosition;
-        };
-
         // Mouse click
         if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && data->context.canvas.isMouseOver) {
-            const ODE_Vector2 mousePosImageSpace = toImageSpace(ImGui::GetMousePos());
+            const ODE_Vector2 mousePosImageSpace = data->toImageSpace(ImGui::GetMousePos());
 
             // If a single group or mask group is selected, insert into it, otherwise to the top layer
             const ODE_StringRef &topLayerID = data->loadedOctopus.layerList.entries[0].id;
@@ -357,16 +360,12 @@ int DesignEditorWindow::display() {
             }
         }
 
-        const auto isRectangleIntersection = [](const ODE_Rectangle &r1, const ODE_Rectangle &r2)->bool {
-            return (!(r1.b.x < r2.a.x || r2.b.x < r1.a.x || r1.b.y < r2.a.y || r2.b.y < r1.a.y));
-        };
-
         // Mouse rectangle selection
         if (data->context.mode == DesignEditorMode::SELECT &&
             data->context.canvas.mouseClickPos.has_value() &&
             data->context.canvas.mouseDragPos.has_value()) {
-            const ODE_Vector2 rectStartInImageSpace = toImageSpace(*data->context.canvas.mouseClickPos);
-            const ODE_Vector2 rectEndInImageSpace = toImageSpace(*data->context.canvas.mouseDragPos);
+            const ODE_Vector2 rectStartInImageSpace = data->toImageSpace(*data->context.canvas.mouseClickPos);
+            const ODE_Vector2 rectEndInImageSpace = data->toImageSpace(*data->context.canvas.mouseDragPos);
             const ODE_Rectangle selectionRectangle {
                 ODE_Vector2 { std::min(rectStartInImageSpace.x, rectEndInImageSpace.x), std::min(rectStartInImageSpace.y, rectEndInImageSpace.y) },
                 ODE_Vector2 { std::max(rectStartInImageSpace.x, rectEndInImageSpace.x), std::max(rectStartInImageSpace.y, rectEndInImageSpace.y) } };
@@ -389,7 +388,7 @@ int DesignEditorWindow::display() {
         }
 
         if (data->context.canvas.isMouseOver) {
-            const ODE_Vector2 mousePosImageSpace = toImageSpace(ImGui::GetMousePos());
+            const ODE_Vector2 mousePosImageSpace = data->toImageSpace(ImGui::GetMousePos());
             ImGui::SetTooltip("[%.2f, %.2f]", mousePosImageSpace.x, mousePosImageSpace.y);
         }
 
