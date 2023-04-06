@@ -208,6 +208,7 @@ DesignError Component::removeLayer(const std::string &id) {
                 (*parentInstance)->layers->erase(layerInParentIt);
                 ++rev;
                 buildComplete = false;
+                instances.erase(id);
                 return DesignError::OK;
             }
         }
