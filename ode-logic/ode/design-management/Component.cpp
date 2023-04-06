@@ -201,7 +201,7 @@ DesignError Component::removeLayer(const std::string &id) {
         const std::string &parentId = instance->getParentId();
         if (LayerInstance *parentInstance = findInstance(parentId)) {
             ODE_ASSERT((*parentInstance)->layers.has_value());
-            const auto layerInParentIt = std::find_if((*parentInstance)->layers->begin(), (*parentInstance)->layers->end(), [&id](const octopus::Layer &layer) {
+            const std::list<octopus::Layer>::iterator layerInParentIt = std::find_if((*parentInstance)->layers->begin(), (*parentInstance)->layers->end(), [&id](const octopus::Layer &layer) {
                 return layer.id == id;
             });
             if (layerInParentIt != (*parentInstance)->layers->end()) {
