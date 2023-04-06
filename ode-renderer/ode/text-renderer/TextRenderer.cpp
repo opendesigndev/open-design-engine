@@ -63,22 +63,22 @@ PlacedImagePtr TextRenderer::drawLayerText(Component &component, const LayerInst
             TransformationMatrix(Matrix3x2d(fromTextRendererMatrix(placedTextData->textTransform)))
         );
         ScaledBounds bounds = scaleBounds(transformBounds(UntransformedBounds(0, 0, dimensions.width, dimensions.height), unscaledTransform), scale)&visibleBounds;
-        PixelBounds pxBounds = outerPixelBounds(bounds)+PixelMargin(1);
+        PixelBounds pxBounds = outerPixelBounds(bounds);
+        PixelBounds marginBounds = pxBounds+PixelMargin(1);
         TransformationMatrix transformation = TransformationMatrix::scale(scale)*unscaledTransform;
 
-        TextureFrameBufferPtr outTex = tfbManager.acquire(pxBounds);
+        TextureFrameBufferPtr outTex = tfbManager.acquire(marginBounds);
         outTex->bind();
-        glViewport(0, 0, pxBounds.dimensions().x, pxBounds.dimensions().y);
+        glViewport(1, 1, pxBounds.dimensions().x, pxBounds.dimensions().y);
         glClearColor(0, 0, 0, 0);
         glClear(GL_COLOR_BUFFER_BIT);
         glEnable(GL_BLEND);
         glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
         sdfShader.bind(pxBounds, Matrix3x3f(Matrix3x3d(transformation)));
         textMesh->draw(sdfShader.texCoordFactorUniform(), SDFTextShader::UNIT_IN);
-        billboard.draw();
         glDisable(GL_BLEND);
         outTex->unbind();
-        return PlacedImagePtr(Image::fromTexture(outTex, Image::PREMULTIPLIED), pxBounds);
+        return PlacedImagePtr(Image::fromTexture(outTex, Image::PREMULTIPLIED), marginBounds);
     }
     return nullptr;
 }
