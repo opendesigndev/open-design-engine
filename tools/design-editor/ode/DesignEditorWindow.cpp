@@ -264,10 +264,27 @@ int DesignEditorWindow::display() {
         if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && data->context.canvas.isMouseOver) {
             const ODE_Vector2 mousePosImageSpace = toImageSpace(ImGui::GetMousePos());
 
-            // TODO: For now, always insert to the top layer.
-//            const std::vector<ODE_StringRef> &selectedLayerIds = data->context.layerSelection.layerIDs;
+            // If a single group or mask group is selected, insert into it, otherwise to the top layer
             const ODE_StringRef &topLayerID = data->loadedOctopus.layerList.entries[0].id;
-            const ODE_StringRef &insertionLayerId = topLayerID;
+            ODE_StringRef insertionLayerId = topLayerID;
+            const std::vector<ODE_StringRef> &selectedLayerIds = data->context.layerSelection.layerIDs;
+
+            if (selectedLayerIds.size() == 1) {
+                ODE_String octopusString;
+                if (ode_component_getOctopus(data->context.api.component, &octopusString) == ODE_RESULT_OK) {
+                    octopus::Octopus componentOctopus;
+                    octopus::Parser::parse(componentOctopus, octopusString.data);
+
+                    if (componentOctopus.content.has_value()) {
+                        const ODE_StringRef &selectedLayerId = selectedLayerIds.front();
+                        const octopus::Layer *layer = findLayer(*componentOctopus.content, ode_stringDeref(selectedLayerId));
+
+                        if (layer != nullptr && (layer->type == octopus::Layer::Type::GROUP || layer->type == octopus::Layer::Type::MASK_GROUP)) {
+                            insertionLayerId = selectedLayerId;
+                        }
+                    }
+                }
+            }
 
             // Layer insertion
             if (data->context.mode == DesignEditorMode::ADD_RECTANGLE ||
