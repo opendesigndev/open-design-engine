@@ -135,6 +135,8 @@ ODE_HANDLE_DECL(ODE_internal_Component) ODE_ComponentHandle;
 
 /// Destroys an ODE_LayerList object
 ODE_Result ODE_API ode_destroyLayerList(ODE_LayerList layerList);
+/// Destroys an ODE_StringList constructed by ode_design_listComponents
+ODE_Result ODE_API ode_destroyComponentList(ODE_StringList componentList);
 /// Destroys an ODE_StringList constructed by ode_design_listMissingFonts or ode_component_listMissingFonts
 ODE_Result ODE_API ode_destroyMissingFontList(ODE_StringList fontList);
 
@@ -223,6 +225,13 @@ ODE_Result ODE_API ode_design_addComponentFromOctopusString(ODE_DesignHandle des
 
 /// Removes component from design. It is not necessary to call this before ode_destroyDesign
 ODE_Result ODE_API ode_design_removeComponent(ODE_DesignHandle design, ODE_ComponentHandle component);
+
+/**
+ * Outputs the list of components in the specified design
+ * @param design - target design
+ * @param componentList - the list of ID's will be stored in this output argument. Deallocate with ode_destroyComponentList
+ */
+ODE_Result ODE_API ode_design_listComponents(ODE_DesignHandle design, ODE_OUT_RETURN ODE_StringList *componentList);
 
 /**
  * Outputs a list of fonts (post-script names) required by a design which haven't been provided yet
