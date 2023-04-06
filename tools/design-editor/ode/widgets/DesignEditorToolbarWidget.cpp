@@ -22,20 +22,19 @@ void addGroup(DesignEditorContext::Api &apiContext,
         return;
     }
 
-    ODE_ParseError parseError;
-    const ODE_Result result = ode_component_addLayer(apiContext.component, ode_stringRef(*insertionLayerIdOpt), {}, ode_stringRef(octopusLayerJson), &parseError);
+    for (const ODE_StringRef &layerId : layersSelectionContext.layerIDs) {
+        if (ode_component_removeLayer(apiContext.component, layerId) != ODE_RESULT_OK) {
+            return;
+        }
+    }
 
-    if (result != ODE_RESULT_OK) {
+    ODE_ParseError parseError;
+    if (ode_component_addLayer(apiContext.component, ode_stringRef(*insertionLayerIdOpt), {}, ode_stringRef(octopusLayerJson), &parseError) != ODE_RESULT_OK) {
         return;
     }
 
-    ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView);
     ode_component_listLayers(apiContext.component, &layerList);
-
-    for (const ODE_StringRef &layerId : layersSelectionContext.layerIDs) {
-        // TODO: Remove original grouped layers when added support for removal
-        // ode_component_removeLayer(apiContext.component, layerId);
-    }
+    ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView);
 }
 
 void drawGroupButtons(DesignEditorContext::Api &apiContext,

@@ -905,6 +905,7 @@ void drawLayerShapeFill(int fillI,
         ImGui::Text("  Pos. tr.:");
         ImGui::SameLine(100);
 
+        // TODO: Fill positioning transform - edit translation,rotation,scale
         const auto positioningTransform = octopusFill.positioning.has_value() ? octopusFill.positioning->transform : defaultGradientFillPositioningTransform;
         float posTr03[4] {
             static_cast<float>(positioningTransform[0]),
