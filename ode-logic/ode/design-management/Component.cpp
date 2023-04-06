@@ -206,6 +206,8 @@ DesignError Component::removeLayer(const std::string &id) {
             });
             if (layerInParentIt != (*parentInstance)->layers->end()) {
                 (*parentInstance)->layers->erase(layerInParentIt);
+                ++rev;
+                buildComplete = false;
                 return DesignError::OK;
             }
         }
