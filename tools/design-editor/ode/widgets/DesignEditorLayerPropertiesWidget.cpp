@@ -397,7 +397,7 @@ void drawLayerTransformation(const ODE_StringRef &layerId,
     ImGui::SameLine(100);
     if (ImGui::DragFloat2(layerPropName(layerId, "translation").c_str(), &translation.x, 1.0f)) {
         const ODE_Transformation newTransformation { 1,0,0,1,translation.x-origTranslation.x,translation.y-origTranslation.y };
-        if (ode_component_transformLayer(apiContext.component, layerId, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation) == ODE_RESULT_OK) {
+        if (ode_component_transformLayer(apiContext.component, layerId, ODE_TRANSFORMATION_BASIS_PARENT_COMPONENT, newTransformation) == ODE_RESULT_OK) {
             ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView);
         }
     }
