@@ -75,12 +75,7 @@ void drawLayerListWidget(const DesignEditorLoadedOctopus &loadedOctopus,
         int idxClicked = -1;
         drawLayerListRecursiveStep(loadedOctopus.layerList, 0, idxClicked, layerSelectionContext.layerIDs);
         if (idxClicked >= 0) {
-            const bool isMultiselect =
-                ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_LeftShift) ||
-                ImGui::IsKeyDown(ImGuiKey_LeftSuper) || ImGui::IsKeyDown(ImGuiKey_RightCtrl) ||
-                ImGui::IsKeyDown(ImGuiKey_RightShift) || ImGui::IsKeyDown(ImGuiKey_RightSuper);
-
-            if (isMultiselect) {
+            if (isImGuiMultiselectKeyModifierPressed()) {
                 layerSelectionContext.add(loadedOctopus.layerList.entries[idxClicked].id.data);
             } else {
                 layerSelectionContext.select(loadedOctopus.layerList.entries[idxClicked].id.data);

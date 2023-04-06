@@ -349,7 +349,11 @@ int DesignEditorWindow::display() {
             } else if (data->context.mode == DesignEditorMode::SELECT) {
                 ODE_String selectedLayerId;
                 ode_component_identifyLayer(data->context.api.component, &selectedLayerId, mousePosImageSpace, 2.0f);
-                data->context.layerSelection.select(selectedLayerId.data);
+                if (isImGuiMultiselectKeyModifierPressed()) {
+                    data->context.layerSelection.add(selectedLayerId.data);
+                } else {
+                    data->context.layerSelection.select(selectedLayerId.data);
+                }
             }
         }
 

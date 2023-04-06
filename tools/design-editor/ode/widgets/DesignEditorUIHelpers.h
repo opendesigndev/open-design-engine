@@ -18,3 +18,5 @@ std::optional<std::string> findAvailableLayerId(const std::string &prefix, const
 
 ImVec4 toImColor(const octopus::Color &color);
 octopus::Color toOctopusColor(const ImVec4 &color);
+
+bool isImGuiMultiselectKeyModifierPressed();

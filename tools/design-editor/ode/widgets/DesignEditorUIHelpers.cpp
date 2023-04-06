@@ -91,3 +91,10 @@ octopus::Color toOctopusColor(const ImVec4 &color) {
         static_cast<double>(color.w),
     };
 }
+
+bool isImGuiMultiselectKeyModifierPressed() {
+    return
+        ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_LeftShift) ||
+        ImGui::IsKeyDown(ImGuiKey_LeftSuper) || ImGui::IsKeyDown(ImGuiKey_RightCtrl) ||
+        ImGui::IsKeyDown(ImGuiKey_RightShift) || ImGui::IsKeyDown(ImGuiKey_RightSuper);
+}
