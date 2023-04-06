@@ -58,6 +58,22 @@ std::optional<std::string> findParentLayerId(const ODE_LayerList &layerList, con
     return std::nullopt;
 }
 
+std::optional<std::string> findAvailableLayerId(const std::string &prefix, const ODE_LayerList &layerList) {
+    for (int i = 0; i < std::numeric_limits<int>::max(); ++i) {
+        const std::string layerId = prefix + "_" + std::to_string(i);
+        bool idAlreadyInUse = false;
+        for (int j = 0; j < layerList.n && !idAlreadyInUse; ++j) {
+            if (layerId == ode_stringDeref(layerList.entries[j].id)) {
+                idAlreadyInUse = true;
+            }
+        }
+        if (!idAlreadyInUse) {
+            return layerId;
+        }
+    }
+    return std::nullopt;
+}
+
 ImVec4 toImColor(const octopus::Color &color) {
     return ImVec4 {
         static_cast<float>(color.r),

@@ -24,6 +24,7 @@
 #include "widgets/DesignEditorLayerListWidget.h"
 #include "widgets/DesignEditorDesignViewWidget.h"
 #include "widgets/DesignEditorLayerPropertiesWidget.h"
+#include "widgets/DesignEditorUIHelpers.h"
 
 namespace {
 
@@ -81,22 +82,6 @@ int loadMissingFonts(const DesignEditorContext::Api &apiContext,
     }
 
     return 0;
-}
-
-std::optional<std::string> findAvailableLayerId(const std::string &prefix, const ODE_LayerList &layerList) {
-    for (int i = 0; i < std::numeric_limits<int>::max(); ++i) {
-        const std::string layerId = prefix + "_" + std::to_string(i);
-        bool idAlreadyInUse = false;
-        for (int j = 0; j < layerList.n && !idAlreadyInUse; ++j) {
-            if (layerId == ode_stringDeref(layerList.entries[j].id)) {
-                idAlreadyInUse = true;
-            }
-        }
-        if (!idAlreadyInUse) {
-            return layerId;
-        }
-    }
-    return std::nullopt;
 }
 
 }

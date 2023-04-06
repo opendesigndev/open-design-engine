@@ -67,7 +67,7 @@ void drawGroupButtons(DesignEditorContext::Api &apiContext,
         ImGui::PushStyleColor(ImGuiCol_Button, IM_COLOR_LIGHT_BLUE);
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COLOR_LIGHT_BLUE);
 
-        const std::optional<octopus::Octopus> newOctopusGroup = [&layerIDs = layersSelectionContext.layerIDs, &rootLayer = *componentOctopus.content]()->std::optional<octopus::Octopus> {
+        const std::optional<octopus::Octopus> newOctopusGroup = [&layerIDs = layersSelectionContext.layerIDs, &rootLayer = *componentOctopus.content, &layerList]()->std::optional<octopus::Octopus> {
 
             if (ImGui::Button("Group")) {
                 ode::octopus_builder::GroupLayer group;
@@ -76,6 +76,11 @@ void drawGroupButtons(DesignEditorContext::Api &apiContext,
                     if (layer != nullptr) {
                         group.add(*layer);
                     }
+                }
+                const std::optional<std::string> idOpt = findAvailableLayerId("GROUP", layerList);
+                if (idOpt.has_value()) {
+                    group.id = *idOpt;
+                    group.name = *idOpt;
                 }
                 return ode::octopus_builder::buildOctopus("Group (WIP)", group);
             }
@@ -86,12 +91,17 @@ void drawGroupButtons(DesignEditorContext::Api &apiContext,
                 const ODE_StringRef &maskLayerId = layerIDs.front();
                 const octopus::Layer *maskLayer = findLayer(rootLayer, ode_stringDeref(maskLayerId));
                 if (maskLayer != nullptr) {
-                    ode::octopus_builder::MaskGroupLayer maskGroup(octopus::MaskBasis::SOLID, *maskLayer);
+                    ode::octopus_builder::MaskGroupLayer maskGroup(octopus::MaskBasis::BODY, *maskLayer);
                     for (size_t li = 1; li < layerIDs.size(); li++) {
                         const octopus::Layer *layer = findLayer(rootLayer, ode_stringDeref(layerIDs[li]));
                         if (layer != nullptr) {
                             maskGroup.add(*layer);
                         }
+                    }
+                    const std::optional<std::string> idOpt = findAvailableLayerId("MASK_GROUP", layerList);
+                    if (idOpt.has_value()) {
+                        maskGroup.id = *idOpt;
+                        maskGroup.name = *idOpt;
                     }
                     return ode::octopus_builder::buildOctopus("Mask Group (WIP)", maskGroup);
                 }
