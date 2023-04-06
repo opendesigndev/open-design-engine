@@ -116,6 +116,10 @@ odtr::TextShapeHandle LayerInstance::getTextShape() {
     return textShape;
 }
 
+const std::string &LayerInstance::getParentId() const {
+    return parentId;
+}
+
 octopus::Layer *LayerInstance::operator->() {
     return layer;
 }
