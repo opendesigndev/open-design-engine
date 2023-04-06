@@ -1531,11 +1531,11 @@ void drawLayerPropertiesWidget(DesignEditorContext::Api &apiContext,
                 ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
                 ImGui::PushStyleColor(ImGuiCol_Button, IM_COLOR_DARK_RED);
                 ImGui::SameLine(100);
-                if (ImGui::Button(layerPropName(layer.id, "delete", nonstd::nullopt, nonstd::nullopt, "Delete Layer [FUTURE_API]").c_str(), ImVec2 { 250, 20 })) {
-                    // TODO: Remove layer when API available
-//                    if (ode_component_removeLayer(apiContext.component, layer.id) == ODE_RESULT_OK) {
-//                        ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView);
-//                    }
+                if (ImGui::Button(layerPropName(layer.id, "delete", nonstd::nullopt, nonstd::nullopt, "Delete Layer").c_str(), ImVec2 { 250, 20 })) {
+                    if (ode_component_removeLayer(apiContext.component, layer.id) == ODE_RESULT_OK) {
+                        ode_component_listLayers(apiContext.component, &layerList);
+                        ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView);
+                    }
                 }
                 ImGui::PopStyleColor(1);
 

@@ -195,7 +195,22 @@ DesignError Component::addLayer(const std::string &parent, const std::string &be
 }
 
 DesignError Component::removeLayer(const std::string &id) {
-    return DesignError::NOT_IMPLEMENTED;
+    if (DesignError error = requireBuild())
+        return error;
+    if (LayerInstance *instance = findInstance(id)) {
+        const std::string &parentId = instance->getParentId();
+        if (LayerInstance *parentInstance = findInstance(parentId)) {
+            ODE_ASSERT((*parentInstance)->layers.has_value());
+            const auto layerInParentIt = std::find_if((*parentInstance)->layers->begin(), (*parentInstance)->layers->end(), [&id](const octopus::Layer &layer) {
+                return layer.id == id;
+            });
+            if (layerInParentIt != (*parentInstance)->layers->end()) {
+                (*parentInstance)->layers->erase(layerInParentIt);
+                return DesignError::OK;
+            }
+        }
+    }
+    return DesignError::LAYER_NOT_FOUND;
 }
 
 DesignError Component::modifyLayer(const std::string &id, const octopus::LayerChange &layerChange) {

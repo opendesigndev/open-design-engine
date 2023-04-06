@@ -389,7 +389,12 @@ ODE_Result ODE_API ode_component_addLayer(ODE_ComponentHandle component, ODE_Str
     return ODE_RESULT_OK;
 }
 
-//ODE_Result ODE_API ode_component_removeLayer(ODE_ComponentHandle component, ODE_StringRef layerId);
+ODE_Result ODE_API ode_component_removeLayer(ODE_ComponentHandle component, ODE_StringRef layerId) {
+    ODE_ASSERT(layerId.data);
+    if (!component.ptr)
+        return ODE_RESULT_INVALID_COMPONENT;
+    return ode_result(component.ptr->accessor.removeLayer(ode_stringDeref(layerId)).type());
+}
 
 ODE_Result ODE_API ode_component_modifyLayer(ODE_ComponentHandle component, ODE_StringRef layerId, ODE_StringRef layerChangeOctopusString, ODE_ParseError *parseError) {
     ODE_ASSERT(layerId.data && layerChangeOctopusString.data);
