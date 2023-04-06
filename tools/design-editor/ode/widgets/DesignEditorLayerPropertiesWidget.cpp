@@ -754,7 +754,7 @@ void drawLayerShapeFill(int fillI,
             // Open "Open Image File" file dialog
             ImGui::SameLine(100);
             if (ImGui::Button("Load image file")) {
-                const char* filters = ".png, .jpeg";
+                const char* filters = "Image files (*.png *.gif *.jpg *.jpeg){.png,.gif,.jpg,.jpeg},.*";
                 ImGuiFileDialog::Instance()->OpenDialog("ChooseImageFileDlgKey", "Choose an image file", filters, fileDialogContext.imageFilePath, fileDialogContext.imageFileName);
             }
 
