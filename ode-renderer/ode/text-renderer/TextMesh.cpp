@@ -55,8 +55,6 @@ std::unique_ptr<TextMesh> TextMesh::build(TextRenderer *parent, odtr::TextShapeH
     for (const odtr::PlacedGlyphsPerFont::value_type &fontGlyphs : placedText->glyphs) {
         int segmentStart = 6*quadCount;
         FontAtlas &fontAtlas = parent->fontAtlas(fontGlyphs.first);
-        if (!fontAtlas.initialize(parent, fontGlyphs.first))
-            continue; // error
         for (const odtr::PlacedGlyph &glyph : fontGlyphs.second) {
             FontAtlas::GlyphQuad quad;
             double emRange = fontAtlas.getGlyphQuad(quad, glyph.codepoint);

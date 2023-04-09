@@ -47,9 +47,7 @@ FontAtlas::FontHandleHolder::operator msdfgen::FontHandle *() {
     return handle;
 }
 
-FontAtlas::TextureStorage::TextureStorage() : parentRenderer(nullptr) { }
-
-FontAtlas::TextureStorage::TextureStorage(int width, int height) : texture(FilterMode::LINEAR), parentRenderer(nullptr) {
+FontAtlas::TextureStorage::TextureStorage(int width, int height, TextRenderer *parentRenderer) : texture(FilterMode::LINEAR), parentRenderer(parentRenderer) {
     texture.initialize(PixelFormat::R, Vector2i(width, height));
 }
 
@@ -80,20 +78,14 @@ void FontAtlas::TextureStorage::put(int x, int y, const msdfgen::BitmapConstRef<
     texture.put(Vector2i(x, y), byteBitmap);
 }
 
-FontAtlas::FontAtlas() : atlas(msdf_atlas::ImmediateAtlasGenerator<float, 1, &msdf_atlas::psdfGenerator, TextureStorage>(FONT_ATLAS_INITIAL_SIZE, FONT_ATLAS_INITIAL_SIZE)), baseScale(1./MSDF_ATLAS_DEFAULT_EM_SIZE) { }
-
-bool FontAtlas::initialize(TextRenderer *parentRenderer, const odtr::FontSpecifier &fontSpecifier) {
-    atlas.atlasGenerator().atlasStorage().parentRenderer = parentRenderer;
-    if (fontHandle)
-        return true;
+FontAtlas::FontAtlas(TextRenderer *parentRenderer, const odtr::FontSpecifier &fontSpecifier) : atlas(FONT_ATLAS_INITIAL_SIZE, parentRenderer), baseScale(1./MSDF_ATLAS_DEFAULT_EM_SIZE) {
     const odtr::FaceTable::Item *faceItem = TEXT_RENDERER_CONTEXT->getFontManager().facesTable().getFaceItem(fontSpecifier.faceId);
     if (!(faceItem && faceItem->face))
-        return false;
+        return;
     fontHandle = FontHandleHolder(faceItem->face->getFtFace());
     msdfgen::FontMetrics fontMetrics;
     if (msdfgen::getFontMetrics(fontMetrics, fontHandle))
         baseScale = 1./fontMetrics.emSize;
-    return true;
 }
 
 const Texture2D *FontAtlas::getTexture() const {

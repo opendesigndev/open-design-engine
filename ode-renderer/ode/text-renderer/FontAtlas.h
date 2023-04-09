@@ -24,8 +24,7 @@ public:
         Rectangle<double> planeBounds, atlasBounds;
     };
 
-    FontAtlas();
-    bool initialize(TextRenderer *parentRenderer, const odtr::FontSpecifier &fontSpecifier);
+    FontAtlas(TextRenderer *parentRenderer, const odtr::FontSpecifier &fontSpecifier);
     const Texture2D *getTexture() const;
     // Returns emRange on success, 0 on failure
     double getGlyphQuad(GlyphQuad &output, unsigned glyphIndex);
@@ -46,11 +45,9 @@ private:
 
     class TextureStorage {
         Texture2D texture;
+        TextRenderer *parentRenderer;
     public:
-        // TODO improve
-        mutable TextRenderer *parentRenderer;
-        TextureStorage();
-        TextureStorage(int width, int height);
+        TextureStorage(int width, int height, TextRenderer *parentRenderer);
         TextureStorage(TextureStorage &&orig, int width, int height);
         TextureStorage(TextureStorage &&orig, int width, int height, const msdf_atlas::Remap *remapping, int count);
         const Texture2D *get() const;

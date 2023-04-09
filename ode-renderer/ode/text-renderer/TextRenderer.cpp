@@ -34,7 +34,10 @@ TextRenderer::~TextRenderer() = default;
 #ifdef ODE_REALTIME_TEXT_RENDERER
 
 FontAtlas &TextRenderer::fontAtlas(const odtr::FontSpecifier &fontSpecifier) {
-    return fontAtlases[fontSpecifier];
+    std::map<odtr::FontSpecifier, FontAtlas>::iterator it = fontAtlases.find(fontSpecifier);
+    if (it == fontAtlases.end())
+        it = fontAtlases.insert(it, std::make_pair(fontSpecifier, FontAtlas(this, fontSpecifier)));
+    return it->second;
 }
 
 PlacedImagePtr TextRenderer::drawLayerText(Component &component, const LayerInstanceSpecifier &layer, const ScaledBounds &visibleBounds, double scale, double time) {
