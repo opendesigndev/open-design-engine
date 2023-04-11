@@ -968,7 +968,7 @@ void drawLayerShapeFill(int fillI,
     ImGui::Text("Filters:");
     ImGui::SameLine(415);
     if (ImGui::SmallButton(layerPropName(layerId, "shape-fill-filter-add", fillI, nonstd::nullopt, "+").c_str())) {
-        changeInsertBack(octopus::LayerChange::Subject::FILL_FILTER, apiContext, layerId, nonstd::nullopt, [](octopus::LayerChange::Values &values) {
+        changeInsertBack(octopus::LayerChange::Subject::FILL_FILTER, apiContext, layerId, fillI, [](octopus::LayerChange::Values &values) {
             values.filter = DEFAULT_FILL_FILTER;
         });
     }
