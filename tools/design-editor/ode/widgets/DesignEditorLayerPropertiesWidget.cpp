@@ -115,17 +115,26 @@ const std::map<int, const char*> EFFECT_BASIS_MAP {
     { 8, "BACKGROUND" },
 };
 
-const octopus::Color DEFAULT_FILL_COLOR {
-    1.0f, 1.0f, 1.0f, 1.0f
-};
-const octopus::Color DEFAULT_STROKE_FILL_COLOR {
-    0.0f, 0.0f, 0.0f, 1.0f
-};
-const octopus::Color DEFAULT_FILL_GRADIENT_COLOR_0 { 0.0f, 0.0f, 0.0f, 0.0f };
-const octopus::Color DEFAULT_FILL_GRADIENT_COLOR_1 { 0.0f, 0.0f, 0.0f, 1.0f };
+const octopus::Color COLOR_WHITE { 1.0f, 1.0f, 1.0f, 1.0f };
+const octopus::Color COLOR_BLACK { 0.0f, 0.0f, 0.0f, 1.0f };
+const octopus::Color COLOR_TRANSPARENT_BLACK { 0.0f, 0.0f, 0.0f, 0.0f };
+const octopus::Color DEFAULT_FILL_COLOR = COLOR_WHITE;
+const octopus::Color DEFAULT_STROKE_FILL_COLOR = COLOR_BLACK;
+const octopus::Color DEFAULT_FILL_GRADIENT_COLOR_0 = COLOR_TRANSPARENT_BLACK;
+const octopus::Color DEFAULT_FILL_GRADIENT_COLOR_1 = COLOR_BLACK;
+const octopus::Color DEFAULT_EFFECT_COLOR = COLOR_BLACK;
 
-const octopus::Gradient::ColorStop DEFAULT_FILL_GRADIENT_COLOR_STOP_0 { 0.0, octopus::Gradient::Interpolation::LINEAR, 0.0, DEFAULT_FILL_GRADIENT_COLOR_0 };
-const octopus::Gradient::ColorStop DEFAULT_FILL_GRADIENT_COLOR_STOP_1 { 1.0, octopus::Gradient::Interpolation::LINEAR, 1.0, DEFAULT_FILL_GRADIENT_COLOR_1 };
+const octopus::Gradient::ColorStop DEFAULT_FILL_GRADIENT_COLOR_STOP_0 {
+    0.0,
+    octopus::Gradient::Interpolation::LINEAR,
+    0.0,
+    DEFAULT_FILL_GRADIENT_COLOR_0 };
+const octopus::Gradient::ColorStop DEFAULT_FILL_GRADIENT_COLOR_STOP_1 {
+    1.0,
+    octopus::Gradient::Interpolation::LINEAR,
+    1.0,
+    DEFAULT_FILL_GRADIENT_COLOR_1 };
+
 const octopus::Gradient DEFAULT_FILL_GRADIENT {
     octopus::Gradient::Type::LINEAR,
     std::vector<octopus::Gradient::ColorStop> {
@@ -168,8 +177,6 @@ const octopus::Shape::Stroke DEFAULT_SHAPE_STROKE {
     nonstd::nullopt,
     nonstd::nullopt,
 };
-
-const octopus::Color DEFAULT_EFFECT_COLOR { 0.0, 0.0, 0.0, 1.0 };
 
 const octopus::Fill DEFAULT_EFFECT_FILL {
     octopus::Fill::Type::COLOR,
@@ -569,10 +576,10 @@ void drawLayerShapeFill(int fillI,
                         DesignEditorLoadedOctopus &loadedOctopus,
                         const octopus::Fill &octopusFill,
                         const ODE_LayerMetrics &layerMetrics) {
-    double defaultGradientFillPositioningTransform[6] {
+    const double defaultGradientFillPositioningTransform[6] {
         0, layerMetrics.logicalBounds.b.y, -layerMetrics.logicalBounds.b.y, 0, layerMetrics.logicalBounds.b.x/2.0, 0
     };
-    double defaultImageFillPositioningTransform[6] {
+    const double defaultImageFillPositioningTransform[6] {
         layerMetrics.logicalBounds.b.x, 0, 0, layerMetrics.logicalBounds.b.y, 0, 0
     };
 
