@@ -111,7 +111,7 @@ jobs:
           build-args: |
             VCPKG_COMMIT_SOURCE=arg
             VCPKG_COMMIT=${{ env.VCPKG_COMMIT }}
-            ODE_BUILD_COMMIT_TAG="${{ env.ODE_BUILD_COMMIT_TAG }}"
+            ODE_BUILD_COMMIT_TAG=${{ env.ODE_BUILD_COMMIT_TAG }}
           cache-from: type=registry,ref=${{ env.GITLAB_BASE_CACHE }}
           cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
       - name: Adding output tags to summary
@@ -126,7 +126,7 @@ jobs:
           build-args: |
             VCPKG_COMMIT_SOURCE=arg
             VCPKG_COMMIT=${{ env.VCPKG_COMMIT }}
-            ODE_BUILD_COMMIT_TAG="${{ env.ODE_BUILD_COMMIT_TAG }}"
+            ODE_BUILD_COMMIT_TAG=${{ env.ODE_BUILD_COMMIT_TAG }}
           target: ode-debian-build
           cache-from: type=local,src=/tmp/.buildx-cache
           outputs: type=docker,dest=/tmp/builder-image.tar
@@ -147,6 +147,13 @@ jobs:
           name: build-artifacts
           path: |
             build-artifacts/ode-renderer
+      - name: Package
+        uses: actions/upload-artifact@v3
+        if: ${{ !env.ODE_SHOULD_PUBLISH_TO_NPM }}
+        with:
+          name: package
+          path: |
+            package
       - uses: ./.github/actions/npm-publish
         if: env.ODE_SHOULD_PUBLISH_TO_NPM
         with:
