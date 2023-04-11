@@ -402,7 +402,7 @@ void drawLayerTransformation(const ODE_StringRef &layerId,
 
     ImGui::Text("Translation:");
     ImGui::SameLine(100);
-    if (ImGui::DragFloat2(layerPropName(layerId, "translation").c_str(), &translation.x, 1.0f)) {
+    if (ImGui::DragFloat2(layerPropName(layerId, "layer-translation").c_str(), &translation.x, 1.0f)) {
         const ODE_Transformation newTransformation { 1,0,0,1,translation.x-origTranslation.x,translation.y-origTranslation.y };
         if (ode_component_transformLayer(apiContext.component, layerId, ODE_TRANSFORMATION_BASIS_PARENT_COMPONENT, newTransformation) == ODE_RESULT_OK) {
             ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView);
@@ -412,7 +412,7 @@ void drawLayerTransformation(const ODE_StringRef &layerId,
     // TODO: Fix transformation scale and rotation
     ImGui::Text("Scale:");
     ImGui::SameLine(100);
-    if (ImGui::DragFloat2(layerPropName(layerId, "blend-scale").c_str(), &scale.x, 0.05f, 0.0f, 100.0f)) {
+    if (ImGui::DragFloat2(layerPropName(layerId, "layer-scale").c_str(), &scale.x, 0.05f, 0.0f, 100.0f)) {
         const ODE_Transformation newTransformation { scale.x/origScale.x,0,0,scale.y/origScale.y,0,0 };
         if (ode_component_transformLayer(apiContext.component, layerId, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation) == ODE_RESULT_OK) {
             ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView);
@@ -421,7 +421,7 @@ void drawLayerTransformation(const ODE_StringRef &layerId,
 
     ImGui::Text("Rotation:");
     ImGui::SameLine(100);
-    if (ImGui::DragFloat(layerPropName(layerId, "blend-rotation").c_str(), &rotation)) {
+    if (ImGui::DragFloat(layerPropName(layerId, "layer-rotation").c_str(), &rotation)) {
         const float rotationChangeRad = -(rotation-origRotation)*M_PI/180.0f;
         const ODE_Transformation newTransformation { cos(rotationChangeRad),-sin(rotationChangeRad),sin(rotationChangeRad),cos(rotationChangeRad),0,0 };
         if (ode_component_transformLayer(apiContext.component, layerId, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation) == ODE_RESULT_OK) {
@@ -909,65 +909,54 @@ void drawLayerShapeFill(int fillI,
         }
 
         // Image positioning origin
-        ImGui::Text("  Pos. tr.:");
-        ImGui::SameLine(100);
-
-        // TODO: Fill positioning transform - edit translation,rotation,scale
+        ImGui::Text("  Pos. transformation:");
         const auto positioningTransform = octopusFill.positioning.has_value() ? octopusFill.positioning->transform : defaultGradientFillPositioningTransform;
-        float posTr03[4] {
-            static_cast<float>(positioningTransform[0]),
-            static_cast<float>(positioningTransform[1]),
-            static_cast<float>(positioningTransform[2]),
-            static_cast<float>(positioningTransform[3]),
+
+        const float a = static_cast<float>(positioningTransform[0]);
+        const float b = static_cast<float>(positioningTransform[2]);
+        const float c = static_cast<float>(positioningTransform[1]);
+        const float d = static_cast<float>(positioningTransform[3]);
+        const float trX = static_cast<float>(positioningTransform[4]);
+        const float trY = static_cast<float>(positioningTransform[5]);
+
+        Vector2f translation { trX, trY };
+        Vector2f scale { sqrt(a*a+b*b), sqrt(c*c+d*d) };
+        float rotation = atan(c/d) * (180.0f/M_PI);
+
+        // TODO: Fix transformation scale and rotation
+        const auto updateFill = [&octopusFill, &translation, &scale, &rotation](octopus::LayerChange::Values &values) {
+            values.fill = octopusFill;
+            if (!octopusFill.positioning.has_value()) {
+                values.fill->positioning = {
+                    octopus::Fill::Positioning::Layout::STRETCH,
+                    octopus::Fill::Positioning::Origin::LAYER,
+                };
+            }
+            const float rotationRad = rotation * (M_PI/180.0f);
+            values.fill->positioning->transform[0] = scale.x * cos(rotationRad);
+            values.fill->positioning->transform[1] = scale.x * sin(rotationRad);
+            values.fill->positioning->transform[2] = - scale.y * sin(rotationRad);
+            values.fill->positioning->transform[3] = scale.y * cos(rotationRad);
+            values.fill->positioning->transform[4] = translation.x;
+            values.fill->positioning->transform[5] = translation.y;
         };
-        if (ImGui::DragFloat4(layerPropName(layerId, "shape-fill-positioning-transform-03", fillI).c_str(), posTr03, 0.1f, -1000.0f, 1000.0f)) {
-            changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, &posTr03, &defaultGradientFillPositioningTransform](octopus::LayerChange::Values &values) {
-                values.fill = octopusFill;
-                if (octopusFill.positioning.has_value()) {
-                    values.fill->positioning->transform[0] = posTr03[0];
-                    values.fill->positioning->transform[1] = posTr03[1];
-                    values.fill->positioning->transform[2] = posTr03[2];
-                    values.fill->positioning->transform[3] = posTr03[3];
-                } else {
-                    values.fill->positioning = {
-                        octopus::Fill::Positioning::Layout::STRETCH,
-                        octopus::Fill::Positioning::Origin::LAYER,
-                    };
-                    values.fill->positioning->transform[0] = posTr03[0];
-                    values.fill->positioning->transform[1] = posTr03[1];
-                    values.fill->positioning->transform[2] = posTr03[2];
-                    values.fill->positioning->transform[3] = posTr03[3];
-                    values.fill->positioning->transform[4] = defaultGradientFillPositioningTransform[4];
-                    values.fill->positioning->transform[5] = defaultGradientFillPositioningTransform[5];
-                }
-            });
+
+        ImGui::Text("    Transl.:");
+        ImGui::SameLine(100);
+        if (ImGui::DragFloat2(layerPropName(layerId, "fill-translation", fillI).c_str(), &translation.x, 1.0f)) {
+            changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, updateFill);
         }
 
-        ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
+        ImGui::Text("    Scale:");
         ImGui::SameLine(100);
-        float posTr45[2] {
-            static_cast<float>(positioningTransform[4]),
-            static_cast<float>(positioningTransform[5]),
-        };
-        if (ImGui::DragFloat2(layerPropName(layerId, "shape-fill-positioning-transform-45", fillI).c_str(), posTr45, 0.1f, -1000.0f, 1000.0f)) {
-            changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, [&octopusFill, &posTr45, &defaultGradientFillPositioningTransform](octopus::LayerChange::Values &values) {
-                values.fill = octopusFill;
-                if (octopusFill.positioning.has_value()) {
-                    values.fill->positioning->transform[4] = posTr45[0];
-                    values.fill->positioning->transform[5] = posTr45[1];
-                } else {
-                    values.fill->positioning = {
-                        octopus::Fill::Positioning::Layout::STRETCH,
-                        octopus::Fill::Positioning::Origin::LAYER,
-                    };
-                    values.fill->positioning->transform[0] = defaultGradientFillPositioningTransform[0];
-                    values.fill->positioning->transform[1] = defaultGradientFillPositioningTransform[1];
-                    values.fill->positioning->transform[2] = defaultGradientFillPositioningTransform[2];
-                    values.fill->positioning->transform[3] = defaultGradientFillPositioningTransform[3];
-                    values.fill->positioning->transform[4] = posTr45[0];
-                    values.fill->positioning->transform[5] = posTr45[1];
-                }
-            });
+        if (ImGui::DragFloat2(layerPropName(layerId, "fill-scale", fillI).c_str(), &scale.x, 1.0f, 0.0f, 100000.0f)) {
+            changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, updateFill);
+        }
+
+        ImGui::Text("    Rot.:");
+        ImGui::SameLine(100);
+        if (ImGui::DragFloat(layerPropName(layerId, "fill-rotation", fillI).c_str(), &rotation, 1.0f, -10000.0f, 10000.0f)) {
+            changeReplace(octopus::LayerChange::Subject::FILL, apiContext, layerId, fillI, nonstd::nullopt, updateFill);
         }
     }
 
