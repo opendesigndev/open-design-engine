@@ -1,4 +1,13 @@
 
+## Version 0.3.1 (2023-04-12)
+
+- Added new functions to ODE API:
+  - `ode_design_listComponents`
+  - `ode_destroyComponentList`
+- Fixed positioning of group members after changes to group's transform matrix
+- Fixed invalidation of reported layer bounds following layer modifications
+- Updated baseline version of vcpkg dependencies to `4116148` (2023-04-11)
+
 ## Version 0.3.0 (2023-03-30)
 
 - Added Node-API bindings for the ODE API (ode-napi module)
