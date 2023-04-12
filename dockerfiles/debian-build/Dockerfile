@@ -71,13 +71,20 @@ RUN cmake \
     -DCMAKE_CXX_COMPILER=clang++ \
     -DCMAKE_MAKE_PROGRAM=make \
     -DVCPKG_TARGET_TRIPLET=x64-linux-release
-RUN cmake --build /home/ode/build --target ode-renderer-cli --config Release
+RUN cmake --build /home/ode/build --config Release --parallel
 
 RUN mkdir -p /opt/ode-renderer/bin /opt/ode-renderer/lib
 RUN cp /home/ode/build/ode-renderer/ode-renderer-cli /opt/ode-renderer/bin/ode-renderer
 
 # Find system libraries used by the compiled binaries and copy them as redistributables
 RUN ldd /opt/ode-renderer/bin/* | awk '{ print $1 }' | awk -F'/' '{ print $NF }' | xargs -I'{}' find /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu -name '{}' -print -quit | tee /tmp/libs.txt | xargs -I{} cp {} /opt/ode-renderer/lib
+
+# Collect libraries for node.js package
+WORKDIR /home/ode/build/ode-napi/target-specific
+RUN cp /opt/ode-renderer/lib/* . \
+    && rm libc.so.6 libstdc++.so.6 libpthread.so.0 librt.so.1 \
+    && patchelf --set-rpath '$ORIGIN' *.so* \
+    && patchelf --set-rpath '$ORIGIN' ode-napi.node
 
 WORKDIR /opt/ode-renderer
 RUN patchelf --set-interpreter /opt/ode-renderer/lib/ld-linux-x86-64.so.2 bin/* \
