@@ -974,15 +974,15 @@ void drawLayerShapeFill(int fillI,
         int fillFilterToRemove = -1;
 
         for (int ffI = 0; ffI < static_cast<int>(octopusFill.filters->size()); ffI++) {
-            const octopus::Filter &fillFilter = (*octopusFill.filters)[ffI];
+            const octopus::Filter &octopusFillFilter = (*octopusFill.filters)[ffI];
 
             ImGui::Text("  Filter #%i:", ffI);
 
             ImGui::SameLine(100);
             bool filterVisible = (*octopusFill.filters)[ffI].visible;
             if (ImGui::Checkbox(layerPropName(layerId, "shape-fill-filter-visibility", fillI, ffI).c_str(), &filterVisible)) {
-                changeReplace(octopus::LayerChange::Subject::FILL_FILTER, apiContext, layerId, fillI, ffI, [fillFilter, filterVisible](octopus::LayerChange::Values &values) {
-                    values.filter = fillFilter;
+                changeReplace(octopus::LayerChange::Subject::FILL_FILTER, apiContext, layerId, fillI, ffI, [octopusFillFilter, filterVisible](octopus::LayerChange::Values &values) {
+                    values.filter = octopusFillFilter;
                     values.filter->visible = filterVisible;
                 });
             }
@@ -1227,6 +1227,43 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                         values.effect->overlay->color = toOctopusColor(imColor);
                     });
                 }
+
+                // Effect fill filters (overlay)
+                ImGui::Text("Overlay filters:");
+                ImGui::SameLine(415);
+                if (ImGui::SmallButton(layerPropName(layerId, "effect-overlay-fill-filter-add", ei, nonstd::nullopt, "+").c_str())) {
+                    changeInsertBack(octopus::LayerChange::Subject::EFFECT_FILL_FILTER, apiContext, layerId, ei, [](octopus::LayerChange::Values &values) {
+                        values.filter = DEFAULT_FILL_FILTER;
+                    });
+                }
+
+                if (octopusEffectOverlay.filters.has_value() && !octopusEffectOverlay.filters->empty()) {
+                    int effectFillFilterToRemove = -1;
+
+                    for (int effI = 0; effI < static_cast<int>(octopusEffectOverlay.filters->size()); effI++) {
+                        ImGui::Text("  Filter #%i:", effI);
+                        ImGui::SameLine(100);
+
+                        const octopus::Filter &octopusEffectOverlayFilter = (*octopusEffectOverlay.filters)[effI];
+
+                        bool effectFillFilterVisible = octopusEffectOverlayFilter.visible;
+                        if (ImGui::Checkbox(layerPropName(layerId, "effect-overlay-fill-filter-visibility", ei, effI).c_str(), &effectFillFilterVisible)) {
+                            changeReplace(octopus::LayerChange::Subject::EFFECT_FILL_FILTER, apiContext, layerId, ei, effI, [&octopusEffectOverlayFilter, effectFillFilterVisible](octopus::LayerChange::Values &values) {
+                                values.filter = octopusEffectOverlayFilter;
+                                values.filter->visible = effectFillFilterVisible;
+                            });
+                        }
+
+                        ImGui::SameLine(415);
+                        if (ImGui::SmallButton(layerPropName(layerId, "effect-overlay-fill-filter-remove", ei, effI, "-").c_str())) {
+                            effectFillFilterToRemove = static_cast<int>(effI);
+                        }
+                    }
+
+                    if (effectFillFilterToRemove >= 0 && effectFillFilterToRemove < static_cast<int>(octopusEffectOverlay.filters->size())) {
+                        changeRemove(octopus::LayerChange::Subject::EFFECT_FILL_FILTER, apiContext, layerId, ei, effectFillFilterToRemove);
+                    }
+                }
                 break;
             }
             case octopus::Effect::Type::STROKE:
@@ -1280,6 +1317,42 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                     });
                 }
 
+                // Effect fill filters (stroke)
+                ImGui::Text("Stroke filters:");
+                ImGui::SameLine(415);
+                if (ImGui::SmallButton(layerPropName(layerId, "effect-stroke-fill-filter-add", ei, nonstd::nullopt, "+").c_str())) {
+                    changeInsertBack(octopus::LayerChange::Subject::EFFECT_FILL_FILTER, apiContext, layerId, ei, [](octopus::LayerChange::Values &values) {
+                        values.filter = DEFAULT_FILL_FILTER;
+                    });
+                }
+
+                if (octopusEffectStroke.fill.filters.has_value() && !octopusEffectStroke.fill.filters->empty()) {
+                    int effectFillFilterToRemove = -1;
+
+                    for (int effI = 0; effI < static_cast<int>(octopusEffectStroke.fill.filters->size()); effI++) {
+                        ImGui::Text("  Filter #%i:", effI);
+                        ImGui::SameLine(100);
+
+                        const octopus::Filter &octopusEffectStrokeFillFilter = (*octopusEffectStroke.fill.filters)[effI];
+
+                        bool effectFillFilterVisible = octopusEffectStrokeFillFilter.visible;
+                        if (ImGui::Checkbox(layerPropName(layerId, "effect-stroke-fill-filter-visibility", ei, effI).c_str(), &effectFillFilterVisible)) {
+                            changeReplace(octopus::LayerChange::Subject::EFFECT_FILL_FILTER, apiContext, layerId, ei, effI, [&octopusEffectStrokeFillFilter, effectFillFilterVisible](octopus::LayerChange::Values &values) {
+                                values.filter = octopusEffectStrokeFillFilter;
+                                values.filter->visible = effectFillFilterVisible;
+                            });
+                        }
+
+                        ImGui::SameLine(415);
+                        if (ImGui::SmallButton(layerPropName(layerId, "effect-stroke-fill-filter-remove", ei, effI, "-").c_str())) {
+                            effectFillFilterToRemove = static_cast<int>(effI);
+                        }
+                    }
+
+                    if (effectFillFilterToRemove >= 0 && effectFillFilterToRemove < static_cast<int>(octopusEffectStroke.fill.filters->size())) {
+                        changeRemove(octopus::LayerChange::Subject::EFFECT_FILL_FILTER, apiContext, layerId, ei, effectFillFilterToRemove);
+                    }
+                }
                 break;
             }
             case octopus::Effect::Type::DROP_SHADOW:

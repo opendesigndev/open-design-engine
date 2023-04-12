@@ -9,19 +9,22 @@ namespace ode {
     if ((level) > changeLevel) \
         changeLevel = (level);
 
+// TODO: Invalid index error ?
 #define CHECK_INDEX(layerValues) \
     if (!layerChange.index.has_value() || layer.layerValues.size() <= *layerChange.index) { \
-        return DesignError::INVALID_LAYER_CHANGE_INDEX; \
+        return DesignError::UNKNOWN_ERROR; \
     }
 
+// TODO: Invalid filter index?
 #define CHECK_FILTER_INDEX() \
     if (!filters.has_value() || filters->size() <= *layerChange.filterIndex) { \
-        return DesignError::INVALID_LAYER_CHANGE_INDEX; \
+        return DesignError::UNKNOWN_ERROR; \
     }
 
+// TODO: Invalid layer change value error ?
 #define CHECK_ATTRIB(changeAttrib) \
     if (!layerChange.values.changeAttrib.has_value()) { \
-        return DesignError::INVALID_LAYER_CHANGE_VALUE; \
+        return DesignError::UNKNOWN_ERROR; \
     }
 
 #define CHECK_CHANGE(layerValues, changeAttrib) \
@@ -31,7 +34,7 @@ namespace ode {
 #define CHECK_INSERT(layerValues, changeAttrib) \
     CHECK_ATTRIB(changeAttrib) \
     if (layerChange.index.has_value() && layer.layerValues.size() <= *layerChange.index) { \
-        return DesignError::INVALID_LAYER_CHANGE_INDEX; \
+        return DesignError::UNKNOWN_ERROR; \
     }
 
 #define CHECK_REMOVE(layerValues) \
@@ -39,12 +42,12 @@ namespace ode {
 
 #define APPLY_PROP_CHANGE_LAYER(changeAttrib, level) \
     CHECK_ATTRIB(changeAttrib) \
-    layer.changeAttrib = *layerChange.values.changeAttrib; \
+    layer.changeAttrib = layerChange.values.changeAttrib.value(); \
     UPDATE_CHANGE_LEVEL(changeLevel)
 
 #define APPLY_PROP_CHANGE(element, changeAttrib, level) \
     CHECK_ATTRIB(changeAttrib) \
-    layer.element->changeAttrib = *layerChange.values.changeAttrib; \
+    layer.element->changeAttrib = layerChange.values.changeAttrib.value(); \
     UPDATE_CHANGE_LEVEL(changeLevel)
 
 #define APPLY_REPLACE(layerValues, changeAttrib, level) \
@@ -317,10 +320,6 @@ namespace ode {
         case octopus::Effect::Type::GAUSSIAN_BLUR:
         case octopus::Effect::Type::BOUNDED_BLUR:
         case octopus::Effect::Type::BLUR:
-            if (!octopusEffect.filters.has_value()) {
-                return DesignError::WRONG_LAYER_TYPE;
-            }
-            return applyFilters(layerChange, octopusEffect.filters, changeLevel);
         case octopus::Effect::Type::OTHER:
             break;
     }
