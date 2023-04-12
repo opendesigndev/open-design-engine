@@ -31,6 +31,7 @@ namespace ode {
     CHECK_ATTRIB(changeAttrib) \
     CHECK_INDEX(layerValues)
 
+// TODO: Invalid index error ?
 #define CHECK_INSERT(layerValues, changeAttrib) \
     CHECK_ATTRIB(changeAttrib) \
     if (layerChange.index.has_value() && layer.layerValues.size() <= *layerChange.index) { \
@@ -140,10 +141,10 @@ namespace ode {
             if (layer.type != octopus::Layer::Type::SHAPE || !layer.shape.has_value()) {
                 return DesignError::WRONG_LAYER_TYPE;
             }
-            APPLY_PROP_CHANGE(shape, fillRule, COMPOSITION_CHANGE);
-            APPLY_PROP_CHANGE(shape, path, COMPOSITION_CHANGE);
-            APPLY_PROP_CHANGE(shape, fills, COMPOSITION_CHANGE);
-            APPLY_PROP_CHANGE(shape, strokes, COMPOSITION_CHANGE);
+            APPLY_PROP_CHANGE(shape, fillRule, VISUAL_CHANGE);
+            APPLY_PROP_CHANGE(shape, path, BOUNDS_CHANGE);
+            APPLY_PROP_CHANGE(shape, fills, VISUAL_CHANGE);
+            APPLY_PROP_CHANGE(shape, strokes, BOUNDS_CHANGE);
             break;
         default:
             return DesignError::NOT_IMPLEMENTED;
@@ -160,7 +161,7 @@ namespace ode {
                 return DesignError::WRONG_LAYER_TYPE;
             }
             APPLY_PROP_CHANGE(text, value, BOUNDS_CHANGE);
-            APPLY_PROP_CHANGE(text, defaultStyle, COMPOSITION_CHANGE);
+            APPLY_PROP_CHANGE(text, defaultStyle, BOUNDS_CHANGE);
             break;
         default:
             return DesignError::NOT_IMPLEMENTED;
