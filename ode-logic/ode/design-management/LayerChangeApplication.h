@@ -33,6 +33,8 @@ private:
     static DesignError applyOnFillFilter(const octopus::LayerChange &layerChange, octopus::Layer &layer, ChangeLevel &changeLevel);
     static DesignError applyOnStrokeFillFilter(const octopus::LayerChange &layerChange, octopus::Layer &layer, ChangeLevel &changeLevel);
     static DesignError applyOnEffectFillFilter(const octopus::LayerChange &layerChange, octopus::Layer &layer, ChangeLevel &changeLevel);
+
+    static DesignError applyFilters(const octopus::LayerChange &layerChange, nonstd::optional<std::vector<octopus::Filter>> &filters, ChangeLevel &changeLevel);
 };
 
 } // namespace ode

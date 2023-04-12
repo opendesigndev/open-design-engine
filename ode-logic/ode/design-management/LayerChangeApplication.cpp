@@ -15,6 +15,12 @@ namespace ode {
         return DesignError::UNKNOWN_ERROR; \
     }
 
+// TODO: Invalid filter index?
+#define CHECK_FILTER_INDEX() \
+    if (!filters.has_value() || filters->size() <= *layerChange.filterIndex) { \
+        return DesignError::UNKNOWN_ERROR; \
+    }
+
 // TODO: Invalid layer change value error ?
 #define CHECK_ATTRIB(changeAttrib) \
     if (!layerChange.values.changeAttrib.has_value()) { \
@@ -24,11 +30,13 @@ namespace ode {
 #define CHECK_CHANGE(layerValues, changeAttrib) \
     CHECK_ATTRIB(changeAttrib) \
     CHECK_INDEX(layerValues)
+
 #define CHECK_INSERT(layerValues, changeAttrib) \
     CHECK_ATTRIB(changeAttrib) \
     if (layerChange.index.has_value() && layer.layerValues.size() <= *layerChange.index) { \
         return DesignError::UNKNOWN_ERROR; \
     }
+
 #define CHECK_REMOVE(layerValues) \
     CHECK_INDEX(layerValues)
 
@@ -272,42 +280,8 @@ namespace ode {
         return DesignError::WRONG_LAYER_TYPE;
     }
     CHECK_INDEX(shape->fills);
-    std::vector<octopus::Fill> &octopusFills = layer.shape->fills;
-    nonstd::optional<std::vector<octopus::Filter>> &octopusFillFilters = octopusFills[*layerChange.index].filters;
 
-    switch (layerChange.op) {
-        case octopus::LayerChange::Op::PROPERTY_CHANGE:
-            return DesignError::NOT_IMPLEMENTED;
-        case octopus::LayerChange::Op::REPLACE:
-            CHECK_ATTRIB(filter);
-            // TODO: Invalid filter index
-            if (!octopusFillFilters.has_value() || octopusFillFilters->size() <= *layerChange.filterIndex) {
-                return DesignError::UNKNOWN_ERROR;
-            }
-            (*octopusFillFilters)[*layerChange.filterIndex] = *layerChange.values.filter;
-            UPDATE_CHANGE_LEVEL(VISUAL_CHANGE);
-            break;
-        case octopus::LayerChange::Op::INSERT:
-            CHECK_ATTRIB(filter);
-            if (octopusFillFilters.has_value()) {
-                octopusFillFilters->insert(layerChange.filterIndex.has_value() ? octopusFillFilters->begin()+*layerChange.filterIndex : octopusFillFilters->end(), *layerChange.values.filter);
-            } else {
-                octopusFillFilters = std::vector<octopus::Filter> {
-                    *layerChange.values.filter
-                };
-            }
-            UPDATE_CHANGE_LEVEL(VISUAL_CHANGE);
-            break;
-        case octopus::LayerChange::Op::REMOVE:
-            // TODO: Invalid filter index
-            if (!octopusFillFilters.has_value() || octopusFillFilters->size() <= *layerChange.filterIndex) {
-                return DesignError::UNKNOWN_ERROR;
-            }
-            octopusFillFilters->erase(octopusFillFilters->begin()+*layerChange.filterIndex);
-            UPDATE_CHANGE_LEVEL(VISUAL_CHANGE);
-            break;
-    }
-    return DesignError::OK;
+    return applyFilters(layerChange, layer.shape->fills[*layerChange.index].filters, changeLevel);
 }
 
 /*static*/ DesignError LayerChangeApplication::applyOnStrokeFillFilter(const octopus::LayerChange &layerChange, octopus::Layer &layer, ChangeLevel &changeLevel) {
@@ -317,70 +291,27 @@ namespace ode {
         return DesignError::WRONG_LAYER_TYPE;
     }
     CHECK_INDEX(shape->strokes);
-    std::vector<octopus::Shape::Stroke> &octopusStrokes = layer.shape->strokes;
-    nonstd::optional<std::vector<octopus::Filter>> &octopusStrokeFillFilters = octopusStrokes[*layerChange.index].fill.filters;
 
-    switch (layerChange.op) {
-        case octopus::LayerChange::Op::PROPERTY_CHANGE:
-            return DesignError::NOT_IMPLEMENTED;
-        case octopus::LayerChange::Op::REPLACE:
-            CHECK_ATTRIB(filter);
-            // TODO: Invalid filter index
-            if (!octopusStrokeFillFilters.has_value() || octopusStrokeFillFilters->size() <= *layerChange.filterIndex) {
-                return DesignError::UNKNOWN_ERROR;
-            }
-            (*octopusStrokeFillFilters)[*layerChange.filterIndex] = *layerChange.values.filter;
-            UPDATE_CHANGE_LEVEL(VISUAL_CHANGE);
-            break;
-        case octopus::LayerChange::Op::INSERT:
-            CHECK_ATTRIB(filter);
-            if (octopusStrokeFillFilters.has_value()) {
-                octopusStrokeFillFilters->insert(layerChange.filterIndex.has_value() ? octopusStrokeFillFilters->begin()+*layerChange.filterIndex : octopusStrokeFillFilters->end(), *layerChange.values.filter);
-            } else {
-                octopusStrokeFillFilters = std::vector<octopus::Filter> {
-                    *layerChange.values.filter
-                };
-            }
-            UPDATE_CHANGE_LEVEL(VISUAL_CHANGE);
-            break;
-        case octopus::LayerChange::Op::REMOVE:
-            // TODO: Invalid filter index
-            if (!octopusStrokeFillFilters.has_value() || octopusStrokeFillFilters->size() <= *layerChange.filterIndex) {
-                return DesignError::UNKNOWN_ERROR;
-            }
-            octopusStrokeFillFilters->erase(octopusStrokeFillFilters->begin()+*layerChange.filterIndex);
-            UPDATE_CHANGE_LEVEL(VISUAL_CHANGE);
-            break;
-    }
-    return DesignError::OK;
+    return applyFilters(layerChange, layer.shape->strokes[*layerChange.index].fill.filters, changeLevel);
 }
 
 /*static*/ DesignError LayerChangeApplication::applyOnEffectFillFilter(const octopus::LayerChange &layerChange, octopus::Layer &layer, ChangeLevel &changeLevel) {
     ODE_ASSERT(layerChange.subject == octopus::LayerChange::Subject::EFFECT_FILL_FILTER);
 
-    // TODO: Effect fill filter
-    std::vector<octopus::Effect> &octopusEffects = layer.effects;
-    if (!layerChange.index.has_value() || *layerChange.index >= layer.effects.size()) {
-        return DesignError::UNKNOWN_ERROR;
-    }
-    octopus::Effect &octopusEffect = octopusEffects[*layerChange.index];
+    CHECK_INDEX(effects);
+    octopus::Effect &octopusEffect = layer.effects[*layerChange.index];
+
     switch (octopusEffect.type) {
         case octopus::Effect::Type::OVERLAY:
             if (!octopusEffect.overlay.has_value()) {
                 return DesignError::UNKNOWN_ERROR;
             }
-            {
-                // TODO:
-            }
-            break;
+            return applyFilters(layerChange, octopusEffect.overlay->filters, changeLevel);
         case octopus::Effect::Type::STROKE:
             if (!octopusEffect.stroke.has_value()) {
                 return DesignError::UNKNOWN_ERROR;
             }
-            {
-                // TODO:
-            }
-            break;
+            return applyFilters(layerChange, octopusEffect.stroke->fill.filters, changeLevel);
         case octopus::Effect::Type::DROP_SHADOW:
         case octopus::Effect::Type::INNER_SHADOW:
         case octopus::Effect::Type::OUTER_GLOW:
@@ -392,11 +323,40 @@ namespace ode {
             if (!octopusEffect.filters.has_value()) {
                 return DesignError::UNKNOWN_ERROR;
             }
-            {
-                // TODO:
-            }
-            break;
+            return applyFilters(layerChange, octopusEffect.filters, changeLevel);
         case octopus::Effect::Type::OTHER:
+            break;
+    }
+
+    return DesignError::OK;
+}
+
+/*static*/ DesignError LayerChangeApplication::applyFilters(const octopus::LayerChange &layerChange, nonstd::optional<std::vector<octopus::Filter>> &filters, ChangeLevel &changeLevel) {
+
+    switch (layerChange.op) {
+        case octopus::LayerChange::Op::PROPERTY_CHANGE:
+            return DesignError::NOT_IMPLEMENTED;
+        case octopus::LayerChange::Op::REPLACE:
+            CHECK_ATTRIB(filter);
+            CHECK_FILTER_INDEX();
+            (*filters)[*layerChange.filterIndex] = *layerChange.values.filter;
+            UPDATE_CHANGE_LEVEL(VISUAL_CHANGE);
+            break;
+        case octopus::LayerChange::Op::INSERT:
+            CHECK_ATTRIB(filter);
+            if (filters.has_value()) {
+                filters->insert(layerChange.filterIndex.has_value() ? filters->begin()+*layerChange.filterIndex : filters->end(), *layerChange.values.filter);
+            } else {
+                filters = std::vector<octopus::Filter> {
+                    *layerChange.values.filter
+                };
+            }
+            UPDATE_CHANGE_LEVEL(VISUAL_CHANGE);
+            break;
+        case octopus::LayerChange::Op::REMOVE:
+            CHECK_FILTER_INDEX();
+            filters->erase(filters->begin()+*layerChange.filterIndex);
+            UPDATE_CHANGE_LEVEL(VISUAL_CHANGE);
             break;
     }
 
