@@ -9,22 +9,19 @@ namespace ode {
     if ((level) > changeLevel) \
         changeLevel = (level);
 
-// TODO: Invalid index error ?
 #define CHECK_INDEX(layerValues) \
     if (!layerChange.index.has_value() || layer.layerValues.size() <= *layerChange.index) { \
-        return DesignError::UNKNOWN_ERROR; \
+        return DesignError::INVALID_LAYER_CHANGE_INDEX; \
     }
 
-// TODO: Invalid filter index?
 #define CHECK_FILTER_INDEX() \
     if (!filters.has_value() || filters->size() <= *layerChange.filterIndex) { \
-        return DesignError::UNKNOWN_ERROR; \
+        return DesignError::INVALID_LAYER_CHANGE_INDEX; \
     }
 
-// TODO: Invalid layer change value error ?
 #define CHECK_ATTRIB(changeAttrib) \
     if (!layerChange.values.changeAttrib.has_value()) { \
-        return DesignError::UNKNOWN_ERROR; \
+        return DesignError::INVALID_LAYER_CHANGE_VALUE; \
     }
 
 #define CHECK_CHANGE(layerValues, changeAttrib) \
@@ -34,7 +31,7 @@ namespace ode {
 #define CHECK_INSERT(layerValues, changeAttrib) \
     CHECK_ATTRIB(changeAttrib) \
     if (layerChange.index.has_value() && layer.layerValues.size() <= *layerChange.index) { \
-        return DesignError::UNKNOWN_ERROR; \
+        return DesignError::INVALID_LAYER_CHANGE_INDEX; \
     }
 
 #define CHECK_REMOVE(layerValues) \
@@ -42,12 +39,12 @@ namespace ode {
 
 #define APPLY_PROP_CHANGE_LAYER(changeAttrib, level) \
     CHECK_ATTRIB(changeAttrib) \
-    layer.changeAttrib = layerChange.values.changeAttrib.value(); \
+    layer.changeAttrib = *layerChange.values.changeAttrib; \
     UPDATE_CHANGE_LEVEL(changeLevel)
 
 #define APPLY_PROP_CHANGE(element, changeAttrib, level) \
     CHECK_ATTRIB(changeAttrib) \
-    layer.element->changeAttrib = layerChange.values.changeAttrib.value(); \
+    layer.element->changeAttrib = *layerChange.values.changeAttrib; \
     UPDATE_CHANGE_LEVEL(changeLevel)
 
 #define APPLY_REPLACE(layerValues, changeAttrib, level) \
@@ -304,12 +301,12 @@ namespace ode {
     switch (octopusEffect.type) {
         case octopus::Effect::Type::OVERLAY:
             if (!octopusEffect.overlay.has_value()) {
-                return DesignError::UNKNOWN_ERROR;
+                return DesignError::WRONG_LAYER_TYPE;
             }
             return applyFilters(layerChange, octopusEffect.overlay->filters, changeLevel);
         case octopus::Effect::Type::STROKE:
             if (!octopusEffect.stroke.has_value()) {
-                return DesignError::UNKNOWN_ERROR;
+                return DesignError::WRONG_LAYER_TYPE;
             }
             return applyFilters(layerChange, octopusEffect.stroke->fill.filters, changeLevel);
         case octopus::Effect::Type::DROP_SHADOW:
@@ -321,7 +318,7 @@ namespace ode {
         case octopus::Effect::Type::BOUNDED_BLUR:
         case octopus::Effect::Type::BLUR:
             if (!octopusEffect.filters.has_value()) {
-                return DesignError::UNKNOWN_ERROR;
+                return DesignError::WRONG_LAYER_TYPE;
             }
             return applyFilters(layerChange, octopusEffect.filters, changeLevel);
         case octopus::Effect::Type::OTHER:
