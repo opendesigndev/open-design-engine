@@ -42,14 +42,17 @@ namespace ode {
     CHECK_INDEX(layerValues)
 
 #define APPLY_PROP_CHANGE_LAYER(changeAttrib, level) \
-    CHECK_ATTRIB(changeAttrib) \
-    layer.changeAttrib = layerChange.values.changeAttrib.value(); \
-    UPDATE_CHANGE_LEVEL(changeLevel)
+    if (layerChange.values.changeAttrib.has_value()) { \
+        layer.changeAttrib = layerChange.values.changeAttrib.value(); \
+        UPDATE_CHANGE_LEVEL(changeLevel) \
+    }
 
 #define APPLY_PROP_CHANGE(element, changeAttrib, level) \
-    CHECK_ATTRIB(changeAttrib) \
-    layer.element->changeAttrib = layerChange.values.changeAttrib.value(); \
-    UPDATE_CHANGE_LEVEL(changeLevel)
+    if (layerChange.values.changeAttrib.has_value()) { \
+        CHECK_ATTRIB(changeAttrib) \
+        layer.element->changeAttrib = layerChange.values.changeAttrib.value(); \
+        UPDATE_CHANGE_LEVEL(changeLevel) \
+    }
 
 #define APPLY_REPLACE(layerValues, changeAttrib, level) \
     CHECK_CHANGE(layerValues, changeAttrib) \
