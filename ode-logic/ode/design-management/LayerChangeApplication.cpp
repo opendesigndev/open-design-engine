@@ -174,6 +174,7 @@ namespace ode {
     if (layer.type != octopus::Layer::Type::SHAPE || !layer.shape.has_value()) {
         return DesignError::WRONG_LAYER_TYPE;
     }
+
     switch (layerChange.op) {
         case octopus::LayerChange::Op::PROPERTY_CHANGE:
             return DesignError::NOT_IMPLEMENTED;
@@ -197,6 +198,7 @@ namespace ode {
         return DesignError::WRONG_LAYER_TYPE;
     }
     std::vector<octopus::Shape::Stroke> &octopusStrokes = layer.shape->strokes;
+
     switch (layerChange.op) {
         case octopus::LayerChange::Op::PROPERTY_CHANGE:
             return DesignError::NOT_IMPLEMENTED;
@@ -245,6 +247,7 @@ namespace ode {
         return DesignError::WRONG_LAYER_TYPE;
     }
     std::vector<octopus::Shape::Stroke> &octopusStrokes = layer.shape->strokes;
+
     switch (layerChange.op) {
         case octopus::LayerChange::Op::PROPERTY_CHANGE:
             CHECK_CHANGE(shape->strokes, fill);

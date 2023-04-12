@@ -566,6 +566,43 @@ void drawLayerShapeStroke(int strokeI,
         });
     }
 
+    // Stroke fill filters
+    ImGui::Text("Fill filters:");
+    ImGui::SameLine(415);
+    if (ImGui::SmallButton(layerPropName(layerId, "stroke-fill-filter-add", strokeI, nonstd::nullopt, "+").c_str())) {
+        changeInsertBack(octopus::LayerChange::Subject::STROKE_FILL_FILTER, apiContext, layerId, strokeI, [](octopus::LayerChange::Values &values) {
+            values.filter = DEFAULT_FILL_FILTER;
+        });
+    }
+
+    if (octopusShapeStrokeFill.filters.has_value() && !octopusShapeStrokeFill.filters->empty()) {
+        int strokeFillFilterToRemove = -1;
+
+        for (int sffI = 0; sffI < static_cast<int>(octopusShapeStrokeFill.filters->size()); sffI++) {
+            ImGui::Text("  Filter #%i:", sffI);
+            ImGui::SameLine(100);
+
+            const octopus::Filter &octopusEffectStrokeFillFilter = (*octopusShapeStrokeFill.filters)[sffI];
+
+            bool strokeFillFilterVisible = octopusEffectStrokeFillFilter.visible;
+            if (ImGui::Checkbox(layerPropName(layerId, "stroke-fill-filter-visibility", strokeI, sffI).c_str(), &strokeFillFilterVisible)) {
+                changeReplace(octopus::LayerChange::Subject::STROKE_FILL_FILTER, apiContext, layerId, strokeI, sffI, [&octopusEffectStrokeFillFilter, strokeFillFilterVisible](octopus::LayerChange::Values &values) {
+                    values.filter = octopusEffectStrokeFillFilter;
+                    values.filter->visible = strokeFillFilterVisible;
+                });
+            }
+
+            ImGui::SameLine(415);
+            if (ImGui::SmallButton(layerPropName(layerId, "stroke-fill-filter-remove", strokeI, sffI, "-").c_str())) {
+                strokeFillFilterToRemove = static_cast<int>(sffI);
+            }
+        }
+
+        if (strokeFillFilterToRemove >= 0 && strokeFillFilterToRemove < static_cast<int>(octopusShapeStrokeFill.filters->size())) {
+            changeRemove(octopus::LayerChange::Subject::STROKE_FILL_FILTER, apiContext, layerId, strokeI, strokeFillFilterToRemove);
+        }
+    }
+
     ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
 }
 
