@@ -238,7 +238,7 @@ DesignError Component::modifyLayer(const std::string &id, const octopus::LayerCh
                         MOD_APPLY(name, LOGICAL_CHANGE);
                         MOD_APPLY(visible, COMPOSITION_CHANGE);
                         MOD_APPLY(opacity, COMPOSITION_CHANGE); // composition change if opacity changes between zero / non-zero
-                        MOD_APPLY(blendMode, VISUAL_CHANGE);
+                        MOD_APPLY(blendMode, COMPOSITION_CHANGE); // composition change if blend mode changed from/to PASS_THROUGH
                         MOD_APPLY(shape, BOUNDS_CHANGE);
                         MOD_APPLY(text, BOUNDS_CHANGE);
                         MOD_APPLY(maskBasis, COMPOSITION_CHANGE);
@@ -255,12 +255,13 @@ DesignError Component::modifyLayer(const std::string &id, const octopus::LayerCh
         }
         switch (changeLevel) {
             case HIERARCHY_CHANGE:
-                buildComplete = false;
-                // fallthrough
             case COMPOSITION_CHANGE:
                 ++rev;
                 // fallthrough
             case BOUNDS_CHANGE:
+                instance->invalidateBounds();
+                buildComplete = false;
+                // fallthrough
             case VISUAL_CHANGE:
             case LOGICAL_CHANGE:
             case NO_CHANGE:;
@@ -298,6 +299,8 @@ DesignError Component::transformLayer(const std::string &id, octopus::Fill::Posi
                 break;
         }
         toOctopusTransform(layer.transform, layerTranformation);
+        instance->invalidateBounds();
+        buildComplete = false;
         return DesignError::OK;
     }
     return DesignError::LAYER_NOT_FOUND;
@@ -441,7 +444,6 @@ DesignError Component::rebuild() {
 Result<LayerInstance *, DesignError> Component::rebuildSubtree(octopus::Layer *layer, const TransformationMatrix &parentTransform, double parentFeatureScale, const std::string &parentId) {
     LayerInstance &instance = instances[layer->id]; // TODO full instance id
     if ((const octopus::Layer *) instance != layer) {
-        // TODO if instance is up to date, then that may indicate duplicate layer ID error?
         instance = LayerInstance(layer, parentTransform, parentFeatureScale, parentId);
     } else
         instance.setParent(parentTransform, parentFeatureScale, parentId);

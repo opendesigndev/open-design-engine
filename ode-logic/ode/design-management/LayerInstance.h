@@ -22,7 +22,7 @@ public:
     static constexpr int FLAG_BOUNDS_UP_TO_DATE = 0x02;
     static constexpr int FLAG_SHAPE_UP_TO_DATE = 0x04;
     static constexpr int FLAG_SMALL_SHAPE = 0x1000; // is guaranteed not to be a big shape
-    static constexpr int FLAG_BIG_SHAPE = 0x2000; // Skia preprocessing takes too long and should be run in parallel
+    static constexpr int FLAG_BIG_SHAPE = 0x2000; // Skia preprocessing takes too long and should be run asynchronously
 
     LayerInstance() = default;
     LayerInstance(octopus::Layer *layer, const TransformationMatrix &parentTransform, double parentFeatureScale, const std::string &parentId);
@@ -32,6 +32,7 @@ public:
     void setLogicalBounds(const UntransformedBounds &bounds);
     void setParent(const TransformationMatrix &parentTransform, double parentFeatureScale, const std::string &parentId);
     void invalidate();
+    void invalidateBounds();
     void clearAnimations();
     void addAnimation(const LayerAnimation &animation);
 
