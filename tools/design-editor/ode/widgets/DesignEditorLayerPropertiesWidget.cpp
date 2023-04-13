@@ -374,20 +374,14 @@ void drawLayerTransformation(const ODE_StringRef &layerId,
                              DesignEditorContext::Api &apiContext,
                              const ODE_LayerMetrics &layerMetrics) {
     const float a = static_cast<float>(layerMetrics.transformation.matrix[0]);
-    const float b = static_cast<float>(layerMetrics.transformation.matrix[2]);
-    const float c = static_cast<float>(layerMetrics.transformation.matrix[1]);
+    const float b = static_cast<float>(layerMetrics.transformation.matrix[1]);
+    const float c = static_cast<float>(layerMetrics.transformation.matrix[2]);
     const float d = static_cast<float>(layerMetrics.transformation.matrix[3]);
     const float trX = static_cast<float>(layerMetrics.transformation.matrix[4]);
     const float trY = static_cast<float>(layerMetrics.transformation.matrix[5]);
 
-    Vector2f translation {
-        trX,
-        trY,
-    };
-    Vector2f scale {
-        sqrt(a*a+b*b),
-        sqrt(c*c+d*d),
-    };
+    Vector2f translation { trX, trY };
+    Vector2f scale { sqrt(a*a+b*b), sqrt(c*c+d*d) };
     float rotation = atan(c/d) * (180.0f/M_PI);
 
     const Vector2f origTranslation = translation;
@@ -944,8 +938,8 @@ void drawLayerShapeFill(int fillI,
         const auto positioningTransform = octopusFill.positioning.has_value() ? octopusFill.positioning->transform : defaultGradientFillPositioningTransform;
 
         const float a = static_cast<float>(positioningTransform[0]);
-        const float b = static_cast<float>(positioningTransform[2]);
-        const float c = static_cast<float>(positioningTransform[1]);
+        const float b = static_cast<float>(positioningTransform[1]);
+        const float c = static_cast<float>(positioningTransform[2]);
         const float d = static_cast<float>(positioningTransform[3]);
         const float trX = static_cast<float>(positioningTransform[4]);
         const float trY = static_cast<float>(positioningTransform[5]);
