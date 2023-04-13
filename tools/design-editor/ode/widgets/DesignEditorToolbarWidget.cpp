@@ -82,7 +82,7 @@ void drawGroupButtons(DesignEditorContext::Api &apiContext,
                     group.id = *idOpt;
                     group.name = *idOpt;
                 }
-                return ode::octopus_builder::buildOctopus("Group (WIP)", group);
+                return ode::octopus_builder::buildOctopus("Group", group);
             }
 
             ImGui::SameLine();
@@ -103,7 +103,7 @@ void drawGroupButtons(DesignEditorContext::Api &apiContext,
                         maskGroup.id = *idOpt;
                         maskGroup.name = *idOpt;
                     }
-                    return ode::octopus_builder::buildOctopus("Mask Group (WIP)", maskGroup);
+                    return ode::octopus_builder::buildOctopus("Mask Group", maskGroup);
                 }
             }
 
