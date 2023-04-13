@@ -22,6 +22,7 @@ runs:
         if [ $GITHUB_REF_TYPE == tag ]; then
           if [ "v$BASE_VERSION" == "${{ inputs.ref_name }}" ]; then
             echo "ODE_NPM_VERSION=$BASE_VERSION" >> $GITHUB_ENV
+            echo "ODE_SHOULD_PUBLISH_TO_NPM=true" >> $GITHUB_ENV
           else
             echo "ODE_NPM_VERSION=$BASE_VERSION-${{ inputs.ref_name }}" >> $GITHUB_ENV
           fi
@@ -30,5 +31,7 @@ runs:
         fi
         LABELS=`GH_TOKEN="${{ inputs.github_token }}" gh pr view "${{ inputs.ref_name }}" --json labels --jq '.labels.[].name' || true`
         if grep 'ci:npm-publish' <<< $LABELS; then
+          echo "ODE_SHOULD_PUBLISH_TO_NPM=true" >> $GITHUB_ENV
+        elif [ '${{ inputs.ref_name }}' = main ]; then
           echo "ODE_SHOULD_PUBLISH_TO_NPM=true" >> $GITHUB_ENV
         fi
