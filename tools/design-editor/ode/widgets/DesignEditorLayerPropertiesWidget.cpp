@@ -69,12 +69,6 @@ const char *FILL_GRADIENT_TYPES_STR[] = {
     "DIAMOND",
 };
 
-const char *FILL_GRADIENT_INTERPOLATIONS_STR[] = {
-    "LINEAR",
-    "POWER",
-    "REVERSE_POWER",
-};
-
 const char *FILL_POSITIONING_LAYOUTS_STR[] = {
     "STRETCH",
     "FILL",

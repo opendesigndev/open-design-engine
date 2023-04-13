@@ -28,26 +28,15 @@ namespace {
 
 #define CHECK(x) do { if ((x)) return -1; } while (false)
 
+const Vector2f DEFAULT_NEW_SHAPE_SIZE { 100, 50 };
+const Color DEFAULT_NEW_SHAPE_COLOR(0.5, 0.5, 0.5, 1.0);
+
 void fileDropCallback(GLFWwindow* window, int count, const char** paths) {
     glfwFocusWindow(window);
     if (count == 1) {
         DesignEditorWindow &rgiWindow = DesignEditorWindow::getInstance();
         rgiWindow.readOctopusFile(paths[0]);
     }
-}
-
-std::vector<ODE_StringRef> listChildLayers(const ODE_LayerList &layerList,
-                                           const ODE_StringRef &rootLayerId) {
-    std::vector<ODE_StringRef> childLayerIds;
-
-    for (int i = 0; i < layerList.n; i++) {
-        const ODE_LayerList::Entry &entry = layerList.entries[i];
-        if (strcmp(entry.parentId.data, rootLayerId.data) == 0) {
-            childLayerIds.emplace_back(entry.id);
-        }
-    }
-
-    return childLayerIds;
 }
 
 ODE_StringRef lastChildLayerId(const ODE_LayerList &layerList,
@@ -265,12 +254,10 @@ int DesignEditorWindow::display() {
             if (data->context.mode == DesignEditorMode::ADD_RECTANGLE ||
                 data->context.mode == DesignEditorMode::ADD_ELLIPSE ||
                 data->context.mode == DesignEditorMode::ADD_TEXT) {
-                const Vector2f newLayerSize { 100, 50 };
-
-                const octopus::Octopus octopus = [mode = data->context.mode, &layerList = data->context.api.layerList, &newLayerSize]()->octopus::Octopus {
+                const octopus::Octopus octopus = [mode = data->context.mode, &layerList = data->context.api.layerList]()->octopus::Octopus {
                     if (mode == DesignEditorMode::ADD_RECTANGLE) {
-                        ode::octopus_builder::ShapeLayer rectangleShape(0, 0, newLayerSize.x, newLayerSize.y);
-                        rectangleShape.setColor(Color(0.5, 0.5, 0.5, 1.0));
+                        ode::octopus_builder::ShapeLayer rectangleShape(0, 0, DEFAULT_NEW_SHAPE_SIZE.x, DEFAULT_NEW_SHAPE_SIZE.y);
+                        rectangleShape.setColor(DEFAULT_NEW_SHAPE_COLOR);
                         const std::optional<std::string> idOpt = findAvailableLayerId("SHAPE", layerList);
                         if (idOpt.has_value()) {
                             rectangleShape.id = *idOpt;
@@ -279,10 +266,11 @@ int DesignEditorWindow::display() {
                         return ode::octopus_builder::buildOctopus("Rectangle", rectangleShape);
 
                     } else if (mode == DesignEditorMode::ADD_ELLIPSE) {
-                        const std::string w = std::to_string(newLayerSize.x);
-                        const std::string ratio = std::to_string(newLayerSize.x / newLayerSize.y);
-                        ode::octopus_builder::ShapeLayer ellipseShape(0, 0, newLayerSize.x, newLayerSize.y);
+                        const std::string w = std::to_string(DEFAULT_NEW_SHAPE_SIZE.x);
+                        const std::string ratio = std::to_string(DEFAULT_NEW_SHAPE_SIZE.x / DEFAULT_NEW_SHAPE_SIZE.y);
+                        ode::octopus_builder::ShapeLayer ellipseShape(0, 0, DEFAULT_NEW_SHAPE_SIZE.x, DEFAULT_NEW_SHAPE_SIZE.y);
                         ellipseShape.setPath("M 0,0 a " + ratio + " 1 0 0 0 " + w + " 0 a " + ratio + " 1 0 0 0 -" + w + " 0");
+                        ellipseShape.setColor(DEFAULT_NEW_SHAPE_COLOR);
                         const std::optional<std::string> idOpt = findAvailableLayerId("ELLIPSE", layerList);
                         if (idOpt.has_value()) {
                             ellipseShape.id = *idOpt;
@@ -292,7 +280,7 @@ int DesignEditorWindow::display() {
 
                     } else {
                         ode::octopus_builder::TextLayer textShape("Text");
-                        textShape.setColor(Color(0.5, 0.5, 0.5, 1.0));
+                        textShape.setColor(DEFAULT_NEW_SHAPE_COLOR);
                         const std::optional<std::string> idOpt = findAvailableLayerId("TEXT", layerList);
                         if (idOpt.has_value()) {
                             textShape.id = *idOpt;
