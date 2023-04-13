@@ -1,6 +1,14 @@
 
 #include "DesignEditorContext.h"
 
+void DesignEditorContext::LoadedOctopus::clear() {
+    filePath = "";
+}
+
+bool DesignEditorContext::LoadedOctopus::isLoaded() const {
+    return !filePath.empty() && !octopusJson.empty();
+}
+
 void DesignEditorContext::LayerSelection::select(const char *layerID) {
     clear();
 

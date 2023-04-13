@@ -61,7 +61,8 @@ void drawDesignViewWidget(const DesignEditorContext::Api &apiContext,
                           DesignEditorContext::Textures &texturesContext,
                           DesignEditorContext::Canvas &canvasContext,
                           const DesignEditorContext::LayerSelection &layerSelectionContext,
-                          const ODE_StringRef &topLayerId) {
+                          const ODE_StringRef &topLayerId,
+                          int selectedDisplayMode) {
     ImGui::Begin("Interactive Design View");
 
     if (apiContext.bitmap.width > 0 && apiContext.bitmap.height > 0) {
@@ -113,7 +114,7 @@ void drawDesignViewWidget(const DesignEditorContext::Api &apiContext,
             });
         }
 
-        texturesContext.designImageTexture = renderer.blendImageToTexture(std::move(bitmap), placement, 2, selectionRectangle, highlightRectangles);
+        texturesContext.designImageTexture = renderer.blendImageToTexture(std::move(bitmap), placement, selectedDisplayMode, selectionRectangle, highlightRectangles);
 
         drawImGuiWidgetTexture(texturesContext.designImageTexture->getInternalGLHandle(),
                                texturesContext.designImageTexture->dimensions().x,

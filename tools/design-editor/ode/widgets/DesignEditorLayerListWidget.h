@@ -2,8 +2,7 @@
 #pragma once
 
 #include "../DesignEditorContext.h"
-#include "../DesignEditorLoadedOctopus.h"
 
 /// Draw DE Layer List widget
-void drawLayerListWidget(const DesignEditorLoadedOctopus &loadedOctopus,
+void drawLayerListWidget(const ODE_LayerList &layerList,
                          DesignEditorContext::LayerSelection &layerSelectionContext);

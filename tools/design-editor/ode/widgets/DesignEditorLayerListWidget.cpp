@@ -67,18 +67,18 @@ void drawLayerListRecursiveStep(const ODE_LayerList &layerList,
 
 }
 
-void drawLayerListWidget(const DesignEditorLoadedOctopus &loadedOctopus,
+void drawLayerListWidget(const ODE_LayerList &layerList,
                          DesignEditorContext::LayerSelection &layerSelectionContext) {
     ImGui::Begin("Layer List");
 
-    if (loadedOctopus.isLoaded()) {
+    if (layerList.entries != nullptr) {
         int idxClicked = -1;
-        drawLayerListRecursiveStep(loadedOctopus.layerList, 0, idxClicked, layerSelectionContext.layerIDs);
+        drawLayerListRecursiveStep(layerList, 0, idxClicked, layerSelectionContext.layerIDs);
         if (idxClicked >= 0) {
             if (isImGuiMultiselectKeyModifierPressed()) {
-                layerSelectionContext.add(loadedOctopus.layerList.entries[idxClicked].id.data);
+                layerSelectionContext.add(layerList.entries[idxClicked].id.data);
             } else {
-                layerSelectionContext.select(loadedOctopus.layerList.entries[idxClicked].id.data);
+                layerSelectionContext.select(layerList.entries[idxClicked].id.data);
             }
         }
     } else {

@@ -610,7 +610,7 @@ void drawLayerShapeFill(int fillI,
                         const ODE_StringRef &layerId,
                         DesignEditorContext::Api &apiContext,
                         DesignEditorContext::FileDialog &fileDialogContext,
-                        DesignEditorLoadedOctopus &loadedOctopus,
+                        DesignEditorContext::LoadedOctopus &loadedOctopus,
                         const octopus::Fill &octopusFill,
                         const ODE_LayerMetrics &layerMetrics) {
     const double defaultGradientFillPositioningTransform[6] {
@@ -1041,7 +1041,7 @@ void drawLayerShapeFill(int fillI,
 void drawLayerShape(const ODE_StringRef &layerId,
                     DesignEditorContext::Api &apiContext,
                     DesignEditorContext::FileDialog &fileDialogContext,
-                    DesignEditorLoadedOctopus &loadedOctopus,
+                    DesignEditorContext::LoadedOctopus &loadedOctopus,
                     const octopus::Shape &octopusShape,
                     const ODE_LayerMetrics &layerMetrics) {
     // Rounded corner radius (for rectangles)
@@ -1566,7 +1566,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
 }
 
 void drawLayerPropertiesWidget(DesignEditorContext::Api &apiContext,
-                               DesignEditorLoadedOctopus &loadedOctopus,
+                               DesignEditorContext::LoadedOctopus &loadedOctopus,
                                DesignEditorContext::LayerSelection &layerSelectionContext,
                                DesignEditorContext::FileDialog &fileDialogContext) {
     ImGui::Begin("Selected Layer Properties");
@@ -1587,7 +1587,7 @@ void drawLayerPropertiesWidget(DesignEditorContext::Api &apiContext,
         return;
     }
 
-    ODE_LayerList &layerList = loadedOctopus.layerList;
+    ODE_LayerList &layerList = apiContext.layerList;
 
     for (int i = 0; i < layerList.n; ++i) {
         const ODE_LayerList::Entry &layer = layerList.entries[i];

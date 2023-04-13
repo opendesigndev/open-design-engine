@@ -7,6 +7,8 @@
 #include <ode/renderer-api.h>
 #include <ode-renderer.h>
 
+#include "DesignEditorImageVisualizationParams.h"
+
 enum class DesignEditorMode {
     SELECT,
     ADD_RECTANGLE,
@@ -26,10 +28,23 @@ struct DesignEditorContext {
         ODE_ComponentHandle component;
         ODE_Bitmap bitmap;
         ODE_PR1_FrameView frameView;
+        /// Layer list
+        ODE_LayerList layerList;
     } api;
 
     /// Editor mode
     DesignEditorMode mode = DesignEditorMode::SELECT;
+
+    /// Loaded octopus data
+    struct LoadedOctopus {
+        /// The file path of the Octopus file loaded.
+        ode::FilePath filePath;
+        /// Octopus Json string.
+        std::string octopusJson;
+
+        void clear();
+        bool isLoaded() const;
+    } loadedOctopus;
 
     /// ImGui window global state
     struct ImGuiWindow {
@@ -43,9 +58,7 @@ struct DesignEditorContext {
         bool showDesignView = true;
         bool showLayerProperties = true;
         bool showImGuiDebugger = false;
-    };
-    Widgets widgets;
-    Widgets preWidgets;
+    } widgets;
 
     /// State of the file dialog
     struct FileDialog {
@@ -82,13 +95,8 @@ struct DesignEditorContext {
         bool isSelected(const char *layerID);
     } layerSelection;
 
-    struct Icons {
-        ode::TexturePtr cursorTexture = nullptr;
-        ode::TexturePtr addRectangleTexture = nullptr;
-        ode::TexturePtr addEllipseTexture = nullptr;
-        ode::TexturePtr addTextTexture = nullptr;
-    } icons;
-
+    /// Current image visualization params
+    DesignEditorImageVisualizationParams imageVisualizationParams;
 };
 
 inline bool operator==(const DesignEditorContext::Widgets &a, const DesignEditorContext::Widgets &b) {
