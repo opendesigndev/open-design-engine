@@ -63,7 +63,7 @@ void drawDesignViewWidget(const DesignEditorContext::Api &apiContext,
                           const DesignEditorContext::LayerSelection &layerSelectionContext,
                           const ODE_StringRef &topLayerId,
                           int selectedDisplayMode) {
-    ImGui::Begin("Interactive Design View");
+    ImGui::Begin("Design View");
 
     if (apiContext.bitmap.width > 0 && apiContext.bitmap.height > 0) {
         ode::Bitmap bitmap(PixelFormat::PREMULTIPLIED_RGBA, reinterpret_cast<const void*>(apiContext.bitmap.pixels), apiContext.bitmap.width, apiContext.bitmap.height);
@@ -106,6 +106,7 @@ void drawDesignViewWidget(const DesignEditorContext::Api &apiContext,
             layerBounds.a.y += trY;
             layerBounds.b.x += trX;
             layerBounds.b.y += trY;
+            // TODO: Fix scale and rotate highlight rectangles
             highlightRectangles.emplace_back(ode::Rectangle<float> {
                 std::max(0.0f, static_cast<float>(layerBounds.a.x) / w),
                 std::max(0.0f, static_cast<float>(layerBounds.a.y) / h),

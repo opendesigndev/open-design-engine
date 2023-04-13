@@ -6,7 +6,7 @@
 CanvasShader::CanvasShader() { }
 
 bool CanvasShader::initialize(const DesignEditorShader::SharedVertexShader &sharedVertexShader) {
-    return DesignEditorShader::initialize(sharedVertexShader, "design-editor-fs");
+    return DesignEditorShader::initialize(sharedVertexShader, "design-editor-canvas-fs");
 }
 
 void CanvasShader::bind(const ScaledBounds& srcBounds,

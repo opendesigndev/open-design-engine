@@ -17,7 +17,7 @@ inline ScaledBounds convertToScaledBounds(const PixelBounds &pb) {
 }
 }
 
-DesignEditorRenderer::DesignEditorRenderer() : sharedVertexShader("diagnostics-shared-vs") {
+DesignEditorRenderer::DesignEditorRenderer() : sharedVertexShader("design-editor-shared-vs") {
     const bool sharedVsInitialized = sharedVertexShader.initialize();
     if (!sharedVsInitialized) {
         fprintf(stderr, "Failed to initialize vertex shader\n");

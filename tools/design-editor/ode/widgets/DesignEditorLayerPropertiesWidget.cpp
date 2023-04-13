@@ -1039,19 +1039,17 @@ void drawLayerShape(const ODE_StringRef &layerId,
                     const octopus::Shape &octopusShape,
                     const ODE_LayerMetrics &layerMetrics) {
     // Rounded corner radius (for rectangles)
-    {
-        const bool isRectangle = (octopusShape.path.has_value() && octopusShape.path->type == octopus::Path::Type::RECTANGLE);
-        if (isRectangle) {
-            const octopus::Path &octopusShapePath = *octopusShape.path;
-            float cornerRadius = octopusShape.path->cornerRadius.has_value() ? *octopusShape.path->cornerRadius : 0.0f;
-            ImGui::Text("Corner radius:");
-            ImGui::SameLine(100);
-            if (ImGui::DragFloat(layerPropName(layerId, "shape-rectangle-corner-radius").c_str(), &cornerRadius, 1.0f, 0.0f, 1000.0f)) {
-                changeProperty(octopus::LayerChange::Subject::SHAPE, apiContext, layerId, nonstd::nullopt, [&cornerRadius, &octopusShapePath](octopus::LayerChange::Values &values) {
-                    values.path = octopusShapePath;
-                    values.path->cornerRadius = cornerRadius;
-                });
-            }
+    const bool isRectangle = (octopusShape.path.has_value() && octopusShape.path->type == octopus::Path::Type::RECTANGLE);
+    if (isRectangle) {
+        const octopus::Path &octopusShapePath = *octopusShape.path;
+        float cornerRadius = octopusShape.path->cornerRadius.has_value() ? *octopusShape.path->cornerRadius : 0.0f;
+        ImGui::Text("Corner radius:");
+        ImGui::SameLine(100);
+        if (ImGui::DragFloat(layerPropName(layerId, "shape-rectangle-corner-radius").c_str(), &cornerRadius, 1.0f, 0.0f, 1000.0f)) {
+            changeProperty(octopus::LayerChange::Subject::SHAPE, apiContext, layerId, nonstd::nullopt, [&cornerRadius, &octopusShapePath](octopus::LayerChange::Values &values) {
+                values.path = octopusShapePath;
+                values.path->cornerRadius = cornerRadius;
+            });
         }
 
         ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
