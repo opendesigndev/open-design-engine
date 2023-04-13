@@ -207,9 +207,17 @@ DesignError Component::removeLayer(const std::string &id) {
             });
             if (layerInParentIt != (*parentInstance)->layers->end()) {
                 (*parentInstance)->layers->erase(layerInParentIt);
+                std::vector<std::string> instancesToErase;
+                for (const std::pair<const std::string, ode::LayerInstance> &instance : instances) {
+                    if (isInstanceInSubtree(id, instance.first)) {
+                        instancesToErase.emplace_back(instance.first);
+                    }
+                }
+                for (const std::string &instanceToErase : instancesToErase) {
+                    instances.erase(instanceToErase);
+                }
                 ++rev;
                 buildComplete = false;
-                instances.erase(id);
                 return DesignError::OK;
             }
         }
@@ -483,6 +491,16 @@ LayerInstance *Component::findInstance(const std::string &id) {
     if (it != instances.end())
         return &it->second;
     return nullptr;
+}
+
+bool Component::isInstanceInSubtree(const std::string &subtreeId, const std::string &instanceId) {
+    if (LayerInstance *instance = findInstance(instanceId)) {
+        if (instance->id() == subtreeId) {
+            return true;
+        }
+        return isInstanceInSubtree(subtreeId, instance->getParentId());
+    }
+    return false;
 }
 
 RendexSubtree Component::assembleLayer(const LayerInstance &instance, const nonstd::optional<octopus::MaskBasis> &maskBasis) {
