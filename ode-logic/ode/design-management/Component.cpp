@@ -8,7 +8,7 @@
 #include "../render-assembly/assembly.h"
 #include "../render-assembly/graph-transform.h"
 #include "../animation/animate.h"
-#include "LayerChangeApplication.h"
+#include "layer-change-apply.h"
 
 namespace ode {
 
@@ -229,28 +229,26 @@ DesignError Component::modifyLayer(const std::string &id, const octopus::LayerCh
     if (DesignError error = requireBuild())
         return error;
     if (LayerInstance *instance = findInstance(id)) {
-        octopus::Layer &layer = *(octopus::Layer *) *instance;
-        LayerChangeApplication::ChangeLevel changeLevel = LayerChangeApplication::NO_CHANGE;
-        if (const DesignError error = LayerChangeApplication::apply(layerChange, layer, changeLevel)) {
-            return error;
-        }
-        switch (changeLevel) {
-            case LayerChangeApplication::HIERARCHY_CHANGE:
-                buildComplete = false;
-                // fallthrough
-            case LayerChangeApplication::COMPOSITION_CHANGE:
-                ++rev;
-                // fallthrough
-            case LayerChangeApplication::BOUNDS_CHANGE:
-            case LayerChangeApplication::VISUAL_CHANGE:
-            case LayerChangeApplication::LOGICAL_CHANGE:
-            case LayerChangeApplication::NO_CHANGE:;
-        }
-        // TODO: Force re-initialize instance shape and text
-        instance->invalidate();
-        instance->initializeShape();
-        instance->initializeText(fontBase.get());
-        return DesignError::OK;
+        if (Result<ChangeLevel, DesignError> result = applyLayerChange(**instance, layerChange)) {
+            switch (result.value()) {
+                case ChangeLevel::HIERARCHY:
+                    buildComplete = false;
+                    // fallthrough
+                case ChangeLevel::COMPOSITION:
+                    ++rev;
+                    // fallthrough
+                case ChangeLevel::BOUNDS:
+                case ChangeLevel::VISUAL:
+                case ChangeLevel::LOGICAL:
+                case ChangeLevel::NONE:;
+            }
+            // TODO: Force re-initialize instance shape and text
+            instance->invalidate();
+            instance->initializeShape();
+            instance->initializeText(fontBase.get());
+            return DesignError::OK;
+        } else
+            return result.error();
     }
     return DesignError::LAYER_NOT_FOUND;
 }

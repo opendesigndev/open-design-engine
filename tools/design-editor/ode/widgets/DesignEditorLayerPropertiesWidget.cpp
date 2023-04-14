@@ -1,6 +1,9 @@
 
+#define _USE_MATH_DEFINES
+
 #include "DesignEditorLayerPropertiesWidget.h"
 
+#include <cmath>
 #include <imgui.h>
 #include <ImGuiFileDialog.h>
 
