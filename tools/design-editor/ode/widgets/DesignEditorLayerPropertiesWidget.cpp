@@ -550,7 +550,7 @@ void drawLayerShapeStroke(int strokeI,
     ImGui::Text("Color:");
     ImGui::SameLine(100);
     if (ImGui::ColorPicker4(layerPropName(layerId, "shape-stroke-color", strokeI).c_str(), (float*)&imColor, ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview)) {
-        changeProperty(octopus::LayerChange::Subject::STROKE_FILL, apiContext, layerId, strokeI, [&imColor, &octopusShapeStrokeFill](octopus::LayerChange::Values &values) {
+        changeProperty(octopus::LayerChange::Subject::STROKE, apiContext, layerId, strokeI, [&imColor, &octopusShapeStrokeFill](octopus::LayerChange::Values &values) {
             values.fill = octopusShapeStrokeFill;
             values.fill->type = octopus::Fill::Type::COLOR;
             values.fill->color = toOctopusColor(imColor);
