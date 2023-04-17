@@ -414,8 +414,13 @@ void drawLayerTransformation(const ODE_StringRef &layerId,
     ImGui::SameLine(100);
     if (ImGui::DragFloat(layerPropName(layerId, "layer-rotation").c_str(), &rotation)) {
         const float rotationChangeRad = -(rotation-origRotation)*M_PI/180.0f;
+        const ODE_Transformation trToOrigin { 1,0,0,1,-translation.x,-translation.y };
         const ODE_Transformation newTransformation { cos(rotationChangeRad),-sin(rotationChangeRad),sin(rotationChangeRad),cos(rotationChangeRad),0,0 };
-        if (ode_component_transformLayer(apiContext.component, layerId, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation) == ODE_RESULT_OK) {
+        const ODE_Transformation trFromOrigin { 1,0,0,1,translation.x,translation.y };
+
+        if (ode_component_transformLayer(apiContext.component, layerId, ODE_TRANSFORMATION_BASIS_PARENT_COMPONENT, trToOrigin) == ODE_RESULT_OK &&
+            ode_component_transformLayer(apiContext.component, layerId, ODE_TRANSFORMATION_BASIS_PARENT_COMPONENT, newTransformation) == ODE_RESULT_OK &&
+            ode_component_transformLayer(apiContext.component, layerId, ODE_TRANSFORMATION_BASIS_PARENT_COMPONENT, trFromOrigin) == ODE_RESULT_OK) {
             ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView);
         }
     }
