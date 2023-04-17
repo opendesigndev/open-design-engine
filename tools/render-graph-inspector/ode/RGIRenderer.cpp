@@ -45,7 +45,7 @@ TexturePtr RGIRenderer::blendImageToTexture(const BitmapPtr &bitmap, const Scale
     bind();
 
     // Bind framebuffer
-    TextureFrameBufferPtr outTex = tfbm.acquire(bounds);
+    TextureFrameBufferPtr outTex = tfbm.acquireExact(bounds);
     outTex->bind();
 
     // Clear the background with the specified color
@@ -87,7 +87,7 @@ TexturePtr RGIRenderer::compareImagesToTexture(const BitmapPtr &bitmapL, const B
     bind();
 
     // Bind framebuffer
-    TextureFrameBufferPtr outTex = tfbm.acquire(dstBounds);
+    TextureFrameBufferPtr outTex = tfbm.acquireExact(dstBounds);
     outTex->bind();
 
     // Clear the background with the specified color

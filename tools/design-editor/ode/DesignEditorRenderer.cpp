@@ -46,7 +46,7 @@ TexturePtr DesignEditorRenderer::blendImageToTexture(Bitmap &&bitmap,
     bind();
 
     // Bind framebuffer
-    TextureFrameBufferPtr outTex = tfbm.acquire(bounds);
+    TextureFrameBufferPtr outTex = tfbm.acquireExact(bounds);
     outTex->bind();
 
     // Clear the background with the specified color
