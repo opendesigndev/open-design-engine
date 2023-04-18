@@ -400,7 +400,6 @@ void drawLayerTransformation(const ODE_StringRef &layerId,
         }
     }
 
-    // TODO: Fix transformation scale and rotation
     ImGui::Text("Scale:");
     ImGui::SameLine(100);
     if (ImGui::DragFloat2(layerPropName(layerId, "layer-scale").c_str(), &scale.x, 0.05f, 0.0f, 100.0f)) {
@@ -413,7 +412,7 @@ void drawLayerTransformation(const ODE_StringRef &layerId,
     ImGui::Text("Rotation:");
     ImGui::SameLine(100);
     if (ImGui::DragFloat(layerPropName(layerId, "layer-rotation").c_str(), &rotation)) {
-        const float rotationChangeRad = -(rotation-origRotation)*M_PI/180.0f;
+        const float rotationChangeRad = (rotation-origRotation)*M_PI/180.0f;
         const ODE_Transformation trToOrigin { 1,0,0,1,-translation.x,-translation.y };
         const ODE_Transformation newTransformation { cos(rotationChangeRad),-sin(rotationChangeRad),sin(rotationChangeRad),cos(rotationChangeRad),0,0 };
         const ODE_Transformation trFromOrigin { 1,0,0,1,translation.x,translation.y };
