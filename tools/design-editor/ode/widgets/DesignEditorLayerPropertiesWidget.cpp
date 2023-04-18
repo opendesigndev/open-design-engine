@@ -382,10 +382,15 @@ void drawLayerTransformation(const ODE_StringRef &layerId,
     const float d = static_cast<float>(layerMetrics.transformation.matrix[3]);
     const float trX = static_cast<float>(layerMetrics.transformation.matrix[4]);
     const float trY = static_cast<float>(layerMetrics.transformation.matrix[5]);
+    const float s = sqrt(a*a+b*b);
+    const float r = sqrt(c*c+d*d);
 
     Vector2f translation { trX, trY };
-    Vector2f scale { sqrt(a*a+b*b), sqrt(c*c+d*d) };
-    float rotation = atan(c/d) * (180.0f/M_PI);
+    Vector2f scale { s, r };
+    float rotation = (b < 0 ? acos(a/r) : -acos(a/r)) * (180.0/M_PI);
+    if (rotation < 0.0f) {
+        rotation += 360.0f;
+    }
 
     const Vector2f origTranslation = translation;
     const Vector2f origScale = scale;
@@ -950,12 +955,18 @@ void drawLayerShapeFill(int fillI,
         const float d = static_cast<float>(positioningTransform[3]);
         const float trX = static_cast<float>(positioningTransform[4]);
         const float trY = static_cast<float>(positioningTransform[5]);
+        const float det = a*d-b*c;
+        const float s = sqrt(a*a+b*b);
+        const float r = sqrt(c*c+d*d);
 
         Vector2f translation { trX, trY };
-        Vector2f scale { sqrt(a*a+b*b), sqrt(c*c+d*d) };
+        Vector2f scale { s, r };
         float rotation = atan(c/d) * (180.0f/M_PI);
+        // TODO: Fix transformation rotation outside of <-90,90>
+        if (rotation < 0.0f) {
+            rotation += 360.0f;
+        }
 
-        // TODO: Fix transformation scale and rotation
         const auto updateFill = [&octopusFill, &translation, &scale, &rotation](octopus::LayerChange::Values &values) {
             values.fill = octopusFill;
             if (!octopusFill.positioning.has_value()) {
@@ -964,7 +975,7 @@ void drawLayerShapeFill(int fillI,
                     octopus::Fill::Positioning::Origin::LAYER,
                 };
             }
-            const float rotationRad = rotation * (M_PI/180.0f);
+            const float rotationRad = -rotation * (M_PI/180.0f);
             values.fill->positioning->transform[0] = scale.x * cos(rotationRad);
             values.fill->positioning->transform[1] = scale.x * sin(rotationRad);
             values.fill->positioning->transform[2] = - scale.y * sin(rotationRad);
