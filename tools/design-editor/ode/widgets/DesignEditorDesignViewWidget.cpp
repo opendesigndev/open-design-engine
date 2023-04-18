@@ -56,19 +56,20 @@ void drawImGuiWidgetTexture(GLuint textureHandle,
 
 }
 
-void drawDesignViewWidget(const DesignEditorContext::Api &apiContext,
+void drawDesignViewWidget(const ODE_ComponentHandle &component,
+                          const ODE_Bitmap &bitmap,
                           DesignEditorRenderer &renderer,
-                          DesignEditorContext::Textures &texturesContext,
-                          DesignEditorContext::Canvas &canvasContext,
-                          const DesignEditorContext::LayerSelection &layerSelectionContext,
+                          DesignEditorUIState::Textures &texturesContext,
+                          DesignEditorUIState::Canvas &canvasContext,
+                          const DesignEditorUIState::LayerSelection &layerSelection,
                           const ODE_StringRef &topLayerId,
                           int selectedDisplayMode) {
     ImGui::Begin("Design View");
 
-    if (apiContext.bitmap.width > 0 && apiContext.bitmap.height > 0) {
-        ode::Bitmap bitmap(PixelFormat::PREMULTIPLIED_RGBA, reinterpret_cast<const void*>(apiContext.bitmap.pixels), apiContext.bitmap.width, apiContext.bitmap.height);
+    if (bitmap.width > 0 && bitmap.height > 0) {
+        ode::Bitmap bmp(PixelFormat::PREMULTIPLIED_RGBA, reinterpret_cast<const void*>(bitmap.pixels), bitmap.width, bitmap.height);
 
-        const ScaledBounds placement {0,0,static_cast<double>(bitmap.width()),static_cast<double>(bitmap.height())};
+        const ScaledBounds placement {0,0,static_cast<double>(bmp.width()),static_cast<double>(bmp.height())};
 
         const auto toCanvasSpace = [&canvasContext](const ImVec2 &posInScreenSpace)->ImVec2 {
             return ImVec2 {
@@ -91,14 +92,14 @@ void drawDesignViewWidget(const DesignEditorContext::Api &apiContext,
         }
 
         AnnotationRectangles highlightRectangles;
-        for (const ODE_StringRef &layerId : layerSelectionContext.layerIDs) {
+        for (const ODE_StringRef &layerId : layerSelection.layerIDs) {
             ODE_LayerMetrics topLayerMetrics;
-            ode_component_getLayerMetrics(apiContext.component, topLayerId, &topLayerMetrics);
+            ode_component_getLayerMetrics(component, topLayerId, &topLayerMetrics);
             const ODE_Rectangle &topLayerBounds = topLayerMetrics.logicalBounds;
             const float w = topLayerBounds.b.x - topLayerBounds.a.x;
             const float h = topLayerBounds.b.y - topLayerBounds.a.y;
             ODE_LayerMetrics layerMetrics;
-            ode_component_getLayerMetrics(apiContext.component, layerId, &layerMetrics);
+            ode_component_getLayerMetrics(component, layerId, &layerMetrics);
             ODE_Rectangle layerBounds = layerMetrics.graphicalBounds;
             const float trX = layerMetrics.transformation.matrix[4];
             const float trY = layerMetrics.transformation.matrix[5];
@@ -115,7 +116,7 @@ void drawDesignViewWidget(const DesignEditorContext::Api &apiContext,
             });
         }
 
-        texturesContext.designImageTexture = renderer.blendImageToTexture(std::move(bitmap), placement, selectedDisplayMode, selectionRectangle, highlightRectangles);
+        texturesContext.designImageTexture = renderer.blendImageToTexture(std::move(bmp), placement, selectedDisplayMode, selectionRectangle, highlightRectangles);
 
         drawImGuiWidgetTexture(texturesContext.designImageTexture->getInternalGLHandle(),
                                texturesContext.designImageTexture->dimensions().x,

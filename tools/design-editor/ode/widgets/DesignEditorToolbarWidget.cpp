@@ -10,46 +10,46 @@
 
 namespace {
 
-void addGroup(DesignEditorContext::Api &apiContext,
-              ODE_LayerList &layerList,
-              const DesignEditorContext::LayerSelection &layersSelectionContext,
+void addGroup(DesignEditorContext &context,
+              DesignEditorComponent &component,
+              const DesignEditorUIState::LayerSelection &layersSelection,
               const octopus::Octopus &newOctopusGroup) {
     std::string octopusLayerJson;
     octopus::Serializer::serialize(octopusLayerJson, *newOctopusGroup.content);
 
-    const std::optional<std::string> insertionLayerIdOpt = findParentLayerId(layerList, layersSelectionContext.layerIDs.front());
+    const std::optional<std::string> insertionLayerIdOpt = findParentLayerId(component.layerList, layersSelection.layerIDs.front());
     if (!insertionLayerIdOpt.has_value()) {
         return;
     }
 
-    for (const ODE_StringRef &layerId : layersSelectionContext.layerIDs) {
-        if (ode_component_removeLayer(apiContext.component, layerId) != ODE_RESULT_OK) {
+    for (const ODE_StringRef &layerId : layersSelection.layerIDs) {
+        if (ode_component_removeLayer(component.component, layerId) != ODE_RESULT_OK) {
             return;
         }
     }
 
     ODE_ParseError parseError;
-    if (ode_component_addLayer(apiContext.component, ode_stringRef(*insertionLayerIdOpt), {}, ode_stringRef(octopusLayerJson), &parseError) != ODE_RESULT_OK) {
+    if (ode_component_addLayer(component.component, ode_stringRef(*insertionLayerIdOpt), {}, ode_stringRef(octopusLayerJson), &parseError) != ODE_RESULT_OK) {
         return;
     }
 
-    ode_component_listLayers(apiContext.component, &layerList);
-    ode_pr1_drawComponent(apiContext.rc, apiContext.component, apiContext.imageBase, &apiContext.bitmap, &apiContext.frameView);
+    ode_component_listLayers(component.component, &component.layerList);
+    ode_pr1_drawComponent(context.rc, component.component, context.design.imageBase, &component.bitmap, &context.frameView);
 }
 
-void drawGroupButtons(DesignEditorContext::Api &apiContext,
-                      ODE_LayerList &layerList,
-                      const DesignEditorContext::LayerSelection &layersSelectionContext) {
-    if (layersSelectionContext.layerIDs.size() < 2) {
+void drawGroupButtons(DesignEditorContext &context,
+                      DesignEditorComponent &component,
+                      const DesignEditorUIState::LayerSelection &layersSelection) {
+    if (layersSelection.layerIDs.size() < 2) {
         return;
     }
 
-    const std::optional<std::string> commonParentId = findParentLayerId(layerList, layersSelectionContext.layerIDs.front());
+    const std::optional<std::string> commonParentId = findParentLayerId(component.layerList, layersSelection.layerIDs.front());
     if (!commonParentId.has_value()) {
         return;
     }
 
-    const bool allSelectedLayersSameParent = std::all_of(layersSelectionContext.layerIDs.begin()+1, layersSelectionContext.layerIDs.end(), [&layerList, &commonParentId](const ODE_StringRef &layerId)->bool {
+    const bool allSelectedLayersSameParent = std::all_of(layersSelection.layerIDs.begin()+1, layersSelection.layerIDs.end(), [&layerList = component.layerList, &commonParentId](const ODE_StringRef &layerId)->bool {
         const std::optional<std::string> layerParentId = findParentLayerId(layerList, layerId);
         return layerParentId.has_value() && *commonParentId == * layerParentId;
     });
@@ -58,7 +58,7 @@ void drawGroupButtons(DesignEditorContext::Api &apiContext,
     }
 
     ODE_String octopusString;
-    ode_component_getOctopus(apiContext.component, &octopusString);
+    ode_component_getOctopus(component.component, &octopusString);
 
     octopus::Octopus componentOctopus;
     octopus::Parser::parse(componentOctopus, octopusString.data);
@@ -67,7 +67,7 @@ void drawGroupButtons(DesignEditorContext::Api &apiContext,
         ImGui::PushStyleColor(ImGuiCol_Button, IM_COLOR_LIGHT_BLUE);
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COLOR_LIGHT_BLUE);
 
-        const std::optional<octopus::Octopus> newOctopusGroup = [&layerIDs = layersSelectionContext.layerIDs, &rootLayer = *componentOctopus.content, &layerList]()->std::optional<octopus::Octopus> {
+        const std::optional<octopus::Octopus> newOctopusGroup = [&layerIDs = layersSelection.layerIDs, &rootLayer = *componentOctopus.content, &layerList = component.layerList]()->std::optional<octopus::Octopus> {
 
             if (ImGui::Button("Group")) {
                 ode::octopus_builder::GroupLayer group;
@@ -110,7 +110,7 @@ void drawGroupButtons(DesignEditorContext::Api &apiContext,
             return std::nullopt;
         } ();
         if (newOctopusGroup.has_value()) {
-            addGroup(apiContext, layerList, layersSelectionContext, *newOctopusGroup);
+            addGroup(context, component, layersSelection, *newOctopusGroup);
         }
 
         ImGui::PopStyleColor(2);
@@ -119,45 +119,45 @@ void drawGroupButtons(DesignEditorContext::Api &apiContext,
 
 }
 
-void drawToolbarWidget(DesignEditorContext::Api &apiContext,
-                       ODE_LayerList &layerList,
-                       const DesignEditorContext::LayerSelection &layersSelectionContext,
-                       DesignEditorMode &mode) {
+void drawToolbarWidget(DesignEditorContext &context,
+                       DesignEditorComponent &component,
+                       const DesignEditorUIState::LayerSelection &layersSelection,
+                       DesignEditorUIState::Mode &mode) {
     ImGui::Begin("Toolbar");
 
-    ImGui::PushStyleColor(ImGuiCol_Button, mode == DesignEditorMode::SELECT ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, mode == DesignEditorMode::SELECT ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
+    ImGui::PushStyleColor(ImGuiCol_Button, mode == DesignEditorUIState::Mode::SELECT ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, mode == DesignEditorUIState::Mode::SELECT ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
     if (ImGui::Button("Select")) {
-        mode = DesignEditorMode::SELECT;
+        mode = DesignEditorUIState::Mode::SELECT;
     }
     ImGui::PopStyleColor(2);
     ImGui::SameLine();
 
-    ImGui::PushStyleColor(ImGuiCol_Button, mode == DesignEditorMode::ADD_RECTANGLE ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, mode == DesignEditorMode::ADD_RECTANGLE ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
+    ImGui::PushStyleColor(ImGuiCol_Button, mode == DesignEditorUIState::Mode::ADD_RECTANGLE ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, mode == DesignEditorUIState::Mode::ADD_RECTANGLE ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
     if (ImGui::Button("Add Rectangle")) {
-        mode = DesignEditorMode::ADD_RECTANGLE;
+        mode = DesignEditorUIState::Mode::ADD_RECTANGLE;
     }
     ImGui::PopStyleColor(2);
     ImGui::SameLine();
 
-    ImGui::PushStyleColor(ImGuiCol_Button, mode == DesignEditorMode::ADD_ELLIPSE ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, mode == DesignEditorMode::ADD_ELLIPSE ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
+    ImGui::PushStyleColor(ImGuiCol_Button, mode == DesignEditorUIState::Mode::ADD_ELLIPSE ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, mode == DesignEditorUIState::Mode::ADD_ELLIPSE ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
     if (ImGui::Button("Add Ellipse")) {
-        mode = DesignEditorMode::ADD_ELLIPSE;
+        mode = DesignEditorUIState::Mode::ADD_ELLIPSE;
     }
     ImGui::PopStyleColor(2);
     ImGui::SameLine();
 
-    ImGui::PushStyleColor(ImGuiCol_Button, mode == DesignEditorMode::ADD_TEXT ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, mode == DesignEditorMode::ADD_TEXT ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
+    ImGui::PushStyleColor(ImGuiCol_Button, mode == DesignEditorUIState::Mode::ADD_TEXT ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, mode == DesignEditorUIState::Mode::ADD_TEXT ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
     if (ImGui::Button("Add Text")) {
-        mode = DesignEditorMode::ADD_TEXT;
+        mode = DesignEditorUIState::Mode::ADD_TEXT;
     }
     ImGui::PopStyleColor(2);
 
     // Draw group and mask group buttons, handle the logic
-    drawGroupButtons(apiContext, layerList, layersSelectionContext);
+    drawGroupButtons(context, component, layersSelection);
 
     ImGui::End();
 }

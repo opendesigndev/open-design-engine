@@ -22,8 +22,6 @@ public:
     /// Display the window - initialize and run its main loop
     int display();
 
-    /// Read the specified octopus manifest file - multiple components
-    bool readManifestFile(const ode::FilePath &manifestPath);
     /// Read the specified octopus file - single component
     bool readOctopusFile(const ode::FilePath &octopusPath);
 

@@ -1,53 +1,36 @@
 
 #include "DesignEditorContext.h"
 
-void DesignEditorContext::LoadedOctopus::clear() {
-    filePath = "";
+#include <GL/glew.h>
+#include <GLFW/glfw3.h> // Will drag system OpenGL headers
+
+#include <ode-graphics.h>
+
+namespace {
+#define CHECK(x) do { if ((x)) return -1; } while (false)
 }
 
-bool DesignEditorContext::LoadedOctopus::isLoaded() const {
-    return !filePath.empty() && !octopusJson.empty();
+int DesignEditorContext::initialize() {
+    ODE_EngineAttributes engineAttribs;
+    CHECK(ode_initializeEngineAttributes(&engineAttribs));
+    CHECK(ode_createEngine(&engine, &engineAttribs));
+    CHECK(ode_createRendererContext(engine, &rc, ode_stringRef("Design Editor")));
+
+    GLFWwindow *window = reinterpret_cast<ode::GraphicsContext *>(rc.ptr)->getNativeHandle<GLFWwindow *>();
+    glfwGetFramebufferSize(window, &frameView.width, &frameView.height);
+    frameView.scale = 1;
+
+    CHECK(ode_createDesign(engine, &design.design));
+    CHECK(ode_createDesignImageBase(rc, design.design, &design.imageBase));
+
+    return 0;
 }
 
-void DesignEditorContext::LayerSelection::select(const char *layerID) {
-    clear();
+int DesignEditorContext::destroy() {
+    CHECK(ode_destroyDesignImageBase(design.imageBase));
+    CHECK(ode_destroyRendererContext(rc));
+    CHECK(ode_destroyDesign(design.design));
+    CHECK(ode_destroyEngine(engine));
 
-    if (layerID == nullptr) {
-        return;
-    }
-
-    const int length = static_cast<int>(strlen(layerID));
-    if (length <= 0) {
-        return;
-    }
-
-    layerIDs = { ODE_StringRef { layerID, length } };
-}
-
-void DesignEditorContext::LayerSelection::add(const char *layerID) {
-    if (layerID == nullptr) {
-        return;
-    }
-
-    const int length = static_cast<int>(strlen(layerID));
-    if (length <= 0) {
-        return;
-    }
-
-    if (!isSelected(layerID)) {
-        layerIDs.emplace_back(ODE_StringRef { layerID, length });
-    }
-}
-
-void DesignEditorContext::LayerSelection::clear() {
-    layerIDs.clear();
-}
-
-bool DesignEditorContext::LayerSelection::isSelected(const char *layerID) {
-    for (const ODE_StringRef &id : layerIDs) {
-        if (strcmp(id.data, layerID) == 0) {
-            return true;
-        }
-    }
-    return false;
+    return 0;
 }
