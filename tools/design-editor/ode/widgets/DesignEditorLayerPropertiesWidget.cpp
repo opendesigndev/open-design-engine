@@ -389,11 +389,11 @@ void drawLayerTransformation(const ODE_StringRef &layerId,
     const float d = static_cast<float>(layerMetrics.transformation.matrix[3]);
     const float trX = static_cast<float>(layerMetrics.transformation.matrix[4]);
     const float trY = static_cast<float>(layerMetrics.transformation.matrix[5]);
-    const float s = sqrt(a*a+b*b);
-    const float r = sqrt(c*c+d*d);
+    const float r = sqrt(a*a+b*b);
+    const float s = sqrt(c*c+d*d);
 
     Vector2f translation { trX, trY };
-    Vector2f scale { s, r };
+    Vector2f scale { r, s };
     float rotation = (b < 0 ? acos(a/r) : -acos(a/r)) * (180.0/M_PI);
     if (rotation < 0.0f) {
         rotation += 360.0f;
@@ -967,14 +967,12 @@ void drawLayerShapeFill(int fillI,
         const float d = static_cast<float>(positioningTransform[3]);
         const float trX = static_cast<float>(positioningTransform[4]);
         const float trY = static_cast<float>(positioningTransform[5]);
-        const float det = a*d-b*c;
-        const float s = sqrt(a*a+b*b);
-        const float r = sqrt(c*c+d*d);
+        const float r = sqrt(a*a+b*b);
+        const float s = sqrt(c*c+d*d);
 
         Vector2f translation { trX, trY };
-        Vector2f scale { s, r };
-        float rotation = atan(c/d) * (180.0f/M_PI);
-        // TODO: Fix transformation rotation outside of <-90,90>
+        Vector2f scale { r, s };
+        float rotation = (b < 0 ? acos(a/r) : -acos(a/r)) * (180.0/M_PI);
         if (rotation < 0.0f) {
             rotation += 360.0f;
         }
@@ -1004,7 +1002,7 @@ void drawLayerShapeFill(int fillI,
 
         ImGui::Text("    Scale:");
         ImGui::SameLine(100);
-        if (ImGui::DragFloat2(layerPropName(layerId, "fill-scale", fillI).c_str(), &scale.x, 1.0f, 0.0f, 100000.0f)) {
+        if (ImGui::DragFloat2(layerPropName(layerId, "fill-scale", fillI).c_str(), &scale.x, 1.0f, 1.0f, 100000.0f)) {
             changeReplace(octopus::LayerChange::Subject::FILL, context, component, layerId, fillI, nonstd::nullopt, updateFill);
         }
 
