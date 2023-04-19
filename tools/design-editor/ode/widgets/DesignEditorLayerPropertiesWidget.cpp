@@ -1651,16 +1651,21 @@ void drawLayerPropertiesWidget(DesignEditorContext &context,
                     drawLayerEffects(layer.id, context, component, octopusLayer.effects);
                 }
 
-                ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
-                ImGui::PushStyleColor(ImGuiCol_Button, IM_COLOR_DARK_RED);
-                ImGui::SameLine(100);
-                if (ImGui::Button(layerPropName(layer.id, "delete", nonstd::nullopt, nonstd::nullopt, "Delete Layer").c_str(), ImVec2 { 250, 20 })) {
-                    if (ode_component_removeLayer(component.component, layer.id) == ODE_RESULT_OK) {
-                        ode_component_listLayers(component.component, &layerList);
-                        ode_pr1_drawComponent(context.rc, component.component, context.design.imageBase, &component.bitmap, context.frameView);
+                const octopus::Layer *octopusParentLayerPtr = findLayer(*componentOctopus.content, ode_stringDeref(layer.parentId));
+                const bool isMask = octopusParentLayerPtr != nullptr && octopusParentLayerPtr->type == octopus::Layer::Type::MASK_GROUP && octopusParentLayerPtr->mask.has_value() && octopusParentLayerPtr->mask->id == octopusLayer.id;
+
+                if (!isMask) {
+                    ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
+                    ImGui::PushStyleColor(ImGuiCol_Button, IM_COLOR_DARK_RED);
+                    ImGui::SameLine(100);
+                    if (ImGui::Button(layerPropName(layer.id, "delete", nonstd::nullopt, nonstd::nullopt, "Delete Layer").c_str(), ImVec2 { 250, 20 })) {
+                        if (ode_component_removeLayer(component.component, layer.id) == ODE_RESULT_OK) {
+                            ode_component_listLayers(component.component, &layerList);
+                            ode_pr1_drawComponent(context.rc, component.component, context.design.imageBase, &component.bitmap, context.frameView);
+                        }
                     }
+                    ImGui::PopStyleColor(1);
                 }
-                ImGui::PopStyleColor(1);
 
                 ImGui::Dummy(ImVec2 { 0.0f, 20.0f });
             }

@@ -201,12 +201,13 @@ DesignError Component::removeLayer(const std::string &id) {
     if (LayerInstance *instance = findInstance(id)) {
         const std::string &parentId = instance->getParentId();
         if (LayerInstance *parentInstance = findInstance(parentId)) {
-            ODE_ASSERT((*parentInstance)->layers.has_value());
-            const std::list<octopus::Layer>::iterator layerInParentIt = std::find_if((*parentInstance)->layers->begin(), (*parentInstance)->layers->end(), [&id](const octopus::Layer &layer) {
+            nonstd::optional<std::list<octopus::Layer>> &layers = (*parentInstance)->layers;
+            ODE_ASSERT(layers.has_value());
+            const std::list<octopus::Layer>::iterator layerInParentIt = std::find_if(layers->begin(), layers->end(), [&id](const octopus::Layer &layer) {
                 return layer.id == id;
             });
-            if (layerInParentIt != (*parentInstance)->layers->end()) {
-                (*parentInstance)->layers->erase(layerInParentIt);
+            if (layerInParentIt != layers->end()) {
+                layers->erase(layerInParentIt);
                 std::vector<std::string> instancesToErase;
                 for (const std::pair<const std::string, ode::LayerInstance> &instance : instances) {
                     if (isInstanceInSubtree(id, instance.first)) {
