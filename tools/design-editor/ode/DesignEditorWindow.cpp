@@ -172,7 +172,7 @@ int DesignEditorWindow::display() {
                         if (mode == DesignEditorUIState::Mode::ADD_RECTANGLE) {
                             ode::octopus_builder::ShapeLayer rectangleShape(0, 0, DEFAULT_NEW_SHAPE_SIZE.x, DEFAULT_NEW_SHAPE_SIZE.y);
                             rectangleShape.setColor(DEFAULT_NEW_SHAPE_COLOR);
-                            const std::optional<std::string> idOpt = findAvailableLayerId("SHAPE", layerList);
+                            const std::optional<std::string> idOpt = findAvailableLayerId("RECTANGLE", layerList);
                             if (idOpt.has_value()) {
                                 rectangleShape.id = *idOpt;
                                 rectangleShape.name = *idOpt;
