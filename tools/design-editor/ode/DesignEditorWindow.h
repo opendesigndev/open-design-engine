@@ -32,11 +32,9 @@ public:
     bool readOctopusFile(const ode::FilePath &octopusPath);
 
     void setImageDirectory(const ode::FilePath &imageDirectory_);
-    void setFontDirectory(const ode::FilePath &fontDirectory);
+    void setFontDirectory(const ode::FilePath &fontDirectory_);
 
 private:
-    void drawControlsWidget();
-
     void handleKeyboardEvents();
 
     int loadMissingFonts(const FilePath &fontDir);

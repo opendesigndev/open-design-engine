@@ -16,6 +16,7 @@
 #include <ode-diagnostics.h>
 #include <ode-media.h>
 #include <ode/renderer-api.h>
+#include "widgets/DesignEditorControlsWidget.h"
 #include "widgets/DesignEditorToolbarWidget.h"
 #include "widgets/DesignEditorLayerListWidget.h"
 #include "widgets/DesignEditorDesignViewWidget.h"
@@ -132,7 +133,7 @@ int DesignEditorWindow::display() {
         handleKeyboardEvents();
 
         // ODE DesignEditor controls window
-        drawControlsWidget();
+        drawControlsWidget(context.design, ui);
 
         if (!context.design.empty()) {
             DesignEditorComponent &component = context.design.components.back();
@@ -326,96 +327,6 @@ void DesignEditorWindow::setFontDirectory(const FilePath &fontDirectory_) {
     fontDirectory = fontDirectory_;
 }
 
-void DesignEditorWindow::drawControlsWidget() {
-    ImGui::Begin("Controls");
-
-    ImGui::Columns(3);
-
-    // Create "New Design"
-    if (ImGui::Button("New")) {
-        createEmptyDesign(fontDirectory);
-    }
-
-    // Open "Open Octopus File" file dialog on button press
-    if (ImGui::Button("Open Octopus File")) {
-        const char* filters = ".json";
-        ImGuiFileDialog::Instance()->OpenDialog("ChooseOctopusFileDlgKey", "Choose Octopus *.json File", filters, ui.fileDialog.octopusFilePath, ui.fileDialog.octopusFileName);
-    }
-
-    if (!context.design.empty()) {
-        // Open "Save Octopus File" file dialog on button press
-        if (ImGui::Button("Save Octopus File")) {
-            const char* filters = ".json";
-            ImGuiFileDialog::Instance()->OpenDialog("SaveOctopusFileDlgKey", "Save as *.json", filters, ui.fileDialog.octopusFilePath, ui.fileDialog.octopusFileName);
-        }
-    }
-
-    // Display "Open Octopus File" file dialog
-    if (ImGuiFileDialog::Instance()->Display("ChooseOctopusFileDlgKey")) {
-        ui.fileDialog.octopusFilePath = ImGuiFileDialog::Instance()->GetCurrentPath();
-        ui.fileDialog.octopusFileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
-
-        if (ImGuiFileDialog::Instance()->IsOk()) {
-            const std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
-
-            // Handle file input
-            const bool isOctopusFileRead = readOctopusFile(filePathName);
-            if (!isOctopusFileRead) {
-                fprintf(stderr, "Failed to parse Octopus file\n");
-            }
-        }
-
-        ImGuiFileDialog::Instance()->Close();
-    }
-
-    if (!context.design.empty()) {
-        // Display "Save Octopus File" file dialog
-        if (ImGuiFileDialog::Instance()->Display("SaveOctopusFileDlgKey")) {
-            ui.fileDialog.octopusFilePath = ImGuiFileDialog::Instance()->GetCurrentPath();
-            ui.fileDialog.octopusFileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
-
-            if (ImGuiFileDialog::Instance()->IsOk()) {
-                const ODE_ComponentHandle &component = context.design.components.back().component;
-
-                const std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
-
-                ODE_String octopusString;
-                ode_component_getOctopus(component, &octopusString);
-
-                const bool isSaved = writeFile(filePathName, octopusString.data, octopusString.length);
-                if (!isSaved) {
-                    fprintf(stderr, "Internal error (saving Octopus json to filesystem)\n");
-                }
-            }
-
-            ImGuiFileDialog::Instance()->Close();
-        }
-    }
-
-    ImGui::NextColumn();
-
-    ImGui::Text("Widgets:");
-    ImGui::Checkbox("Toolbar", &ui.widgets.showToolbar);
-    ImGui::Checkbox("Layer List", &ui.widgets.showLayerList);
-    ImGui::Checkbox("Interactive Design View", &ui.widgets.showDesignView);
-    ImGui::Checkbox("Layer Properties", &ui.widgets.showLayerProperties);
-
-    ImGui::NextColumn();
-
-    ImGui::Text("Blend Mode");
-    ImGui::Combo(" ", &ui.imageVisualizationParams.selectedDisplayMode, designEditorImageDisplayModes, sizeof(designEditorImageDisplayModes)/sizeof(designEditorImageDisplayModes[0]));
-
-    ImGui::NextColumn();
-    ImGui::Separator();
-    ImGui::Text("Frame rate:  %f", ImGui::GetIO().Framerate);
-
-    ImGui::NextColumn();
-
-    ImGui::Checkbox("ImGui Metrics/Debugger", &ui.widgets.showImGuiDebugger);
-
-    ImGui::End();
-}
-
 void DesignEditorWindow::handleKeyboardEvents() {
     const float zoomKeySpeed = 0.03f;
     const float minZoom = 1.0f;
@@ -463,7 +374,7 @@ int DesignEditorWindow::createEmptyDesign(const FilePath &fontDir) {
     }
     context.design.imageDirectory = imageDirectory.empty() ? std::filesystem::temp_directory_path().string()+"/ode-design-editor-images" : imageDirectory;
     // TODO: set imageBase directory using the ODE API
-    reinterpret_cast<ImageBase *>(context.design.imageBase.ptr)->setImageDirectory(context.design.imageDirectory);
+    reinterpret_cast<ImageBase *>(context.design.imageBase.ptr)->setImageDirectory(context.design.imageDirectory.parent());
 
     context.design.components.clear();
     DesignEditorComponent &newComponent = context.design.components.emplace_back();
@@ -494,7 +405,7 @@ int DesignEditorWindow::reloadOctopus(const FilePath &octopusPath, const FilePat
     }
     context.design.imageDirectory = imageDirectory.empty() ? octopusPath.parent()+"/images" : imageDirectory;
     // TODO: set imageBase directory using the ODE API
-    reinterpret_cast<ImageBase *>(context.design.imageBase.ptr)->setImageDirectory(context.design.imageDirectory);
+    reinterpret_cast<ImageBase *>(context.design.imageBase.ptr)->setImageDirectory(context.design.imageDirectory.parent());
 
     CHECK(ode_design_addComponentFromOctopusString(context.design.design, &newComponent.component, newComponent.metadata, ode_stringRef(newComponent.octopusJson), nullptr));
     CHECK(loadMissingFonts(fontDir));
