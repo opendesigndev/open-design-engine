@@ -304,7 +304,7 @@ std::string layerPropName(const ODE_StringRef &layerId,
         std::string("##layer-")+std::string(invisibleId)+std::string("-")+ode_stringDeref(layerId) +
         (index.has_value() ? "-" + std::to_string(*index) : "") +
         (filterIndex.has_value() ? "-" + std::to_string(*filterIndex) : "");
-};
+}
 
 }
 

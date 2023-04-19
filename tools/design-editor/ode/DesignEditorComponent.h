@@ -10,16 +10,16 @@ struct DesignEditorComponent {
     DesignEditorComponent() = default;
     ~DesignEditorComponent();
 
-    /// Octopus Json string.
+    /// Json representation of the component
     std::string octopusJson;
 
     /// Component handle
     ODE_ComponentHandle component;
-    /// Component metadata
+    /// Metadata
     ODE_ComponentMetadata metadata = {};
     /// Bitmap renderered from the component
     ODE_Bitmap bitmap = {};
-    /// Layer list
+    /// List of layers in the component
     ODE_LayerList layerList = {};
 };
 using DesignEditorComponents = std::vector<DesignEditorComponent>;

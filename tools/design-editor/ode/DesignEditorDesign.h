@@ -11,8 +11,8 @@ struct DesignEditorDesign {
     ODE_DesignHandle design;
     /// A single image base for the design
     ODE_DesignImageBaseHandle imageBase;
-    /// Image directory
+    /// Images directory
     ode::FilePath imageDirectory;
-    /// The loaded / created components
+    /// The loaded/created components
     DesignEditorComponents components;
 };
