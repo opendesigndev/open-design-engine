@@ -403,7 +403,7 @@ int DesignEditorWindow::reloadOctopus(const FilePath &octopusPath, const FilePat
         fprintf(stderr, "Failed to read file \"%s\"\n", ((const std::string &) octopusPath).c_str());
         return false;
     }
-    context.design.imageDirectory = imageDirectory.empty() ? octopusPath.parent()+"/images" : imageDirectory;
+    context.design.imageDirectory = imageDirectory.empty() ? (std::string)octopusPath.parent()+"/images" : imageDirectory;
     // TODO: set imageBase directory using the ODE API
     reinterpret_cast<ImageBase *>(context.design.imageBase.ptr)->setImageDirectory(context.design.imageDirectory.parent());
 
