@@ -19,13 +19,12 @@ namespace {
     #define CONFIG_SKIA_GPU "disabled"
 #endif
 
-// TODO: (Matus) Move this command line functionality and unify with other tools that have similar input?
+// TODO: Move this command line functionality and unify with other tools that have similar input?
 /// Parsed command line input.
 struct CommandLineInput {
     ode::FilePath octopusPath;
     ode::FilePath imageDirectory;
     ode::FilePath fontDirectory;
-    bool ignoreValidation = false;
 };
 
 /// Parse command line input and return it. Or print version info (if specified) and return nullopt.
@@ -48,8 +47,6 @@ std::optional<CommandLineInput> parseCommandLineArguments(int argc, const char *
             } else if (curArg == "--font-assets" || curArg == "--fontpath" || curArg == "--fonts") {
                 if (i+1 < argc)
                     input.fontDirectory = argv[++i];
-            } else if (curArg == "--ignore-validation") {
-                input.ignoreValidation = true;
             } else if (curArg == "--version") {
                 puts(
                     "\nOPEN DESIGN ENGINE" /* " v" ODE_STRINGIZE(ODE_VERSION) */ " by Ceros\n\n" // put in when version is actually used
@@ -89,10 +86,11 @@ int main(int argc, const char *const *argv) {
     if (commandLineInputOpt.has_value()) {
         window.setImageDirectory(commandLineInputOpt->imageDirectory);
         window.setFontDirectory(commandLineInputOpt->fontDirectory);
-        window.setIgnoreValidation(commandLineInputOpt->ignoreValidation);
 
         if (!commandLineInputOpt->octopusPath.empty()) {
             window.readOctopusFile(commandLineInputOpt->octopusPath);
+        } else {
+            window.createEmptyDesign();
         }
     }
 

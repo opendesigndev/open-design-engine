@@ -10,8 +10,6 @@ struct DesignEditorComponent {
     DesignEditorComponent() = default;
     ~DesignEditorComponent();
 
-    /// The file path of the Octopus file loaded.
-    ode::FilePath filePath;
     /// Octopus Json string.
     std::string octopusJson;
 

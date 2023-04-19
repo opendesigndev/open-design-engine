@@ -16,9 +16,6 @@
 #include <ode-diagnostics.h>
 #include <ode-media.h>
 #include <ode/renderer-api.h>
-#include "DesignEditorRenderer.h"
-#include "DesignEditorContext.h"
-#include "DesignEditorUIState.h"
 #include "widgets/DesignEditorToolbarWidget.h"
 #include "widgets/DesignEditorLayerListWidget.h"
 #include "widgets/DesignEditorDesignViewWidget.h"
@@ -56,86 +53,28 @@ ODE_StringRef lastChildLayerId(const ODE_LayerList &layerList,
     return ODE_StringRef { nullptr, 0 };
 }
 
+ODE_Vector2 toImageSpace(const ImVec2 &posInScreenSpace, const DesignEditorUIState::Canvas &canvas, const DesignEditorComponent &component) {
+    // Image space position from top layer bounds
+    const ODE_StringRef &topLayerId = component.layerList.entries[0].id;
+
+    const ImVec2 inCanvasSpace = ImVec2 {
+        (posInScreenSpace.x - canvas.bbMin.x) / canvas.bbSize.x,
+        (posInScreenSpace.y - canvas.bbMin.y) / canvas.bbSize.y,
+    };
+
+    ODE_LayerMetrics topLayerMetrics;
+    ode_component_getLayerMetrics(component.component, topLayerId, &topLayerMetrics);
+
+    const ODE_Rectangle &topLayerBounds = topLayerMetrics.logicalBounds;
+    const ODE_Vector2 imageSpacePosition {
+        inCanvasSpace.x * topLayerBounds.b.x,
+        inCanvasSpace.y * topLayerBounds.b.y
+    };
+
+    return imageSpacePosition;
 }
 
-struct DesignEditorWindow::Internal {
-    /// Renderer
-    std::unique_ptr<DesignEditorRenderer> renderer;
-
-    /// Context
-    DesignEditorContext context;
-    /// UI
-    DesignEditorUIState ui;
-
-    /// Graphics context accessor
-    GraphicsContext *gc() {
-        return reinterpret_cast<GraphicsContext *>(context.rc.ptr);
-    }
-
-    int loadMissingFonts(const FilePath &fontDir) {
-        ODE_StringList missingFonts;
-        CHECK(ode_design_listMissingFonts(context.design.design, &missingFonts));
-
-        for (int i = 0; i < missingFonts.n; ++i) {
-            if (missingFonts.entries[i].length > 0) {
-                const std::string pathStr = (std::string)fontDir+std::string("/")+ode_stringDeref(missingFonts.entries[i])+std::string(".ttf");
-                CHECK(ode_design_loadFontFile(context.design.design, missingFonts.entries[i], ode_stringRef(pathStr), ODE_StringRef()));
-            }
-        }
-        return 0;
-    }
-
-    int reloadOctopus(const FilePath &octopusPath,
-                      const FilePath &fontDir) {
-        ui.layerSelection.clear();
-
-        // TODO: Allow multiple components
-        if (context.design.design.ptr) {
-            CHECK(ode_destroyDesign(context.design.design));
-            CHECK(ode_createDesign(context.engine, &context.design.design));
-        }
-
-        context.design.components.clear();
-        DesignEditorComponent &newComponent = context.design.components.emplace_back();
-        newComponent.filePath = octopusPath;
-
-        if (!readFile(newComponent.filePath, newComponent.octopusJson)) {
-            fprintf(stderr, "Failed to read file \"%s\"\n", ((const std::string &) octopusPath).c_str());
-            return false;
-        }
-
-        // TODO: Image base directory:
-        reinterpret_cast<ImageBase *>(context.design.imageBase.ptr)->setImageDirectory(octopusPath.parent());
-
-        CHECK(ode_design_addComponentFromOctopusString(context.design.design, &newComponent.component, newComponent.metadata, ode_stringRef(newComponent.octopusJson), nullptr));
-        CHECK(loadMissingFonts(fontDir));
-        CHECK(ode_component_listLayers(newComponent.component, &newComponent.layerList));
-        CHECK(ode_pr1_drawComponent(context.rc, newComponent.component, context.design.imageBase, &newComponent.bitmap, &context.frameView));
-        return 0;
-    }
-
-    ODE_Vector2 toImageSpace(const ImVec2 &posInScreenSpace, const DesignEditorComponent &component) {
-        // Image space position from top layer bounds
-        const ODE_StringRef &topLayerId = component.layerList.entries[0].id;
-
-        const ImVec2 inCanvasSpace = ImVec2 {
-            (posInScreenSpace.x - ui.canvas.bbMin.x) / ui.canvas.bbSize.x,
-            (posInScreenSpace.y - ui.canvas.bbMin.y) / ui.canvas.bbSize.y,
-        };
-
-        ODE_LayerMetrics topLayerMetrics;
-        ode_component_getLayerMetrics(component.component, topLayerId, &topLayerMetrics);
-
-        const ODE_Rectangle &topLayerBounds = topLayerMetrics.logicalBounds;
-        const ODE_Vector2 imageSpacePosition {
-            inCanvasSpace.x * topLayerBounds.b.x,
-            inCanvasSpace.y * topLayerBounds.b.y
-        };
-
-        return imageSpacePosition;
-    }
-
-};
+}
 
 
 /*static*/ DesignEditorWindow& DesignEditorWindow::getInstance() {
@@ -143,19 +82,18 @@ struct DesignEditorWindow::Internal {
     return instance;
 }
 
-DesignEditorWindow::DesignEditorWindow() :
-    data(new Internal()) {
-    data->context.initialize();
-    data->renderer = std::make_unique<DesignEditorRenderer>();
+DesignEditorWindow::DesignEditorWindow() {
+    context.initialize();
+    renderer = std::make_unique<DesignEditorRenderer>();
 }
 
 DesignEditorWindow::~DesignEditorWindow() {
-    data->context.destroy();
+    context.destroy();
 }
 
 int DesignEditorWindow::display() {
     // Get the GLFW window as initialized in ODE GraphicsContext
-    GLFWwindow *window = data->gc()->getNativeHandle<GLFWwindow *>();
+    GLFWwindow *window = reinterpret_cast<GraphicsContext *>(context.rc.ptr)->getNativeHandle<GLFWwindow *>();
 
     // Set file drop callback
     glfwSetDropCallback(window, fileDropCallback);
@@ -196,17 +134,17 @@ int DesignEditorWindow::display() {
         // ODE DesignEditor controls window
         drawControlsWidget();
 
-        if (!data->context.design.empty()) {
-            DesignEditorComponent &component = data->context.design.components.back();
+        if (!context.design.empty()) {
+            DesignEditorComponent &component = context.design.components.back();
 
             // Mouse click
-            if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && data->ui.canvas.isMouseOver) {
-                const ODE_Vector2 mousePosImageSpace = data->toImageSpace(ImGui::GetMousePos(), component);
+            if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && ui.canvas.isMouseOver) {
+                const ODE_Vector2 mousePosImageSpace = toImageSpace(ImGui::GetMousePos(), ui.canvas, component);
 
                 // If a single group or mask group is selected, insert into it, otherwise to the top layer
                 const ODE_StringRef &topLayerID = component.layerList.entries[0].id;
                 ODE_StringRef insertionLayerId = topLayerID;
-                const std::vector<ODE_StringRef> &selectedLayerIds = data->ui.layerSelection.layerIDs;
+                const std::vector<ODE_StringRef> &selectedLayerIds = ui.layerSelection.layerIDs;
 
                 if (selectedLayerIds.size() == 1) {
                     ODE_String octopusString;
@@ -226,10 +164,10 @@ int DesignEditorWindow::display() {
                 }
 
                 // Layer insertion
-                if (data->ui.mode == DesignEditorUIState::Mode::ADD_RECTANGLE ||
-                    data->ui.mode == DesignEditorUIState::Mode::ADD_ELLIPSE ||
-                    data->ui.mode == DesignEditorUIState::Mode::ADD_TEXT) {
-                    const octopus::Octopus octopus = [mode = data->ui.mode, &layerList = component.layerList]()->octopus::Octopus {
+                if (ui.mode == DesignEditorUIState::Mode::ADD_RECTANGLE ||
+                    ui.mode == DesignEditorUIState::Mode::ADD_ELLIPSE ||
+                    ui.mode == DesignEditorUIState::Mode::ADD_TEXT) {
+                    const octopus::Octopus octopus = [mode = ui.mode, &layerList = component.layerList]()->octopus::Octopus {
                         if (mode == DesignEditorUIState::Mode::ADD_RECTANGLE) {
                             ode::octopus_builder::ShapeLayer rectangleShape(0, 0, DEFAULT_NEW_SHAPE_SIZE.x, DEFAULT_NEW_SHAPE_SIZE.y);
                             rectangleShape.setColor(DEFAULT_NEW_SHAPE_COLOR);
@@ -272,7 +210,7 @@ int DesignEditorWindow::display() {
                     const ODE_Result result = ode_component_addLayer(component.component, insertionLayerId, {}, ode_stringRef(octopusLayerJson), &parseError);
 
                     if (result == ODE_RESULT_OK) {
-                        data->loadMissingFonts(fontDirectory);
+                        loadMissingFonts(fontDirectory);
 
                         const ODE_Transformation translation { 1, 0, 0, 1, std::round(mousePosImageSpace.x), std::round(mousePosImageSpace.y) };
                         ode_component_listLayers(component.component, &component.layerList);
@@ -281,31 +219,31 @@ int DesignEditorWindow::display() {
                             ode_component_transformLayer(component.component, insertedLayerId, ODE_TRANSFORMATION_BASIS_LAYER, translation);
                         }
 
-                        ode_pr1_drawComponent(data->context.rc, component.component, data->context.design.imageBase, &component.bitmap, &data->context.frameView);
+                        ode_pr1_drawComponent(context.rc, component.component, context.design.imageBase, &component.bitmap, &context.frameView);
                     }
 
-                } else if (data->ui.mode == DesignEditorUIState::Mode::SELECT) {
+                } else if (ui.mode == DesignEditorUIState::Mode::SELECT) {
                     ODE_String selectedLayerId;
                     ode_component_identifyLayer(component.component, &selectedLayerId, mousePosImageSpace, 2.0f);
                     if (isImGuiMultiselectKeyModifierPressed()) {
-                        data->ui.layerSelection.add(selectedLayerId.data);
+                        ui.layerSelection.add(selectedLayerId.data);
                     } else {
-                        data->ui.layerSelection.select(selectedLayerId.data);
+                        ui.layerSelection.select(selectedLayerId.data);
                     }
                 }
             }
 
             // Mouse rectangle selection
-            if (data->ui.mode == DesignEditorUIState::Mode::SELECT &&
-                data->ui.canvas.mouseClickPos.has_value() &&
-                data->ui.canvas.mouseDragPos.has_value()) {
-                const ODE_Vector2 rectStartInImageSpace = data->toImageSpace(*data->ui.canvas.mouseClickPos, component);
-                const ODE_Vector2 rectEndInImageSpace = data->toImageSpace(*data->ui.canvas.mouseDragPos, component);
+            if (ui.mode == DesignEditorUIState::Mode::SELECT &&
+                ui.canvas.mouseClickPos.has_value() &&
+                ui.canvas.mouseDragPos.has_value()) {
+                const ODE_Vector2 rectStartInImageSpace = toImageSpace(*ui.canvas.mouseClickPos, ui.canvas, component);
+                const ODE_Vector2 rectEndInImageSpace = toImageSpace(*ui.canvas.mouseDragPos, ui.canvas, component);
                 const ODE_Rectangle selectionRectangle {
                     ODE_Vector2 { std::min(rectStartInImageSpace.x, rectEndInImageSpace.x), std::min(rectStartInImageSpace.y, rectEndInImageSpace.y) },
                     ODE_Vector2 { std::max(rectStartInImageSpace.x, rectEndInImageSpace.x), std::max(rectStartInImageSpace.y, rectEndInImageSpace.y) } };
 
-                data->ui.layerSelection.clear();
+                ui.layerSelection.clear();
 
                 for (int i = 0; i < component.layerList.n; ++i) {
                     const ODE_LayerList::Entry &layer = component.layerList.entries[i];
@@ -315,31 +253,31 @@ int DesignEditorWindow::display() {
                     const ODE_Rectangle &layerBounds = layerMetrics.transformedGraphicalBounds;
 
                     if (isRectangleIntersection(selectionRectangle, layerBounds)) {
-                        data->ui.layerSelection.add(layer.id.data);
+                        ui.layerSelection.add(layer.id.data);
                     }
                 }
             }
 
-            if (data->ui.canvas.isMouseOver) {
-                const ODE_Vector2 mousePosImageSpace = data->toImageSpace(ImGui::GetMousePos(), component);
+            if (ui.canvas.isMouseOver) {
+                const ODE_Vector2 mousePosImageSpace = toImageSpace(ImGui::GetMousePos(), ui.canvas, component);
                 ImGui::SetTooltip("[%.2f, %.2f]", mousePosImageSpace.x, mousePosImageSpace.y);
             }
 
-            if (data->ui.widgets.showToolbar) {
-                drawToolbarWidget(data->context, component, data->ui.layerSelection, data->ui.mode);
+            if (ui.widgets.showToolbar) {
+                drawToolbarWidget(context, component, ui.layerSelection, ui.mode);
             }
-            if (data->ui.widgets.showLayerList) {
-                drawLayerListWidget(component.layerList, data->ui.layerSelection);
+            if (ui.widgets.showLayerList) {
+                drawLayerListWidget(component.layerList, ui.layerSelection);
             }
-            if (data->ui.widgets.showDesignView) {
-                drawDesignViewWidget(component.component, component.bitmap, *data->renderer, data->ui.textures, data->ui.canvas, data->ui.layerSelection, component.layerList.entries[0].id, data->ui.imageVisualizationParams.selectedDisplayMode);
+            if (ui.widgets.showDesignView) {
+                drawDesignViewWidget(component.component, component.bitmap, *renderer, ui.textures, ui.canvas, ui.layerSelection, component.layerList.entries[0].id, ui.imageVisualizationParams.selectedDisplayMode);
             }
-            if (data->ui.widgets.showLayerProperties) {
-                drawLayerPropertiesWidget(data->context, component, data->ui.layerSelection, data->ui.fileDialog);
+            if (ui.widgets.showLayerProperties) {
+                drawLayerPropertiesWidget(context, component, ui.layerSelection, ui.fileDialog);
             }
         }
 
-        if (data->ui.widgets.showImGuiDebugger) {
+        if (ui.widgets.showImGuiDebugger) {
             ImGui::ShowMetricsWindow();
         }
 
@@ -348,7 +286,7 @@ int DesignEditorWindow::display() {
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
-        const ImVec4 &clearColor = data->ui.imGuiWindow.clearColor;
+        const ImVec4 &clearColor = ui.imGuiWindow.clearColor;
         glClearColor(clearColor.x * clearColor.w, clearColor.y * clearColor.w, clearColor.z * clearColor.w, clearColor.w);
         glClear(GL_COLOR_BUFFER_BIT);
 
@@ -372,9 +310,12 @@ int DesignEditorWindow::display() {
     return 0;
 }
 
+bool DesignEditorWindow::createEmptyDesign() {
+    return createEmptyDesign(fontDirectory) == 0;
+}
+
 bool DesignEditorWindow::readOctopusFile(const FilePath &octopusPath) {
-    const int loadError = data->reloadOctopus(octopusPath, fontDirectory);
-    return loadError == 0;
+    return reloadOctopus(octopusPath, fontDirectory) == 0;
 }
 
 void DesignEditorWindow::setImageDirectory(const FilePath &imageDirectory_) {
@@ -385,33 +326,34 @@ void DesignEditorWindow::setFontDirectory(const FilePath &fontDirectory_) {
     fontDirectory = fontDirectory_;
 }
 
-void DesignEditorWindow::setIgnoreValidation(bool ignoreValidation_) {
-    ignoreValidation = ignoreValidation_;
-}
-
 void DesignEditorWindow::drawControlsWidget() {
     ImGui::Begin("Controls");
 
     ImGui::Columns(3);
 
+    // Create "New Design"
+    if (ImGui::Button("New")) {
+        createEmptyDesign(fontDirectory);
+    }
+
     // Open "Open Octopus File" file dialog on button press
     if (ImGui::Button("Open Octopus File")) {
         const char* filters = ".json";
-        ImGuiFileDialog::Instance()->OpenDialog("ChooseOctopusFileDlgKey", "Choose Octopus *.json File", filters, data->ui.fileDialog.octopusFilePath, data->ui.fileDialog.octopusFileName);
+        ImGuiFileDialog::Instance()->OpenDialog("ChooseOctopusFileDlgKey", "Choose Octopus *.json File", filters, ui.fileDialog.octopusFilePath, ui.fileDialog.octopusFileName);
     }
 
-    if (!data->context.design.empty()) {
+    if (!context.design.empty()) {
         // Open "Save Octopus File" file dialog on button press
         if (ImGui::Button("Save Octopus File")) {
             const char* filters = ".json";
-            ImGuiFileDialog::Instance()->OpenDialog("SaveOctopusFileDlgKey", "Save as *.json", filters, data->ui.fileDialog.octopusFilePath, data->ui.fileDialog.octopusFileName);
+            ImGuiFileDialog::Instance()->OpenDialog("SaveOctopusFileDlgKey", "Save as *.json", filters, ui.fileDialog.octopusFilePath, ui.fileDialog.octopusFileName);
         }
     }
 
     // Display "Open Octopus File" file dialog
     if (ImGuiFileDialog::Instance()->Display("ChooseOctopusFileDlgKey")) {
-        data->ui.fileDialog.octopusFilePath = ImGuiFileDialog::Instance()->GetCurrentPath();
-        data->ui.fileDialog.octopusFileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
+        ui.fileDialog.octopusFilePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+        ui.fileDialog.octopusFileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
 
         if (ImGuiFileDialog::Instance()->IsOk()) {
             const std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
@@ -426,14 +368,14 @@ void DesignEditorWindow::drawControlsWidget() {
         ImGuiFileDialog::Instance()->Close();
     }
 
-    if (!data->context.design.empty()) {
+    if (!context.design.empty()) {
         // Display "Save Octopus File" file dialog
         if (ImGuiFileDialog::Instance()->Display("SaveOctopusFileDlgKey")) {
-            data->ui.fileDialog.octopusFilePath = ImGuiFileDialog::Instance()->GetCurrentPath();
-            data->ui.fileDialog.octopusFileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
+            ui.fileDialog.octopusFilePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+            ui.fileDialog.octopusFileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
 
             if (ImGuiFileDialog::Instance()->IsOk()) {
-                const ODE_ComponentHandle &component = data->context.design.components.back().component;
+                const ODE_ComponentHandle &component = context.design.components.back().component;
 
                 const std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
 
@@ -453,15 +395,15 @@ void DesignEditorWindow::drawControlsWidget() {
     ImGui::NextColumn();
 
     ImGui::Text("Widgets:");
-    ImGui::Checkbox("Toolbar", &data->ui.widgets.showToolbar);
-    ImGui::Checkbox("Layer List", &data->ui.widgets.showLayerList);
-    ImGui::Checkbox("Interactive Design View", &data->ui.widgets.showDesignView);
-    ImGui::Checkbox("Layer Properties", &data->ui.widgets.showLayerProperties);
+    ImGui::Checkbox("Toolbar", &ui.widgets.showToolbar);
+    ImGui::Checkbox("Layer List", &ui.widgets.showLayerList);
+    ImGui::Checkbox("Interactive Design View", &ui.widgets.showDesignView);
+    ImGui::Checkbox("Layer Properties", &ui.widgets.showLayerProperties);
 
     ImGui::NextColumn();
 
     ImGui::Text("Blend Mode");
-    ImGui::Combo(" ", &data->ui.imageVisualizationParams.selectedDisplayMode, designEditorImageDisplayModes, sizeof(designEditorImageDisplayModes)/sizeof(designEditorImageDisplayModes[0]));
+    ImGui::Combo(" ", &ui.imageVisualizationParams.selectedDisplayMode, designEditorImageDisplayModes, sizeof(designEditorImageDisplayModes)/sizeof(designEditorImageDisplayModes[0]));
 
     ImGui::NextColumn();
     ImGui::Separator();
@@ -469,7 +411,7 @@ void DesignEditorWindow::drawControlsWidget() {
 
     ImGui::NextColumn();
 
-    ImGui::Checkbox("ImGui Metrics/Debugger", &data->ui.widgets.showImGuiDebugger);
+    ImGui::Checkbox("ImGui Metrics/Debugger", &ui.widgets.showImGuiDebugger);
 
     ImGui::End();
 }
@@ -481,19 +423,82 @@ void DesignEditorWindow::handleKeyboardEvents() {
 
     if (ImGui::IsKeyPressed(ImGuiKey_LeftSuper)) {
         if (ImGui::IsKeyPressed(ImGuiKey_1)) {
-            data->ui.mode = DesignEditorUIState::Mode::SELECT;
+            ui.mode = DesignEditorUIState::Mode::SELECT;
         } else if (ImGui::IsKeyPressed(ImGuiKey_2)) {
-            data->ui.mode = DesignEditorUIState::Mode::ADD_RECTANGLE;
+            ui.mode = DesignEditorUIState::Mode::ADD_RECTANGLE;
         } else if (ImGui::IsKeyPressed(ImGuiKey_3)) {
-            data->ui.mode = DesignEditorUIState::Mode::ADD_ELLIPSE;
+            ui.mode = DesignEditorUIState::Mode::ADD_ELLIPSE;
         } else if (ImGui::IsKeyPressed(ImGuiKey_4)) {
-            data->ui.mode = DesignEditorUIState::Mode::ADD_TEXT;
+            ui.mode = DesignEditorUIState::Mode::ADD_TEXT;
         }
     }
 
     if (ImGui::IsKeyDown(ImGuiKey_W)) {
-        data->ui.canvas.zoom = std::clamp(data->ui.canvas.zoom + zoomKeySpeed, minZoom, maxZoom);
+        ui.canvas.zoom = std::clamp(ui.canvas.zoom + zoomKeySpeed, minZoom, maxZoom);
     } else if (ImGui::IsKeyDown(ImGuiKey_S)) {
-        data->ui.canvas.zoom = std::clamp(data->ui.canvas.zoom - zoomKeySpeed, minZoom, maxZoom);
+        ui.canvas.zoom = std::clamp(ui.canvas.zoom - zoomKeySpeed, minZoom, maxZoom);
     }
+}
+
+int DesignEditorWindow::loadMissingFonts(const FilePath &fontDir) {
+    ODE_StringList missingFonts;
+    CHECK(ode_design_listMissingFonts(context.design.design, &missingFonts));
+
+    for (int i = 0; i < missingFonts.n; ++i) {
+        if (missingFonts.entries[i].length > 0) {
+            const std::string pathStr = (std::string)fontDir+std::string("/")+ode_stringDeref(missingFonts.entries[i])+std::string(".ttf");
+            CHECK(ode_design_loadFontFile(context.design.design, missingFonts.entries[i], ode_stringRef(pathStr), ODE_StringRef()));
+        }
+    }
+    return 0;
+}
+
+int DesignEditorWindow::createEmptyDesign(const FilePath &fontDir) {
+    ui.layerSelection.clear();
+
+    // TODO: Allow multiple components
+    if (context.design.design.ptr) {
+        CHECK(ode_destroyDesign(context.design.design));
+        CHECK(ode_createDesign(context.engine, &context.design.design));
+    }
+    context.design.imageDirectory = imageDirectory.empty() ? std::filesystem::temp_directory_path().string()+"/ode-design-editor-images" : imageDirectory;
+    // TODO: set imageBase directory using the ODE API
+    reinterpret_cast<ImageBase *>(context.design.imageBase.ptr)->setImageDirectory(context.design.imageDirectory);
+
+    context.design.components.clear();
+    DesignEditorComponent &newComponent = context.design.components.emplace_back();
+    newComponent.octopusJson = R"( {"type":"OCTOPUS_COMPONENT","version":"3.0.0-rc.19","id":"COMPONENT-1","dimensions":{"width":1920,"height":1080},"content":{"id":"ARTBOARD","type":"MASK_GROUP","name":"Artboard","visible":true,"opacity":1,"blendMode":"NORMAL","transform":[1,0,0,1,0,0],"mask":{"id":"BACKGROUND","type":"SHAPE","name":"Background","visible":true,"opacity":1,"blendMode":"NORMAL","transform":[1,0,0,1,0,0],"shape":{"fillRule":"NON_ZERO","path":{"type":"RECTANGLE","visible":true,"rectangle":{"x0":0,"y0":0,"x1":1920,"y1":1080},"transform":[1,0,0,1,0,0]},"fills":[{"type":"COLOR","visible":true,"blendMode":"NORMAL","color":{"r":1,"g":1,"b":1,"a":1}}],"strokes":[]},"effects":[]},"maskBasis":"BODY","layers":[],"effects":[]}})";
+
+    CHECK(ode_design_addComponentFromOctopusString(context.design.design, &newComponent.component, newComponent.metadata, ode_stringRef(newComponent.octopusJson), nullptr));
+    CHECK(loadMissingFonts(fontDir));
+    CHECK(ode_component_listLayers(newComponent.component, &newComponent.layerList));
+    CHECK(ode_pr1_drawComponent(context.rc, newComponent.component, context.design.imageBase, &newComponent.bitmap, &context.frameView));
+    return 0;
+}
+
+int DesignEditorWindow::reloadOctopus(const FilePath &octopusPath, const FilePath &fontDir) {
+    ui.layerSelection.clear();
+
+    // TODO: Allow multiple components
+    if (context.design.design.ptr) {
+        CHECK(ode_destroyDesign(context.design.design));
+        CHECK(ode_createDesign(context.engine, &context.design.design));
+    }
+
+    context.design.components.clear();
+    DesignEditorComponent &newComponent = context.design.components.emplace_back();
+
+    if (!readFile(octopusPath, newComponent.octopusJson)) {
+        fprintf(stderr, "Failed to read file \"%s\"\n", ((const std::string &) octopusPath).c_str());
+        return false;
+    }
+    context.design.imageDirectory = imageDirectory.empty() ? octopusPath.parent()+"/images" : imageDirectory;
+    // TODO: set imageBase directory using the ODE API
+    reinterpret_cast<ImageBase *>(context.design.imageBase.ptr)->setImageDirectory(context.design.imageDirectory);
+
+    CHECK(ode_design_addComponentFromOctopusString(context.design.design, &newComponent.component, newComponent.metadata, ode_stringRef(newComponent.octopusJson), nullptr));
+    CHECK(loadMissingFonts(fontDir));
+    CHECK(ode_component_listLayers(newComponent.component, &newComponent.layerList));
+    CHECK(ode_pr1_drawComponent(context.rc, newComponent.component, context.design.imageBase, &newComponent.bitmap, &context.frameView));
+    return 0;
 }

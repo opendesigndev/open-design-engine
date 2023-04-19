@@ -818,13 +818,16 @@ void drawLayerShapeFill(int fillI,
 
                 if (ImGuiFileDialog::Instance()->IsOk()) {
                     const std::string filePath = ImGuiFileDialog::Instance()->GetFilePathName();
-                    const std::string fileName = ((FilePath)filePath).filename();
-                    const std::string destDir = (std::string)component.filePath.parent();
                     // Copy the file to images directory
                     std::vector<byte> fileContents;
                     const bool isRead = readFile(filePath, fileContents);
                     if (isRead) {
-                        const std::string imageLocation = destDir+"/images/"+fileName;
+                        const std::string imageDirectoryStr = (std::string)context.design.imageDirectory;
+                        if (!std::filesystem::is_directory(imageDirectoryStr)) {
+                            std::filesystem::create_directory(imageDirectoryStr);
+                        }
+                        const std::string fileName = ((FilePath)filePath).filename();
+                        const std::string imageLocation = imageDirectoryStr+"/"+fileName;
                         const bool isCopied = writeFile(imageLocation, fileContents);
                         if (isCopied) {
                             changeReplace(octopus::LayerChange::Subject::FILL, context, component, layerId, fillI, nonstd::nullopt, [&octopusFill, &imageLocation](octopus::LayerChange::Values &values) {
