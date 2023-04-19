@@ -1,14 +1,13 @@
 
-#include "FontAtlas.h"
-
 #ifdef ODE_REALTIME_TEXT_RENDERER
 
-// TODO
-#include "../../../open-design-text-renderer/src/text-renderer/Context.h"
-#include "../../../open-design-text-renderer/src/text-renderer/Face.h"
-#include "../../../open-design-text-renderer/src/fonts/FontManager.h"
-#include "../../../open-design-text-renderer/src/fonts/FaceTable.h"
+// Making sure FreeType is included before first occurence of text-renderer-api.h
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
+#include "FontAtlas.h"
+
+#include <open-design-text-renderer/text-renderer-api.h>
 #include <ode/text-renderer/text-renderer-instance.h>
 #include "TextRenderer.h"
 
@@ -79,10 +78,10 @@ void FontAtlas::TextureStorage::put(int x, int y, const msdfgen::BitmapConstRef<
 }
 
 FontAtlas::FontAtlas(TextRenderer *parentRenderer, const odtr::FontSpecifier &fontSpecifier) : atlas(FONT_ATLAS_INITIAL_SIZE, parentRenderer), baseScale(1./MSDF_ATLAS_DEFAULT_EM_SIZE) {
-    const odtr::FaceTable::Item *faceItem = TEXT_RENDERER_CONTEXT->getFontManager().facesTable().getFaceItem(fontSpecifier.faceId);
-    if (!(faceItem && faceItem->face))
+    FT_Face ftFace = odtr::getFreetypeFace(TEXT_RENDERER_CONTEXT, fontSpecifier.faceId);
+    if (!ftFace)
         return;
-    fontHandle = FontHandleHolder(faceItem->face->getFtFace());
+    fontHandle = FontHandleHolder(ftFace);
     msdfgen::FontMetrics fontMetrics;
     if (msdfgen::getFontMetrics(fontMetrics, fontHandle))
         baseScale = 1./fontMetrics.emSize;

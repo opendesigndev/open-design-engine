@@ -35,8 +35,6 @@ if(ODE_REALTIME_TEXT)
     add_subdirectory(../third-party/msdf-atlas-gen ${CMAKE_CURRENT_BINARY_DIR}/msdf-atlas-gen)
     target_link_libraries(ode-renderer PRIVATE msdf-atlas-gen)
     target_compile_definitions(ode-renderer PUBLIC ODE_REALTIME_TEXT_RENDERER)
-    # TODO fix this in ODTR
-    target_include_directories(ode-renderer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../open-design-text-renderer/src ${CMAKE_CURRENT_SOURCE_DIR}/../open-design-text-renderer/src/vendor)
     target_link_libraries(ode-renderer PRIVATE freetype harfbuzz::harfbuzz)
 endif()
 
