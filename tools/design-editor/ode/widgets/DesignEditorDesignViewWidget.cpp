@@ -95,24 +95,56 @@ void drawDesignViewWidget(const ODE_ComponentHandle &component,
         for (const ODE_StringRef &layerId : layerSelection.layerIDs) {
             ODE_LayerMetrics topLayerMetrics;
             ode_component_getLayerMetrics(component, topLayerId, &topLayerMetrics);
+
             const ODE_Rectangle &topLayerBounds = topLayerMetrics.logicalBounds;
-            const float w = topLayerBounds.b.x - topLayerBounds.a.x;
-            const float h = topLayerBounds.b.y - topLayerBounds.a.y;
+            const float canvasWidth = topLayerBounds.b.x - topLayerBounds.a.x;
+            const float canvasHeight = topLayerBounds.b.y - topLayerBounds.a.y;
+
             ODE_LayerMetrics layerMetrics;
             ode_component_getLayerMetrics(component, layerId, &layerMetrics);
             ODE_Rectangle layerBounds = layerMetrics.graphicalBounds;
-            const float trX = layerMetrics.transformation.matrix[4];
-            const float trY = layerMetrics.transformation.matrix[5];
+
+            const float w = layerBounds.b.x - layerBounds.a.x;
+            const float h = layerBounds.b.y - layerBounds.a.y;
+
+            const float a = static_cast<float>(layerMetrics.transformation.matrix[0]);
+            const float b = static_cast<float>(layerMetrics.transformation.matrix[1]);
+            const float c = static_cast<float>(layerMetrics.transformation.matrix[2]);
+            const float d = static_cast<float>(layerMetrics.transformation.matrix[3]);
+            const float trX = static_cast<float>(layerMetrics.transformation.matrix[4]);
+            const float trY = static_cast<float>(layerMetrics.transformation.matrix[5]);
+            const float sX = sqrt(a*a+b*b);
+            const float sY = sqrt(c*c+d*d);
+            const float rotation = (b < 0) ? -acos(a/sX) : acos(a/sX);
+
             layerBounds.a.x += trX;
             layerBounds.a.y += trY;
-            layerBounds.b.x += trX;
-            layerBounds.b.y += trY;
-            // TODO: Fix scale and rotate highlight rectangles
+            layerBounds.b.x += trX + w*(sX-1.0);
+            layerBounds.b.y += trY + h*(sY-1.0);
+
+            std::vector<Vector2<float>> corners {
+                { static_cast<float>(layerBounds.a.x), static_cast<float>(layerBounds.a.y) },
+                { static_cast<float>(layerBounds.b.x), static_cast<float>(layerBounds.a.y) },
+                { static_cast<float>(layerBounds.b.x), static_cast<float>(layerBounds.b.y) },
+                { static_cast<float>(layerBounds.a.x), static_cast<float>(layerBounds.b.y) },
+            };
+            std::transform(corners.begin()+1, corners.end(), corners.begin()+1, [&rotation, &center=corners.front()](Vector2<float> p) {
+                p -= center;
+
+                const float s = sin(rotation);
+                const float c = cos(rotation);
+
+                return Vector2<float>{
+                    p.x*c - p.y*s + center.x,
+                    p.x*s + p.y*c + center.y,
+                };
+            });
+
             highlightRectangles.emplace_back(ode::Rectangle<float> {
-                std::max(0.0f, static_cast<float>(layerBounds.a.x) / w),
-                std::max(0.0f, static_cast<float>(layerBounds.a.y) / h),
-                std::min(1.0f, static_cast<float>(layerBounds.b.x) / w),
-                std::min(1.0f, static_cast<float>(layerBounds.b.y) / h),
+                std::clamp(std::min(std::min(corners[0].x, corners[1].x), std::min(corners[2].x, corners[3].x)) / canvasWidth, 0.0f, 1.0f),
+                std::clamp(std::min(std::min(corners[0].y, corners[1].y), std::min(corners[2].y, corners[3].y)) / canvasHeight, 0.0f, 1.0f),
+                std::clamp(std::max(std::max(corners[0].x, corners[1].x), std::max(corners[2].x, corners[3].x)) / canvasWidth, 0.0f, 1.0f),
+                std::clamp(std::max(std::max(corners[0].y, corners[1].y), std::max(corners[2].y, corners[3].y)) / canvasHeight, 0.0f, 1.0f),
             });
         }
 
