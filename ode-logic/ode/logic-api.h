@@ -135,15 +135,17 @@ ODE_HANDLE_DECL(ODE_internal_Component) ODE_ComponentHandle;
 
 /// Destroys an ODE_LayerList object
 ODE_Result ODE_API ode_destroyLayerList(ODE_LayerList layerList);
+/// Destroys an ODE_StringList constructed by ode_design_listComponents
+ODE_Result ODE_API ode_destroyComponentList(ODE_StringList componentList);
 /// Destroys an ODE_StringList constructed by ode_design_listMissingFonts or ode_component_listMissingFonts
 ODE_Result ODE_API ode_destroyMissingFontList(ODE_StringList fontList);
 
 // Engine
 
 /// Fills the ODE_EngineAttributes structure with default values of attributes
-ODE_Result ODE_API ode_initializeEngineAttributes(ODE_EngineAttributes *engineAttributes);
+ODE_Result ODE_API ode_initializeEngineAttributes(ODE_OUT_RETURN ODE_EngineAttributes *engineAttributes);
 /// Creates an instance of Open Design Engine with the given attributes and saves its handle to the engine argument. Use ode_destroyEngine to destroy it
-ODE_Result ODE_API ode_createEngine(ODE_EngineHandle *engine, const ODE_EngineAttributes *engineAttributes);
+ODE_Result ODE_API ode_createEngine(ODE_OUT_RETURN ODE_EngineHandle *engine, const ODE_EngineAttributes *engineAttributes);
 /// Destroys an instance of Open Design Engine
 ODE_Result ODE_API ode_destroyEngine(ODE_EngineHandle engine);
 
@@ -154,7 +156,7 @@ ODE_Result ODE_API ode_destroyEngine(ODE_EngineHandle engine);
  * @param engine - instance of engine
  * @param design - output argument for the new design handle
  */
-ODE_Result ODE_API ode_createDesign(ODE_EngineHandle engine, ODE_DesignHandle *design);
+ODE_Result ODE_API ode_createDesign(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_DesignHandle *design);
 
 /**
  * Loads a design from a comprehensive binary file representation - deallocate with ode_destroyDesign
@@ -163,7 +165,7 @@ ODE_Result ODE_API ode_createDesign(ODE_EngineHandle engine, ODE_DesignHandle *d
  * @param path - path to design file
  * @param parseError - output argument to store details of parse error if ODE_RESULT_OCTOPUS_PARSE_ERROR or ODE_RESULT_OCTOPUS_MANIFEST_PARSE_ERROR is returned. Can be null if this information is not needed.
  */
-ODE_Result ODE_FUTURE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_DesignHandle *design, ODE_StringRef path, ODE_ParseError *parseError);
+ODE_Result ODE_FUTURE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_DesignHandle *design, ODE_StringRef path, ODE_OUT ODE_ParseError *parseError);
 
 /**
  * Loads a design from an Octopus Manifest file - deallocate with ode_destroyDesign
@@ -172,7 +174,7 @@ ODE_Result ODE_FUTURE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_De
  * @param path - path to Octopus manifest file
  * @param parseError - output argument to store details of parse error if ODE_RESULT_OCTOPUS_MANIFEST_PARSE_ERROR or ODE_RESULT_OCTOPUS_PARSE_ERROR is returned. Can be null if this information is not needed.
  */
-ODE_Result ODE_NATIVE_API ode_loadDesignFromManifestFile(ODE_EngineHandle engine, ODE_DesignHandle *design, ODE_StringRef path, ODE_ParseError *parseError);
+ODE_Result ODE_NATIVE_API ode_loadDesignFromManifestFile(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_DesignHandle *design, ODE_StringRef path, ODE_OUT ODE_ParseError *parseError);
 
 /**
  * Loads a design from an Octopus Manifest string - deallocate with ode_destroyDesign
@@ -181,7 +183,7 @@ ODE_Result ODE_NATIVE_API ode_loadDesignFromManifestFile(ODE_EngineHandle engine
  * @param manifestString - Octopus manifest JSON string reference
  * @param parseError - output argument to store details of parse error if ODE_RESULT_OCTOPUS_MANIFEST_PARSE_ERROR or ODE_RESULT_OCTOPUS_PARSE_ERROR is returned. Can be null if this information is not needed.
  */
-ODE_Result ODE_API ode_loadDesignFromManifestString(ODE_EngineHandle engine, ODE_DesignHandle *design, ODE_StringRef manifestString, ODE_ParseError *parseError);
+ODE_Result ODE_API ode_loadDesignFromManifestString(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_DesignHandle *design, ODE_StringRef manifestString, ODE_OUT ODE_ParseError *parseError);
 
 /// Destroys a design and its components
 ODE_Result ODE_API ode_destroyDesign(ODE_DesignHandle design);
@@ -192,7 +194,7 @@ ODE_Result ODE_API ode_destroyDesign(ODE_DesignHandle design);
  * @param path - path to Octopus manifest file
  * @param parseError - output argument to store details of parse error if ODE_RESULT_OCTOPUS_MANIFEST_PARSE_ERROR or ODE_RESULT_OCTOPUS_PARSE_ERROR is returned. Can be null if this information is not needed.
  */
-ODE_Result ODE_NATIVE_API ode_design_loadManifestFile(ODE_DesignHandle design, ODE_StringRef path, ODE_ParseError *parseError);
+ODE_Result ODE_NATIVE_API ode_design_loadManifestFile(ODE_DesignHandle design, ODE_StringRef path, ODE_OUT ODE_ParseError *parseError);
 
 /**
  * Loads an Octopus Manifest from JSON string into an existing design. Caller must ensure no conflicts with preexisting content
@@ -200,7 +202,7 @@ ODE_Result ODE_NATIVE_API ode_design_loadManifestFile(ODE_DesignHandle design, O
  * @param manifestString - Octopus manifest JSON string reference
  * @param parseError - output argument to store details of parse error if ODE_RESULT_OCTOPUS_MANIFEST_PARSE_ERROR or ODE_RESULT_OCTOPUS_PARSE_ERROR is returned. Can be null if this information is not needed.
  */
-ODE_Result ODE_API ode_design_loadManifestString(ODE_DesignHandle design, ODE_StringRef manifestString, ODE_ParseError *parseError);
+ODE_Result ODE_API ode_design_loadManifestString(ODE_DesignHandle design, ODE_StringRef manifestString, ODE_OUT ODE_ParseError *parseError);
 
 /**
  * Loads a component manifest from JSON string and adds the component to design
@@ -209,7 +211,7 @@ ODE_Result ODE_API ode_design_loadManifestString(ODE_DesignHandle design, ODE_St
  * @param componentManifestString - component manifest JSON string reference
  * @param parseError - output argument to store details of parse error if ODE_RESULT_OCTOPUS_MANIFEST_PARSE_ERROR or ODE_RESULT_OCTOPUS_PARSE_ERROR is returned. Can be null if this information is not needed.
  */
-ODE_Result ODE_FUTURE_API ode_design_addComponentFromManifestString(ODE_DesignHandle design, ODE_ComponentHandle *component, ODE_StringRef componentManifestString, ODE_ParseError *parseError);
+ODE_Result ODE_FUTURE_API ode_design_addComponentFromManifestString(ODE_DesignHandle design, ODE_OUT_RETURN ODE_ComponentHandle *component, ODE_StringRef componentManifestString, ODE_OUT ODE_ParseError *parseError);
 
 /**
  * Loads a component from Octopus JSON string and adds the component to design
@@ -219,16 +221,23 @@ ODE_Result ODE_FUTURE_API ode_design_addComponentFromManifestString(ODE_DesignHa
  * @param octopusString - Octopus JSON string reference
  * @param parseError - output argument to store details of parse error if ODE_RESULT_OCTOPUS_PARSE_ERROR is returned. Can be null if this information is not needed.
  */
-ODE_Result ODE_API ode_design_addComponentFromOctopusString(ODE_DesignHandle design, ODE_ComponentHandle *component, ODE_ComponentMetadata metadata, ODE_StringRef octopusString, ODE_ParseError *parseError);
+ODE_Result ODE_API ode_design_addComponentFromOctopusString(ODE_DesignHandle design, ODE_OUT_RETURN ODE_ComponentHandle *component, ODE_ComponentMetadata metadata, ODE_StringRef octopusString, ODE_OUT ODE_ParseError *parseError);
 
 /// Removes component from design. It is not necessary to call this before ode_destroyDesign
 ODE_Result ODE_API ode_design_removeComponent(ODE_DesignHandle design, ODE_ComponentHandle component);
 
 /**
+ * Outputs the list of components in the specified design
+ * @param design - target design
+ * @param componentList - the list of ID's will be stored in this output argument. Deallocate with ode_destroyComponentList
+ */
+ODE_Result ODE_API ode_design_listComponents(ODE_DesignHandle design, ODE_OUT_RETURN ODE_StringList *componentList);
+
+/**
  * Outputs a list of fonts (post-script names) required by a design which haven't been provided yet
  * @param fontList - the list is stored in this output argument. Deallocate with ode_destroyMissingFontList
  */
-ODE_Result ODE_API ode_design_listMissingFonts(ODE_DesignHandle design, ODE_StringList *fontList);
+ODE_Result ODE_API ode_design_listMissingFonts(ODE_DesignHandle design, ODE_OUT_RETURN ODE_StringList *fontList);
 
 /**
  * Loads a font for a design from a font file
@@ -243,23 +252,23 @@ ODE_Result ODE_NATIVE_API ode_design_loadFontFile(ODE_DesignHandle design, ODE_S
  * Loads a font for a design from bytes in memory
  * @param design - target design
  * @param name - font name identifier (post-script name)
- * @param data - memory buffer holding the raw font data. Ownership of the memory buffer will be transferred to ODE, so it needn't be destroyed on success
+ * @param data - memory buffer holding the raw font data. Ownership of the memory buffer will be transferred to ODE, so it must not be destroyed on success
  * @param faceName - for files containing multiple faces, identifies the specific face within the file, otherwise should be left empty
  */
-ODE_Result ODE_API ode_design_loadFontBytes(ODE_DesignHandle design, ODE_StringRef name, ODE_MemoryBuffer *data, ODE_StringRef faceName);
+ODE_Result ODE_API ode_design_loadFontBytes(ODE_DesignHandle design, ODE_StringRef name, ODE_INOUT ODE_MemoryBuffer *data, ODE_StringRef faceName);
 
 /**
  * Finds component within a design by ID and outputs its handle
  * @param component - output argument for the component handle
  * @param componentId - component ID string reference
  */
-ODE_Result ODE_API ode_design_getComponent(ODE_DesignHandle design, ODE_ComponentHandle *component, ODE_StringRef componentId);
+ODE_Result ODE_API ode_design_getComponent(ODE_DesignHandle design, ODE_OUT_RETURN ODE_ComponentHandle *component, ODE_StringRef componentId);
 
 // Component
 
-ODE_Result ODE_FUTURE_API ode_component_loadOctopusFile(ODE_ComponentHandle component, ODE_StringRef path, ODE_StringRef assetBasePath, ODE_ParseError *parseError);
-ODE_Result ODE_FUTURE_API ode_component_loadOctopusString(ODE_ComponentHandle component, ODE_StringRef octopusString, ODE_StringRef assetBasePath, ODE_ParseError *parseError);
-ODE_Result ODE_FUTURE_API ode_component_setRootLayer(ODE_ComponentHandle component, ODE_StringRef layerOctopusString, ODE_ParseError *parseError);
+ODE_Result ODE_FUTURE_API ode_component_loadOctopusFile(ODE_ComponentHandle component, ODE_StringRef path, ODE_StringRef assetBasePath, ODE_OUT ODE_ParseError *parseError);
+ODE_Result ODE_FUTURE_API ode_component_loadOctopusString(ODE_ComponentHandle component, ODE_StringRef octopusString, ODE_StringRef assetBasePath, ODE_OUT ODE_ParseError *parseError);
+ODE_Result ODE_FUTURE_API ode_component_setRootLayer(ODE_ComponentHandle component, ODE_StringRef layerOctopusString, ODE_OUT ODE_ParseError *parseError);
 
 /**
  * Adds a layer to component
@@ -269,7 +278,7 @@ ODE_Result ODE_FUTURE_API ode_component_setRootLayer(ODE_ComponentHandle compone
  * @param layerOctopusString - the Octopus representation of the single layer being inserted as a JSON string reference
  * @param parseError - output argument to store details of parse error if ODE_RESULT_OCTOPUS_PARSE_ERROR is returned. Can be null if this information is not needed.
  */
-ODE_Result ODE_API ode_component_addLayer(ODE_ComponentHandle component, ODE_StringRef parentLayerId, ODE_StringRef beforeLayerId, ODE_StringRef layerOctopusString, ODE_ParseError *parseError);
+ODE_Result ODE_API ode_component_addLayer(ODE_ComponentHandle component, ODE_StringRef parentLayerId, ODE_StringRef beforeLayerId, ODE_StringRef layerOctopusString, ODE_OUT ODE_ParseError *parseError);
 
 ODE_Result ODE_FUTURE_API ode_component_removeLayer(ODE_ComponentHandle component, ODE_StringRef layerId);
 
@@ -282,7 +291,7 @@ ODE_Result ODE_FUTURE_API ode_component_removeLayer(ODE_ComponentHandle componen
  *     THE ONLY IMPLEMENTED "subject" IS CURRENTLY "LAYER"
  * @param parseError - output argument to store details of parse error if ODE_RESULT_OCTOPUS_PARSE_ERROR is returned. Can be null if this information is not needed.
  */
-ODE_Result ODE_API ode_component_modifyLayer(ODE_ComponentHandle component, ODE_StringRef layerId, ODE_StringRef layerChangeOctopusString, ODE_ParseError *parseError);
+ODE_Result ODE_API ode_component_modifyLayer(ODE_ComponentHandle component, ODE_StringRef layerId, ODE_StringRef layerChangeOctopusString, ODE_OUT ODE_ParseError *parseError);
 
 /**
  * Permanently applies a transformation matrix to a single layer within a component
@@ -299,7 +308,7 @@ ODE_Result ODE_API ode_component_transformLayer(ODE_ComponentHandle component, O
  * @param animationDefinition - the animation definition encoded as a JSON string
  * @param parseError - output argument to store details of parse error if ODE_RESULT_ANIMATION_PARSE_ERROR is returned. Can be null if this information is not needed.
  */
-ODE_Result ODE_API ode_pr1_component_loadAnimation(ODE_ComponentHandle component, ODE_StringRef animationDefinition, ODE_ParseError *parseError);
+ODE_Result ODE_API ode_pr1_component_loadAnimation(ODE_ComponentHandle component, ODE_StringRef animationDefinition, ODE_OUT ODE_ParseError *parseError);
 
 /**
  * PROTOTYPE - Evaluates the value of a layer's animation at a specific point in time
@@ -317,7 +326,7 @@ ODE_Result ODE_API ode_pr1_component_getAnimationValueAtTime(ODE_ComponentHandle
  * Outputs a list of all layers within a component and their metadata
  * @param layerList - output argument where the layer list is stored. Deallocate with ode_destroyLayerList
  */
-ODE_Result ODE_API ode_component_listLayers(ODE_ComponentHandle component, ODE_LayerList *layerList);
+ODE_Result ODE_API ode_component_listLayers(ODE_ComponentHandle component, ODE_OUT_RETURN ODE_LayerList *layerList);
 
 /**
  * Finds the component's topmost layer at a given position
@@ -325,7 +334,7 @@ ODE_Result ODE_API ode_component_listLayers(ODE_ComponentHandle component, ODE_L
  * @param position - position in component's coordinate system
  * @param radius - tolerance radius around position (a layer not intersecting position but within this radius may be outputted)
  */
-ODE_Result ODE_API ode_component_identifyLayer(ODE_ComponentHandle component, ODE_String *layerId, ODE_Vector2 position, ODE_Scalar radius);
+ODE_Result ODE_API ode_component_identifyLayer(ODE_ComponentHandle component, ODE_OUT_RETURN ODE_String *layerId, ODE_Vector2 position, ODE_Scalar radius);
 
 /**
  * Outputs layer metrics for a given layer of a component
@@ -333,22 +342,22 @@ ODE_Result ODE_API ode_component_identifyLayer(ODE_ComponentHandle component, OD
  * @param layerId - layer's ID
  * @param layerMetrics - output argument where the layer's metrics will be stored
  */
-ODE_Result ODE_API ode_component_getLayerMetrics(ODE_ComponentHandle component, ODE_StringRef layerId, ODE_LayerMetrics *layerMetrics);
+ODE_Result ODE_API ode_component_getLayerMetrics(ODE_ComponentHandle component, ODE_StringRef layerId, ODE_OUT_RETURN ODE_LayerMetrics *layerMetrics);
 
 /**
  * Outputs a list of fonts (post-script names) required by a design component which haven't been provided yet
  * @param fontList - the list is stored in this output argument. Deallocate with ode_destroyMissingFontList
  */
-ODE_Result ODE_API ode_component_listMissingFonts(ODE_ComponentHandle component, ODE_StringList *fontList);
+ODE_Result ODE_API ode_component_listMissingFonts(ODE_ComponentHandle component, ODE_OUT_RETURN ODE_StringList *fontList);
 
 /**
  * Outputs the Octopus string representing a given design component
  * @param octopusString - output argument where the Octopus JSON will be stored. Deallocate with ode_destroyString
  */
-ODE_Result ODE_API ode_component_getOctopus(ODE_ComponentHandle component, ODE_String *octopusString);
+ODE_Result ODE_API ode_component_getOctopus(ODE_ComponentHandle component, ODE_OUT_RETURN ODE_String *octopusString);
 
-ODE_Result ODE_FUTURE_API ode_component_getInstancedOctopus(ODE_ComponentHandle component, ODE_String *octopusString);
-ODE_Result ODE_FUTURE_API ode_component_getLayerOctopus(ODE_ComponentHandle *component, ODE_String *octopusString, ODE_StringRef layerId);
+ODE_Result ODE_FUTURE_API ode_component_getInstancedOctopus(ODE_ComponentHandle component, ODE_OUT_RETURN ODE_String *octopusString);
+ODE_Result ODE_FUTURE_API ode_component_getLayerOctopus(ODE_ComponentHandle component, ODE_OUT_RETURN ODE_String *octopusString, ODE_StringRef layerId);
 
 #ifdef __cplusplus
 }

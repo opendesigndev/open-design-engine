@@ -205,6 +205,7 @@ Bitmap Texture2D::download() const {
     Bitmap bitmap(fmt, dims);
     if (!bitmap)
         return Bitmap();
+    glFinish();
     #ifndef ODE_WEBGL_COMPATIBILITY
         glBindTexture(GL_TEXTURE_2D, handle);
         glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, (void *) bitmap);

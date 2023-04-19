@@ -34,7 +34,7 @@ void addGroup(DesignEditorContext &context,
     }
 
     ode_component_listLayers(component.component, &component.layerList);
-    ode_pr1_drawComponent(context.rc, component.component, context.design.imageBase, &component.bitmap, &context.frameView);
+    ode_pr1_drawComponent(context.rc, component.component, context.design.imageBase, &component.bitmap, context.frameView);
 }
 
 void drawGroupButtons(DesignEditorContext &context,

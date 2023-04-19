@@ -1,0 +1,12 @@
+{
+    "name": "@opendesign/engine-${ODE_PLATFORM_OS}-${ODE_PLATFORM_CPU}",
+    "version": "${ODE_NPM_VERSION}",
+    "type": "module",
+    "exports": "./index.js",
+    "engines": {
+        "node": "^14.17.0 || ^15.12.0 || >=16.0.0"
+    },
+    "os": ["${ODE_PLATFORM_OS}"],
+    "cpu": ["${ODE_PLATFORM_CPU}"],
+    "publishConfig": { "access": "public" }
+}

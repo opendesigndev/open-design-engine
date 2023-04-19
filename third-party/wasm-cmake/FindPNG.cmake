@@ -1,5 +1,7 @@
-set(PNG_FOUND TRUE)
-set(PNG_INCLUDE_DIR "${EMSCRIPTEN_SYSROOT}/include")
-set(PNG_LIBRARIES "null")
-add_library(PNG::PNG ALIAS null)
-target_include_directories(null PUBLIC "${PNG_INCLUDE_DIR}")
+if(NOT TARGET PNG::PNG)
+  add_library(PNG::PNG INTERFACE IMPORTED)
+  set_target_properties(PNG::PNG PROPERTIES
+    INTERFACE_COMPILE_OPTIONS "-sUSE_LIBPNG=1"
+    INTERFACE_LINK_LIBRARIES "-sUSE_LIBPNG=1"
+  )
+endif()

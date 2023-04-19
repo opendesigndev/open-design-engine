@@ -1,4 +1,26 @@
 
+## Version 0.3.1 (2023-04-12)
+
+- Added new functions to ODE API:
+  - `ode_design_listComponents`
+  - `ode_destroyComponentList`
+- Fixed positioning of group members after changes to group's transform matrix
+- Fixed invalidation of reported layer bounds following layer modifications
+- Updated baseline version of vcpkg dependencies to `4116148` (2023-04-11)
+
+## Version 0.3.0 (2023-03-30)
+
+- Added Node-API bindings for the ODE API (ode-napi module)
+- Embind version of JavaScript bindings removed
+- Expanded ODE API
+  - Output arguments marked with `ODE_OUT` / `ODE_INOUT` / `ODE_OUT_RETURN`
+  - New enumeration `ODE_TransformationBasis`
+  - New API function `ode_component_transformLayer`
+  - Additional `ODE_Result` codes
+- Generated source code no longer checked in in the repository
+- Moved animation prototype module to tools
+- Minor version formatting changes
+
 ## Version 0.2.3 (2023-03-13)
 
 - "Textify" submodule replaced by overhauled Open Design Text Renderer

@@ -1,6 +1,5 @@
 name: Docker build
-on:
-  push
+on: push
 
 env:
   GITLAB_REGISTRY: registry.avcd.cz
@@ -18,12 +17,18 @@ jobs:
           # https://github.com/organizations/opendesigndev/settings/personal-access-tokens/39049
           token: ${{ secrets.ODE_REPOS_TOKEN }}
           submodules: true
+      - uses: ./.github/actions/determine-version
+        id: npm-version
+        with:
+          github_token: ${{ github.token }}
+          ref_name: ${{ github.ref_name }}
+          ref: ${{ github.ref }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       - name: Configure AWS credentials for ECR access
         uses: "aws-actions/configure-aws-credentials@v1"
         with:
-          # Reusing the CiLambdaWorkersDeployment IAM user for now
+          # GithubCIUser
           aws-access-key-id: "${{ vars.AWS_ACCESS_KEY_ID }}"
           aws-region: us-east-1
           aws-secret-access-key: "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
@@ -40,9 +45,11 @@ jobs:
           then
             echo "ON_BRANCH=true" >> $GITHUB_ENV;
             echo "ON_TAG=false" >> $GITHUB_ENV;
+            echo "ODE_BUILD_COMMIT_TAG=`git describe --tags --always`-`git show -s "--format=format:%cs" | tr -d -`" >> $GITHUB_ENV;
           else
             echo "ON_BRANCH=false" >> $GITHUB_ENV;
             echo "ON_TAG=true" >> $GITHUB_ENV;
+            echo "ODE_BUILD_COMMIT_TAG=${{ github.ref_name }}" >> $GITHUB_ENV;
           fi
           { echo -n "VCPKG_COMMIT="; jq -r '."builtin-baseline"' vcpkg.json; } >> $GITHUB_ENV
           { echo -n "GITLAB_BASE_CACHE=${{ env.GITLAB_BASE_CACHE_IMAGE }}:cache-"; {
@@ -104,8 +111,51 @@ jobs:
           build-args: |
             VCPKG_COMMIT_SOURCE=arg
             VCPKG_COMMIT=${{ env.VCPKG_COMMIT }}
-            ODE_BUILD_COMMIT="${{ github.sha }}"
+            ODE_BUILD_COMMIT_TAG=${{ env.ODE_BUILD_COMMIT_TAG }}
           cache-from: type=registry,ref=${{ env.GITLAB_BASE_CACHE }}
+          cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
       - name: Adding output tags to summary
         run: |
           echo "Main docker image: ${{ fromJSON(steps.meta.outputs.json).tags[1] }}" >> $GITHUB_STEP_SUMMARY
+      - name: Build builder image
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          tags: builder
+          file: ./dockerfiles/debian-build/Dockerfile
+          build-args: |
+            VCPKG_COMMIT_SOURCE=arg
+            VCPKG_COMMIT=${{ env.VCPKG_COMMIT }}
+            ODE_BUILD_COMMIT_TAG=${{ env.ODE_BUILD_COMMIT_TAG }}
+          target: ode-debian-build
+          cache-from: type=local,src=/tmp/.buildx-cache
+          outputs: type=docker,dest=/tmp/builder-image.tar
+      - name: Copy artifacts
+        run: |
+          mkdir build-artifacts target-specific
+          docker load --input /tmp/builder-image.tar
+          docker create --name ode-build-inst builder ode-renderer
+          docker cp ode-build-inst:/opt/ode-renderer build-artifacts/
+          docker cp ode-build-inst:/home/ode/build/ode-napi/target-specific package
+          docker rm -v ode-build-inst
+      - name: Clear docker stuff
+        if: ${{ always() }}
+        run: rm -rf /tmp/.buildx-cache /tmp/builder-image.tar
+      - name: Build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: |
+            build-artifacts/ode-renderer
+      - name: Package
+        uses: actions/upload-artifact@v3
+        if: ${{ !env.ODE_SHOULD_PUBLISH_TO_NPM }}
+        with:
+          name: package
+          path: |
+            package
+      - uses: ./.github/actions/npm-publish
+        if: env.ODE_SHOULD_PUBLISH_TO_NPM
+        with:
+          npm_token: ${{ secrets.NPM_TOKEN }}
+          directory: package

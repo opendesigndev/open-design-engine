@@ -1,0 +1,7 @@
+*
+!/{liboctopus,ode-essentials,ode-logic,ode-napi,ode-renderer,ode-rasterizer,open-design-text-renderer,ode-media,ode-graphics}/**/*.{cpp,h,txt,js,d.ts,cc,c,hpp,mjs,json,py}
+!/CMakeLists.txt
+!/version.cmake
+!/vcpkg.json
+!/index.js
+!/api-utils.py

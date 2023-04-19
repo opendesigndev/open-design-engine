@@ -1,5 +1,7 @@
-set(ZLIB_FOUND TRUE)
-set(ZLIB_INCLUDE_DIR "${EMSCRIPTEN_SYSROOT}/include")
-set(ZLIB_LIBRARY "null")
-add_library(zlib ALIAS null)
-target_include_directories(null PUBLIC "${ZLIB_INCLUDE_DIR}")
+if(NOT TARGET zlib)
+  add_library(zlib INTERFACE IMPORTED)
+  set_target_properties(zlib PROPERTIES
+    INTERFACE_COMPILE_OPTIONS "-sUSE_ZLIB=1"
+    INTERFACE_LINK_LIBRARIES "-sUSE_ZLIB=1"
+  )
+endif()

@@ -1,0 +1,37 @@
+name: Determine npm version
+
+inputs:
+  github_token:
+    description: "github.token"
+    required: true
+  ref_name:
+    description: "github.ref_name"
+    required: true
+  ref:
+    description: "github.ref"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - id: script
+      shell: bash
+      run: |
+        set -xe
+        BASE_VERSION=`jq .version vcpkg.json -r`
+        if [ $GITHUB_REF_TYPE == tag ]; then
+          if [ "v$BASE_VERSION" == "${{ inputs.ref_name }}" ]; then
+            echo "ODE_NPM_VERSION=$BASE_VERSION" >> $GITHUB_ENV
+            echo "ODE_SHOULD_PUBLISH_TO_NPM=true" >> $GITHUB_ENV
+          else
+            echo "ODE_NPM_VERSION=$BASE_VERSION-${{ inputs.ref_name }}" >> $GITHUB_ENV
+          fi
+        else
+          echo "ODE_NPM_VERSION=$BASE_VERSION-`git show -s --format=%h/%cs | tr -d - | tr / -`" >> $GITHUB_ENV
+        fi
+        LABELS=`GH_TOKEN="${{ inputs.github_token }}" gh pr view "${{ inputs.ref_name }}" --json labels --jq '.labels.[].name' || true`
+        if grep 'ci:npm-publish' <<< $LABELS; then
+          echo "ODE_SHOULD_PUBLISH_TO_NPM=true" >> $GITHUB_ENV
+        elif [ '${{ inputs.ref_name }}' = main ]; then
+          echo "ODE_SHOULD_PUBLISH_TO_NPM=true" >> $GITHUB_ENV
+        fi

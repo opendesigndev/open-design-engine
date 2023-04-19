@@ -2,6 +2,7 @@
 #include "api-base.h"
 
 #include <cstdlib>
+#include <cstring>
 #include "utils.h"
 
 ODE_Result ODE_API ode_destroyString(ODE_String string) {

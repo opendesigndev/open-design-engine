@@ -1,27 +1,20 @@
 name: Mac OS build
-on:
-  pull_request:
-    types:
-      - opened
-      - edited
-      - reopened
-      - synchronize
-      - review_requested
-      - ready_for_review
-  push:
-    branches:
-      - main
+on: push
 
 jobs:
   macos:
+    strategy:
+      matrix:
+        arch: [ARM64, X64]
     if: |
       (github.event_name == 'pull_request' && github.event.pull_request.draft == false) || github.event_name == 'push'
-    runs-on: macos-latest
-
-    env:
-      VCPKG_DEFAULT_TRIPLET: x64-osx-release
-
+    runs-on: [self-hosted, macOS, "${{ matrix.arch }}"]
     steps:
+      #- name: Install prerequisites
+      #  run: brew install automake autoconf autoconf-archive git node gh
+      - name: Setup env
+        # The runner has: brew automake autoconf autoconf-archive git cmake node gh
+        run: echo "PATH=/opt/homebrew/bin:$PATH" >> $GITHUB_ENV
       - uses: actions/checkout@v3
         with:
           # Personal token with read-only access to liboctopus and open-design-text-renderer
@@ -29,14 +22,17 @@ jobs:
           token: ${{ secrets.ODE_REPOS_TOKEN }}
           submodules: true
 
-      - name: Install prerequisites
-        run: brew install automake autoconf autoconf-archive
-
       - name: Get project variables
         run: |
           printf "VCPKG_BASELINE=%s\n" $(jq -r '."builtin-baseline"' vcpkg.json) >> $GITHUB_ENV;
+          echo "ARCH_LOWER=`echo ${{ matrix.arch }} | tr '[:upper:]' '[:lower:]'`" >> ${GITHUB_ENV}
+      - uses: ./.github/actions/determine-version
+        with:
+          github_token: ${{ github.token }}
+          ref_name: ${{ github.ref_name }}
+          ref: ${{ github.ref }}
 
-      - name: Setup vcpkg dependencies (cached)
+      - name: Setup vcpkg
         uses: lukka/run-vcpkg@v10
         with:
           vcpkgJsonGlob: vcpkg.json
@@ -45,20 +41,29 @@ jobs:
       - name: Configure and build ODE
         uses: lukka/run-cmake@v10
         with:
-          configurePreset: osx-rel
-          buildPreset: osx-rel
+          configurePreset: osx-${{ env.ARCH_LOWER }}-no-skia-gpu
+          buildPreset: osx-${{ env.ARCH_LOWER }}-no-skia-gpu-rel
+          configurePresetAdditionalArgs: "['-DVCPKG_TARGET_TRIPLET=${{ env.ARCH_LOWER }}-osx-release']"
+          buildPresetAdditionalArgs: "['--parallel']"
 
       - name: Gather artifacts
         run: |
-          mkdir -p build/artifacts/open-design-engine
-          cp build/osx-rel/ode-logic/ode-logic-cli build/artifacts/open-design-engine
-          cp build/osx-rel/ode-renderer/ode-renderer-cli build/artifacts/open-design-engine
-          cp build/osx-rel/ode-animation-prototype/ode-animation-prototype-window build/artifacts/open-design-engine
-          cp build/osx-rel/tests/renderer-unit-tests/renderer-unit-tests build/artifacts/open-design-engine
-          cp build/osx-rel/tools/render-graph-inspector/render-graph-inspector build/artifacts/open-design-engine
+          mkdir -p build/artifacts/open-design-engine/$arch
+          cp build/osx-$arch/ode-logic/ode-logic-cli build/artifacts/open-design-engine/$arch
+          cp build/osx-$arch/ode-renderer/ode-renderer-cli build/artifacts/open-design-engine/$arch
+          cp build/osx-$arch/tests/renderer-output-tests/renderer-output-tests build/artifacts/open-design-engine/$arch
+          cp build/osx-$arch/tools/animation-prototype/animation-prototype-window build/artifacts/open-design-engine/$arch
+          cp build/osx-$arch/tools/render-graph-inspector/render-graph-inspector build/artifacts/open-design-engine/$arch
+        env:
+          arch: ${{ env.ARCH_LOWER }}
 
-      - name: Upload arifacts
+      - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: ode-osx64
+          name: ode-osx-${{ env.ARCH_LOWER }}
           path: build/artifacts
+      - uses: ./.github/actions/npm-publish
+        if: env.ODE_SHOULD_PUBLISH_TO_NPM
+        with:
+          npm_token: ${{ secrets.NPM_TOKEN }}
+          directory: build/osx-${{ env.ARCH_LOWER }}/ode-napi/target-specific

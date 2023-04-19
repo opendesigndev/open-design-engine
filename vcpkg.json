@@ -1,8 +1,8 @@
 {
     "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/master/docs/vcpkg.schema.json",
     "name": "open-design-engine",
-    "version": "0.2.3",
-    "builtin-baseline": "ac12118f02e127ef1fe9806ffe1a23e7db7ef988",
+    "version": "0.3.1",
+    "builtin-baseline": "4116148a7f5c09d39da34ffb75f33283796d687b",
     "default-features": [
         "glfw",
         "glew",
@@ -10,7 +10,8 @@
         "freetype",
         "harfbuzz",
         "icu",
-        "image-formats"
+        "image-formats",
+        "node-api"
     ],
     "features": {
         "glfw": {
@@ -58,11 +59,16 @@
                 "libwebp"
             ]
         },
+        "node-api": {
+            "description": "Node.js bindings",
+            "dependencies": [
+                "node-api",
+                "node-addon-api"
+            ]
+        },
         "gtest": {
             "description": "Google Test library",
-            "dependencies": [
-                "gtest"
-            ]
+            "dependencies": [ "gtest" ]
         }
     }
 }

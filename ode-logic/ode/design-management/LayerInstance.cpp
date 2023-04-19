@@ -6,12 +6,12 @@ namespace ode {
 LayerInstance::LayerInstance(octopus::Layer *layer, const TransformationMatrix &parentTransform, double parentFeatureScale, const std::string &parentId) : layer(layer), parentTransform(parentTransform), parentFeatureScale(parentFeatureScale), parentId(parentId) { }
 
 bool LayerInstance::initializeShape() {
-    if (statusFlags&FLAG_SHAPE_UP_TO_DATE)
+    if ((statusFlags&(FLAG_SHAPE_UP_TO_DATE|FLAG_BOUNDS_UP_TO_DATE)) == (FLAG_SHAPE_UP_TO_DATE|FLAG_BOUNDS_UP_TO_DATE))
         return true;
     ODE_ASSERT(layer && layer->type == octopus::Layer::Type::SHAPE);
     if (layer->shape.has_value()) {
         TransformationMatrix transform = transformation();
-        if (!(shape = Rasterizer::createShape(layer->shape.value())))
+        if (!((statusFlags&FLAG_SHAPE_UP_TO_DATE) || (shape = Rasterizer::createShape(layer->shape.value()))))
             return false;
         layerBounds.logicalBounds = (UntransformedBounds) Rasterizer::getBounds(shape.get(), Rasterizer::BODY, Matrix3x2d(1));
         layerBounds.untransformedBounds = layerBounds.logicalBounds;
@@ -29,19 +29,21 @@ bool LayerInstance::initializeShape() {
 }
 
 bool LayerInstance::initializeText(FontBase *fontBase) {
-    if (statusFlags&FLAG_SHAPE_UP_TO_DATE)
+    if ((statusFlags&(FLAG_SHAPE_UP_TO_DATE|FLAG_BOUNDS_UP_TO_DATE)) == (FLAG_SHAPE_UP_TO_DATE|FLAG_BOUNDS_UP_TO_DATE))
         return true;
     // TODO layer transformation & bounds
     if (layer->text.has_value()) {
-        if (fontBase)
-            fontBase->loadFonts(layer->text.value());
-
-        if ((textShape = odtr::shapeText(TEXT_RENDERER_CONTEXT, layer->text.value()))) {
+        if (!(statusFlags&FLAG_SHAPE_UP_TO_DATE)) {
+            if (fontBase)
+                fontBase->loadFonts(layer->text.value());
+            textShape = odtr::shapeText(TEXT_RENDERER_CONTEXT, layer->text.value());
+        }
+        if (textShape) {
             layerBounds.bounds = fromTextRendererBounds(odtr::getBounds(TEXT_RENDERER_CONTEXT, textShape));
             layerBounds.logicalBounds = (UntransformedBounds) layerBounds.bounds;
             layerBounds.untransformedBounds = layerBounds.logicalBounds;
-        }
-
+        } else
+            layerBounds = LayerBounds();
         statusFlags |= FLAG_SHAPE_UP_TO_DATE|FLAG_BOUNDS_UP_TO_DATE;
         return true;
     }
@@ -54,11 +56,11 @@ void LayerInstance::setLogicalBounds(const UntransformedBounds &bounds) {
 
 void LayerInstance::setParent(const TransformationMatrix &parentTransform, double parentFeatureScale, const std::string &parentId) {
     if (this->parentTransform != parentTransform) {
-        // TODO
+        statusFlags &= ~FLAG_BOUNDS_UP_TO_DATE;
         this->parentTransform = parentTransform;
     }
     if (this->parentFeatureScale != parentFeatureScale) {
-        // TODO
+        statusFlags &= ~FLAG_BOUNDS_UP_TO_DATE;
         this->parentFeatureScale = parentFeatureScale;
     }
     this->parentId = parentId;
@@ -66,6 +68,10 @@ void LayerInstance::setParent(const TransformationMatrix &parentTransform, doubl
 
 void LayerInstance::invalidate() {
     statusFlags &= ~(FLAG_TRANSFORM_UP_TO_DATE|FLAG_BOUNDS_UP_TO_DATE|FLAG_SHAPE_UP_TO_DATE);
+}
+
+void LayerInstance::invalidateBounds() {
+    statusFlags &= ~FLAG_BOUNDS_UP_TO_DATE;
 }
 
 void LayerInstance::clearAnimations() {

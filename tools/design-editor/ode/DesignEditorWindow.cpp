@@ -220,7 +220,7 @@ int DesignEditorWindow::display() {
                             ode_component_transformLayer(component.component, insertedLayerId, ODE_TRANSFORMATION_BASIS_LAYER, translation);
                         }
 
-                        ode_pr1_drawComponent(context.rc, component.component, context.design.imageBase, &component.bitmap, &context.frameView);
+                        ode_pr1_drawComponent(context.rc, component.component, context.design.imageBase, &component.bitmap, context.frameView);
                     }
 
                 } else if (ui.mode == DesignEditorUIState::Mode::SELECT) {
@@ -384,7 +384,7 @@ int DesignEditorWindow::createEmptyDesign(const FilePath &fontDir) {
     CHECK(ode_design_addComponentFromOctopusString(context.design.design, &newComponent.component, newComponent.metadata, ode_stringRef(newComponent.octopusJson), nullptr));
     CHECK(loadMissingFonts(fontDir));
     CHECK(ode_component_listLayers(newComponent.component, &newComponent.layerList));
-    CHECK(ode_pr1_drawComponent(context.rc, newComponent.component, context.design.imageBase, &newComponent.bitmap, &context.frameView));
+    CHECK(ode_pr1_drawComponent(context.rc, newComponent.component, context.design.imageBase, &newComponent.bitmap, context.frameView));
     return 0;
 }
 
@@ -411,6 +411,6 @@ int DesignEditorWindow::reloadOctopus(const FilePath &octopusPath, const FilePat
     CHECK(ode_design_addComponentFromOctopusString(context.design.design, &newComponent.component, newComponent.metadata, ode_stringRef(newComponent.octopusJson), nullptr));
     CHECK(loadMissingFonts(fontDir));
     CHECK(ode_component_listLayers(newComponent.component, &newComponent.layerList));
-    CHECK(ode_pr1_drawComponent(context.rc, newComponent.component, context.design.imageBase, &newComponent.bitmap, &context.frameView));
+    CHECK(ode_pr1_drawComponent(context.rc, newComponent.component, context.design.imageBase, &newComponent.bitmap, context.frameView));
     return 0;
 }

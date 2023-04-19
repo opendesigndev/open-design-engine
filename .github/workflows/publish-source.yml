@@ -1,0 +1,27 @@
+name: Publish source package to npm
+on: push
+
+jobs:
+  source:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          # Personal token with read-only access to liboctopus and open-design-text-renderer
+          # https://github.com/organizations/opendesigndev/settings/personal-access-tokens/39049
+          token: ${{ secrets.ODE_REPOS_TOKEN }}
+          submodules: true
+      - uses: ./.github/actions/determine-version
+        with:
+          github_token: ${{ github.token }}
+          ref_name: ${{ github.ref_name }}
+          ref: ${{ github.ref }}
+      - run: |
+          jq .version=\"$ODE_NPM_VERSION\" package.json > file
+          mv file package.json
+      - uses: ./.github/actions/npm-publish
+        if: env.ODE_SHOULD_PUBLISH_TO_NPM
+        with:
+          npm_token: ${{ secrets.NPM_TOKEN }}
+          directory: .

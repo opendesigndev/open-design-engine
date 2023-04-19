@@ -25,12 +25,15 @@ ARG VCPKG_COMMIT
 ENV VCPKG_DEFAULT_TRIPLET x64-linux-release
 ENV VCPKG_DEFAULT_HOST_TRIPLET x64-linux-release
 
-RUN apt update -qq && apt install -qqy curl zip unzip tar clang make cmake wget git python3 bison automake autoconf autoconf-archive libosmesa6-dev pkg-config python3-distutils patchelf
+RUN apt-get update \
+    && apt-get install -y curl zip unzip tar clang make cmake wget git python3 bison automake autoconf autoconf-archive libosmesa6-dev pkg-config python3-distutils patchelf nodejs \
+    && rm -rf /var/lib/apt/lists/*
 
+# Vckpg
 RUN git clone https://github.com/microsoft/vcpkg /opt/vcpkg && cd /opt/vcpkg && git checkout `cat /home/vcpkg-commit`
 RUN /opt/vcpkg/bootstrap-vcpkg.sh -disableMetrics && ln -s /opt/vcpkg/vcpkg /usr/bin/vcpkg
-
-RUN vcpkg --triplet x64-linux-release --host-triplet x64-linux-release install freetype harfbuzz[icu] icu libpng libjpeg-turbo tiff giflib libwebp skia[core,freetype]
+RUN vcpkg --triplet x64-linux-release --host-triplet x64-linux-release install freetype harfbuzz[icu] icu libpng libjpeg-turbo tiff giflib libwebp skia[core,freetype] node-api[core] node-addon-api
+ENV VCPKG_ROOT=/opt/vcpkg
 
 # Build GLFW with OSMesa support
 RUN wget -c https://github.com/glfw/glfw/archive/refs/tags/3.3.7.tar.gz -O - | tar -xz --directory /home
@@ -45,7 +48,7 @@ RUN make install SYSTEM=linux-osmesa -C /home/glew-2.2.0
 
 FROM ode-debian-build-base AS ode-debian-build
 
-ARG ODE_BUILD_COMMIT
+ARG ODE_BUILD_COMMIT_TAG
 
 RUN mkdir -p /home/ode
 COPY . /home/ode
@@ -56,28 +59,34 @@ COPY ./dockerfiles/debian-build/glx-dummy.cpp /home/ode/ode-graphics/ode/glx-dum
 RUN cmake \
     -S /home/ode \
     -B /home/ode/build \
-    -DCMAKE_MAKE_PROGRAM=make \
+    -DCMAKE_BUILD_TYPE=Release \
     -DOVERRIDE_OPENGL_LIBRARY=ON \
     -DOVERRIDE_GLFW_LIBRARY=ON \
     -DOVERRIDE_GLEW_LIBRARY=ON \
     -DGLEW_USE_STATIC_LIBS=ON \
     -DODE_RENDERER_ENABLED=ON \
-    -DODE_TEST_MODULES=OFF \
     -DODE_SKIA_GPU=OFF \
+    -DODE_TEST_MODULES=OFF \
+    -DODE_BUILD_COMMIT_TAG=$ODE_BUILD_COMMIT_TAG \
     -DCMAKE_CXX_STANDARD_LIBRARIES=-lOSMesa \
-    -DODE_BUILD_COMMIT=$ODE_BUILD_COMMIT \
-    -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER=clang \
     -DCMAKE_CXX_COMPILER=clang++ \
-    -DVCPKG_TARGET_TRIPLET=x64-linux-release \
-    -DCMAKE_TOOLCHAIN_FILE=/opt/vcpkg/scripts/buildsystems/vcpkg.cmake
-RUN cmake --build /home/ode/build --target ode-renderer-cli --config Release
+    -DCMAKE_MAKE_PROGRAM=make \
+    -DVCPKG_TARGET_TRIPLET=x64-linux-release
+RUN cmake --build /home/ode/build --config Release --parallel
 
 RUN mkdir -p /opt/ode-renderer/bin /opt/ode-renderer/lib
 RUN cp /home/ode/build/ode-renderer/ode-renderer-cli /opt/ode-renderer/bin/ode-renderer
 
 # Find system libraries used by the compiled binaries and copy them as redistributables
 RUN ldd /opt/ode-renderer/bin/* | awk '{ print $1 }' | awk -F'/' '{ print $NF }' | xargs -I'{}' find /lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu -name '{}' -print -quit | tee /tmp/libs.txt | xargs -I{} cp {} /opt/ode-renderer/lib
+
+# Collect libraries for node.js package
+WORKDIR /home/ode/build/ode-napi/target-specific
+RUN cp /opt/ode-renderer/lib/* . \
+    && rm libc.so.6 libstdc++.so.6 libpthread.so.0 librt.so.1 \
+    && patchelf --set-rpath '$ORIGIN' *.so* \
+    && patchelf --set-rpath '$ORIGIN' ode-napi.node
 
 WORKDIR /opt/ode-renderer
 RUN patchelf --set-interpreter /opt/ode-renderer/lib/ld-linux-x86-64.so.2 bin/* \
@@ -88,3 +97,6 @@ RUN patchelf --set-interpreter /opt/ode-renderer/lib/ld-linux-x86-64.so.2 bin/* 
 FROM scratch
 ENV PATH="${PATH}:/opt/ode-renderer/bin"
 COPY --from=ode-debian-build /opt/ode-renderer /opt/ode-renderer
+
+# Build locally using:
+# bash -c 'docker build . -f dockerfiles/debian-build/Dockerfile --build-arg ODE_BUILD_COMMIT_TAG=`git describe 2> /dev/null || echo "\`git describe --tags --always\`-\`git show -s "--format=format:%cs" | tr -d -\`"` --tag ode --platform linux/amd64'

@@ -90,7 +90,7 @@ int main(int argc, const char *const *argv) {
             } else if (curArg == "--version") {
                 puts(
                     "\nOPEN DESIGN ENGINE v" ODE_STRINGIZE(ODE_VERSION) " by Ceros\n\n"
-                    "      Build version: " ODE_STRINGIZE(ODE_BUILD_COMMIT) "\n"
+                    "      Build version: " ODE_STRINGIZE(ODE_BUILD_COMMIT_TAG) "\n"
                     "         Build date: " ODE_STRINGIZE(ODE_BUILD_DATE) "\n"
                     "         Build type: " BUILD_TYPE "\n"
                     "    Octopus version: " OCTOPUS_VERSION ", manifest " OCTOPUS_MANIFEST_VERSION "\n"

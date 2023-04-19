@@ -254,7 +254,7 @@ int applyLayerChange(octopus::LayerChange::Subject subject,
         return result;
     }
 
-    return ode_pr1_drawComponent(context.rc, component.component, context.design.imageBase, &component.bitmap, &context.frameView);
+    return ode_pr1_drawComponent(context.rc, component.component, context.design.imageBase, &component.bitmap, context.frameView);
 }
 
 int changeProperty(octopus::LayerChange::Subject subject,
@@ -408,7 +408,7 @@ void drawLayerTransformation(const ODE_StringRef &layerId,
     if (ImGui::DragFloat2(layerPropName(layerId, "layer-translation").c_str(), &translation.x, 1.0f)) {
         const ODE_Transformation newTransformation { 1,0,0,1,translation.x-origTranslation.x,translation.y-origTranslation.y };
         if (ode_component_transformLayer(component.component, layerId, ODE_TRANSFORMATION_BASIS_PARENT_COMPONENT, newTransformation) == ODE_RESULT_OK) {
-            ode_pr1_drawComponent(context.rc, component.component, context.design.imageBase, &component.bitmap, &context.frameView);
+            ode_pr1_drawComponent(context.rc, component.component, context.design.imageBase, &component.bitmap, context.frameView);
         }
     }
 
@@ -417,7 +417,7 @@ void drawLayerTransformation(const ODE_StringRef &layerId,
     if (ImGui::DragFloat2(layerPropName(layerId, "layer-scale").c_str(), &scale.x, 0.05f, 0.0f, 100.0f)) {
         const ODE_Transformation newTransformation { scale.x/origScale.x,0,0,scale.y/origScale.y,0,0 };
         if (ode_component_transformLayer(component.component, layerId, ODE_TRANSFORMATION_BASIS_LAYER, newTransformation) == ODE_RESULT_OK) {
-            ode_pr1_drawComponent(context.rc, component.component, context.design.imageBase, &component.bitmap, &context.frameView);
+            ode_pr1_drawComponent(context.rc, component.component, context.design.imageBase, &component.bitmap, context.frameView);
         }
     }
 
@@ -432,7 +432,7 @@ void drawLayerTransformation(const ODE_StringRef &layerId,
         if (ode_component_transformLayer(component.component, layerId, ODE_TRANSFORMATION_BASIS_PARENT_COMPONENT, trToOrigin) == ODE_RESULT_OK &&
             ode_component_transformLayer(component.component, layerId, ODE_TRANSFORMATION_BASIS_PARENT_COMPONENT, newTransformation) == ODE_RESULT_OK &&
             ode_component_transformLayer(component.component, layerId, ODE_TRANSFORMATION_BASIS_PARENT_COMPONENT, trFromOrigin) == ODE_RESULT_OK) {
-            ode_pr1_drawComponent(context.rc, component.component, context.design.imageBase, &component.bitmap, &context.frameView);
+            ode_pr1_drawComponent(context.rc, component.component, context.design.imageBase, &component.bitmap, context.frameView);
         }
     }
 
@@ -1656,7 +1656,7 @@ void drawLayerPropertiesWidget(DesignEditorContext &context,
                 if (ImGui::Button(layerPropName(layer.id, "delete", nonstd::nullopt, nonstd::nullopt, "Delete Layer").c_str(), ImVec2 { 250, 20 })) {
                     if (ode_component_removeLayer(component.component, layer.id) == ODE_RESULT_OK) {
                         ode_component_listLayers(component.component, &layerList);
-                        ode_pr1_drawComponent(context.rc, component.component, context.design.imageBase, &component.bitmap, &context.frameView);
+                        ode_pr1_drawComponent(context.rc, component.component, context.design.imageBase, &component.bitmap, context.frameView);
                     }
                 }
                 ImGui::PopStyleColor(1);

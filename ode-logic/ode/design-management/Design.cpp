@@ -123,26 +123,6 @@ Result<Design, DesignError> Design::loadManifest(const octopus::OctopusManifest 
     return (Design &&) design;
 }
 
-/*DesignError Design::addArtboard(const octopus::Artboard &artboard) {
-    if (components.find(artboard.id) != components.end() || protocomponents.find(artboard.id) != protocomponents.end())
-        return DesignError::DUPLICATE_COMPONENT_ID;
-    octopus::Component component;
-    component.id = artboard.id;
-    component.name = artboard.name;
-    component.bounds = artboard.bounds;
-    component.dependencies = artboard.dependencies;
-    component.location = artboard.location;
-    // artifacts not used
-    component.parentId = artboard.parentId;
-    component.preview = artboard.preview;
-    component.assets = artboard.assets;
-    // isPasteboard not used
-    component.description = artboard.description;
-    // hash not used
-    protocomponents.insert(std::make_pair(component.id, (octopus::Component &&) component));
-    return DesignError::OK;
-}*/
-
 DesignError Design::addComponent(const octopus::Component &component) {
     if (components.find(component.id) != components.end() || protocomponents.find(component.id) != protocomponents.end())
         return DesignError::DUPLICATE_COMPONENT_ID;
@@ -168,13 +148,6 @@ DesignError Design::addComponent(const octopus::Component &component, octopus::O
         return DesignError::OK;
     }
 }
-
-/*DesignError Design::addComponentArtboard(const octopus::Component &component) {
-    if (DesignError error = addComponent(component))
-        return error;
-    artboards.push_back(component.id);
-    return DesignError::OK;
-}*/
 
 DesignError Design::removeComponent(const ComponentAccessor &component) {
     return removeComponent(component.getId());
@@ -208,6 +181,13 @@ DesignError Design::removeComponent(const std::string &id) {
 
 Design::ComponentAccessor Design::getComponent(const std::string &id) {
     return ComponentAccessor(this, requireComponent(id));
+}
+
+void Design::listComponents(std::set<std::string> &ids) const {
+    for (const std::map<std::string, ComponentPtr>::value_type &entry : components)
+        ids.insert(entry.first);
+    for (const std::map<std::string, octopus::Component>::value_type &entry : protocomponents)
+        ids.insert(entry.first);
 }
 
 void Design::listMissingFonts(std::set<std::string> &names) const {
