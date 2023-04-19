@@ -194,64 +194,64 @@ DesignError Component::addLayer(const std::string &parent, const std::string &be
     }
     return DesignError::LAYER_NOT_FOUND;
 }
-    
-    DesignError Component::removeLayer(const std::string &id) {
-        if (DesignError error = requireBuild())
-            return error;
-        if (LayerInstance *instance = findInstance(id)) {
-            const std::string &parentId = instance->getParentId();
-            if (LayerInstance *parentInstance = findInstance(parentId)) {
-                ODE_ASSERT((*parentInstance)->layers.has_value());
-                const std::list<octopus::Layer>::iterator layerInParentIt = std::find_if((*parentInstance)->layers->begin(), (*parentInstance)->layers->end(), [&id](const octopus::Layer &layer) {
-                    return layer.id == id;
-                });
-                if (layerInParentIt != (*parentInstance)->layers->end()) {
-                    (*parentInstance)->layers->erase(layerInParentIt);
-                    std::vector<std::string> instancesToErase;
-                    for (const std::pair<const std::string, ode::LayerInstance> &instance : instances) {
-                        if (isInstanceInSubtree(id, instance.first)) {
-                            instancesToErase.emplace_back(instance.first);
-                        }
+
+DesignError Component::removeLayer(const std::string &id) {
+    if (DesignError error = requireBuild())
+        return error;
+    if (LayerInstance *instance = findInstance(id)) {
+        const std::string &parentId = instance->getParentId();
+        if (LayerInstance *parentInstance = findInstance(parentId)) {
+            ODE_ASSERT((*parentInstance)->layers.has_value());
+            const std::list<octopus::Layer>::iterator layerInParentIt = std::find_if((*parentInstance)->layers->begin(), (*parentInstance)->layers->end(), [&id](const octopus::Layer &layer) {
+                return layer.id == id;
+            });
+            if (layerInParentIt != (*parentInstance)->layers->end()) {
+                (*parentInstance)->layers->erase(layerInParentIt);
+                std::vector<std::string> instancesToErase;
+                for (const std::pair<const std::string, ode::LayerInstance> &instance : instances) {
+                    if (isInstanceInSubtree(id, instance.first)) {
+                        instancesToErase.emplace_back(instance.first);
                     }
-                    for (const std::string &instanceToErase : instancesToErase) {
-                        instances.erase(instanceToErase);
-                    }
-                    ++rev;
-                    buildComplete = false;
-                    return DesignError::OK;
                 }
+                for (const std::string &instanceToErase : instancesToErase) {
+                    instances.erase(instanceToErase);
+                }
+                ++rev;
+                buildComplete = false;
+                return DesignError::OK;
             }
         }
-        return DesignError::LAYER_NOT_FOUND;
     }
-    
-    DesignError Component::modifyLayer(const std::string &id, const octopus::LayerChange &layerChange) {
-        if (DesignError error = requireBuild())
-            return error;
-        if (LayerInstance *instance = findInstance(id)) {
-            if (Result<ChangeLevel, DesignError> result = applyLayerChange(**instance, layerChange)) {
-                switch (result.value()) {
-                    case ChangeLevel::HIERARCHY:
-                        buildComplete = false;
-                        // fallthrough
-                    case ChangeLevel::COMPOSITION:
-                        ++rev;
-                        // fallthrough
-                    case ChangeLevel::BOUNDS:
-                    case ChangeLevel::VISUAL:
-                    case ChangeLevel::LOGICAL:
-                    case ChangeLevel::NONE:;
-                }
-                // TODO: Force re-initialize instance shape and text
-                instance->invalidate();
-                instance->initializeShape();
-                instance->initializeText(fontBase.get());
-                return DesignError::OK;
-            } else
-                return result.error();
-        }
-        return DesignError::LAYER_NOT_FOUND;
+    return DesignError::LAYER_NOT_FOUND;
+}
+
+DesignError Component::modifyLayer(const std::string &id, const octopus::LayerChange &layerChange) {
+    if (DesignError error = requireBuild())
+        return error;
+    if (LayerInstance *instance = findInstance(id)) {
+        if (Result<ChangeLevel, DesignError> result = applyLayerChange(**instance, layerChange)) {
+            switch (result.value()) {
+                case ChangeLevel::HIERARCHY:
+                    buildComplete = false;
+                    // fallthrough
+                case ChangeLevel::COMPOSITION:
+                    ++rev;
+                    // fallthrough
+                case ChangeLevel::BOUNDS:
+                case ChangeLevel::VISUAL:
+                case ChangeLevel::LOGICAL:
+                case ChangeLevel::NONE:;
+            }
+            // TODO: Force re-initialize instance shape and text
+            instance->invalidate();
+            instance->initializeShape();
+            instance->initializeText(fontBase.get());
+            return DesignError::OK;
+        } else
+            return result.error();
     }
+    return DesignError::LAYER_NOT_FOUND;
+}
 
 DesignError Component::transformLayer(const std::string &id, octopus::Fill::Positioning::Origin basis, const TransformationMatrix &transformation) {
     if (!transformation.invertible())
