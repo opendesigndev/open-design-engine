@@ -1,6 +1,8 @@
 
 #include "DesignEditorWindow.h"
 
+#include <filesystem>
+
 // ImGui includes
 #include <GL/glew.h>
 #include <imgui.h>

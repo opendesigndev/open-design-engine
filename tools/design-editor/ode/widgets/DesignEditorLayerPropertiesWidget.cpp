@@ -4,6 +4,7 @@
 #include "DesignEditorLayerPropertiesWidget.h"
 
 #include <cmath>
+#include <filesystem>
 #include <imgui.h>
 #include <ImGuiFileDialog.h>
 

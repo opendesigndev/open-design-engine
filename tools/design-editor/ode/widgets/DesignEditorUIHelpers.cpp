@@ -1,6 +1,8 @@
 
 #include "DesignEditorUIHelpers.h"
 
+#include <algorithm>
+
 std::string layerTypeToShortString(ODE_LayerType layerType) {
     switch (layerType) {
         case ODE_LAYER_TYPE_UNSPECIFIED: return "-";
