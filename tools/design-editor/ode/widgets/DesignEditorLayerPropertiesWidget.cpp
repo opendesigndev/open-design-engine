@@ -452,11 +452,11 @@ void drawLayerText(const ODE_StringRef &layerId,
     const octopus::TextStyle &defaultTextStyle = octopusText.defaultStyle;
 
     // Text value
-    char textBuffer[255] {};
+    char textBuffer[1<<16] {};
     strncpy(textBuffer, octopusText.value.c_str(), sizeof(textBuffer)-1);
     ImGui::Text("Text value:");
     ImGui::SameLine(100);
-    ImGui::InputText(layerPropName(layerId, "text-value").c_str(), textBuffer, 255);
+    ImGui::InputTextMultiline(layerPropName(layerId, "text-value").c_str(), textBuffer, IM_ARRAYSIZE(textBuffer), ImVec2(327, ImGui::GetTextLineHeight() * 10), ImGuiInputTextFlags_AllowTabInput);
     if (ImGui::IsItemEdited()) {
         changeProperty(octopus::LayerChange::Subject::TEXT, context, component, layerId, nonstd::nullopt, [&textBuffer](octopus::LayerChange::Values &values) {
             values.value = textBuffer;
