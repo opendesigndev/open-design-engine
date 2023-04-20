@@ -31,6 +31,7 @@ bool LayerInstance::initializeShape() {
 bool LayerInstance::initializeText(FontBase *fontBase) {
     if ((statusFlags&(FLAG_SHAPE_UP_TO_DATE|FLAG_BOUNDS_UP_TO_DATE)) == (FLAG_SHAPE_UP_TO_DATE|FLAG_BOUNDS_UP_TO_DATE))
         return true;
+    ODE_ASSERT(layer && layer->type == octopus::Layer::Type::TEXT);
     // TODO layer transformation & bounds
     if (layer->text.has_value()) {
         if (!(statusFlags&FLAG_SHAPE_UP_TO_DATE)) {

@@ -230,7 +230,8 @@ DesignError Component::modifyLayer(const std::string &id, const octopus::LayerCh
     if (DesignError error = requireBuild())
         return error;
     if (LayerInstance *instance = findInstance(id)) {
-        if (Result<ChangeLevel, DesignError> result = applyLayerChange(**instance, layerChange)) {
+        octopus::Layer &layer = **instance;
+        if (Result<ChangeLevel, DesignError> result = applyLayerChange(layer, layerChange)) {
             switch (result.value()) {
                 case ChangeLevel::HIERARCHY:
                     buildComplete = false;
@@ -245,8 +246,12 @@ DesignError Component::modifyLayer(const std::string &id, const octopus::LayerCh
             }
             // TODO: Force re-initialize instance shape and text
             instance->invalidate();
-            instance->initializeShape();
-            instance->initializeText(fontBase.get());
+            if (layer.type == octopus::Layer::Type::SHAPE) {
+                instance->initializeShape();
+            }
+            if (layer.type == octopus::Layer::Type::TEXT) {
+                instance->initializeText(fontBase.get());
+            }
             return DesignError::OK;
         } else
             return result.error();
