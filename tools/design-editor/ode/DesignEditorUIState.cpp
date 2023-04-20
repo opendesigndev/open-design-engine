@@ -31,6 +31,19 @@ void DesignEditorUIState::LayerSelection::add(const char *layerID) {
     }
 }
 
+void DesignEditorUIState::LayerSelection::remove(const char *layerID) {
+    if (layerID == nullptr || strlen(layerID) <= 0) {
+        return;
+    }
+
+    const auto remIt = std::find_if(layerIDs.begin(), layerIDs.end(), [&layerID](const ODE_StringRef &idStr) {
+        return strcmp(layerID, idStr.data) == 0;
+    });
+    if (remIt != layerIDs.end()) {
+        layerIDs.erase(remIt);
+    }
+}
+
 void DesignEditorUIState::LayerSelection::clear() {
     layerIDs.clear();
 }

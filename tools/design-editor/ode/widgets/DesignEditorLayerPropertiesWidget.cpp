@@ -1660,6 +1660,7 @@ void drawLayerPropertiesWidget(DesignEditorContext &context,
                     ImGui::SameLine(100);
                     if (ImGui::Button(layerPropName(layer.id, "delete", nonstd::nullopt, nonstd::nullopt, "Delete Layer").c_str(), ImVec2 { 250, 20 })) {
                         if (ode_component_removeLayer(component.component, layer.id) == ODE_RESULT_OK) {
+                            layerSelection.remove(layer.id.data);
                             ode_component_listLayers(component.component, &layerList);
                             ode_pr1_drawComponent(context.rc, component.component, context.design.imageBase, &component.bitmap, context.frameView);
                         }

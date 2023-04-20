@@ -495,7 +495,7 @@ LayerInstance *Component::findInstance(const std::string &id) {
 
 bool Component::isInstanceInSubtree(const std::string &subtreeId, const std::string &instanceId) {
     if (LayerInstance *instance = findInstance(instanceId)) {
-        if (instance->id() == subtreeId) {
+        if (instanceId == subtreeId) {
             return true;
         }
         return isInstanceInSubtree(subtreeId, instance->getParentId());

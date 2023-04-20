@@ -64,6 +64,7 @@ struct DesignEditorUIState {
 
         void select(const char *layerID);
         void add(const char *layerID);
+        void remove(const char *layerID);
         void clear();
 
         bool isSelected(const char *layerID);
