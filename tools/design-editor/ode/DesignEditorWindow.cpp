@@ -361,7 +361,10 @@ int DesignEditorWindow::loadMissingFonts(const FilePath &fontDir) {
     for (int i = 0; i < missingFonts.n; ++i) {
         if (missingFonts.entries[i].length > 0) {
             const std::string pathStr = (std::string)fontDir+std::string("/")+ode_stringDeref(missingFonts.entries[i])+std::string(".ttf");
-            CHECK(ode_design_loadFontFile(context.design.design, missingFonts.entries[i], ode_stringRef(pathStr), ODE_StringRef()));
+            const ODE_Result result = ode_design_loadFontFile(context.design.design, missingFonts.entries[i], ode_stringRef(pathStr), ODE_StringRef());
+            if (result != ODE_RESULT_OK && result != ODE_RESULT_FONT_ERROR) {
+                return result;
+            }
         }
     }
     return 0;
