@@ -29,6 +29,13 @@ namespace {
 
 #define CHECK(x) do { if ((x)) return -1; } while (false)
 
+struct {
+    const Vector2f size { 1920, 1080 };
+    const Color color { 1.0, 1.0, 1.0, 1.0 };
+    const std::string rootId = "COMPONENT_ROOT";
+    const std::string backgroundId = "BACKGROUND";
+} DEFAULT_NEW_COMPONENT;
+
 const Vector2f DEFAULT_NEW_SHAPE_SIZE { 100, 50 };
 const Color DEFAULT_NEW_SHAPE_COLOR(0.5, 0.5, 0.5, 1.0);
 
@@ -384,7 +391,18 @@ int DesignEditorWindow::createEmptyDesign(const FilePath &fontDir) {
 
     context.design.components.clear();
     DesignEditorComponent &newComponent = context.design.components.emplace_back();
-    newComponent.octopusJson = R"( {"type":"OCTOPUS_COMPONENT","version":"3.0.0-rc.19","id":"COMPONENT-1","dimensions":{"width":1920,"height":1080},"content":{"id":"ARTBOARD","type":"MASK_GROUP","name":"Artboard","visible":true,"opacity":1,"blendMode":"NORMAL","transform":[1,0,0,1,0,0],"mask":{"id":"BACKGROUND","type":"SHAPE","name":"Background","visible":true,"opacity":1,"blendMode":"NORMAL","transform":[1,0,0,1,0,0],"shape":{"fillRule":"NON_ZERO","path":{"type":"RECTANGLE","visible":true,"rectangle":{"x0":0,"y0":0,"x1":1920,"y1":1080},"transform":[1,0,0,1,0,0]},"fills":[{"type":"COLOR","visible":true,"blendMode":"NORMAL","color":{"r":1,"g":1,"b":1,"a":1}}],"strokes":[]},"effects":[]},"maskBasis":"BODY","layers":[],"effects":[]}})";
+
+    ode::octopus_builder::ShapeLayer backgroundShape(0, 0, DEFAULT_NEW_COMPONENT.size.x, DEFAULT_NEW_COMPONENT.size.y);
+    backgroundShape.setColor(DEFAULT_NEW_COMPONENT.color);
+    backgroundShape.id = DEFAULT_NEW_COMPONENT.backgroundId;
+    backgroundShape.name = DEFAULT_NEW_COMPONENT.backgroundId;
+    ode::octopus_builder::MaskGroupLayer maskGroup(octopus::MaskBasis::BODY, backgroundShape);
+    maskGroup.id = DEFAULT_NEW_COMPONENT.rootId;
+    maskGroup.name = DEFAULT_NEW_COMPONENT.rootId;
+    octopus::Octopus oc = ode::octopus_builder::buildOctopus("Mask Group", maskGroup);
+    oc.dimensions = { DEFAULT_NEW_COMPONENT.size.x, DEFAULT_NEW_COMPONENT.size.y };
+
+    octopus::Serializer::serialize(newComponent.octopusJson, oc);
 
     CHECK(ode_design_addComponentFromOctopusString(context.design.design, &newComponent.component, newComponent.metadata, ode_stringRef(newComponent.octopusJson), nullptr));
     CHECK(loadMissingFonts(fontDir));
