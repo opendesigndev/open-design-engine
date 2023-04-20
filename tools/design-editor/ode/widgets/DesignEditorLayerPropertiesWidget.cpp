@@ -307,6 +307,11 @@ std::string layerPropName(const ODE_StringRef &layerId,
         (filterIndex.has_value() ? "-" + std::to_string(*filterIndex) : "");
 }
 
+std::string layerHeaderLabel(const char *label,
+                             const ODE_StringRef &layerId) {
+    return std::string(label) + "##" + ode_stringDeref(layerId);
+}
+
 }
 
 void drawLayerInfo(const ODE_LayerList::Entry &layer,
@@ -1080,7 +1085,7 @@ void drawLayerShape(const ODE_StringRef &layerId,
 
     // Shape strokes
     const std::vector<octopus::Shape::Stroke> &octopusShapeStrokes = octopusShape.strokes;
-    if (ImGui::CollapsingHeader("Shape strokes")) {
+    if (ImGui::CollapsingHeader(layerHeaderLabel("Shape strokes", layerId).c_str())) {
         ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
         ImGui::SameLine(415);
         if (ImGui::SmallButton(layerPropName(layerId, "shape-stroke-add", nonstd::nullopt, nonstd::nullopt, "+").c_str())) {
@@ -1106,7 +1111,7 @@ void drawLayerShape(const ODE_StringRef &layerId,
 
     // Shape Fills
     const std::vector<octopus::Fill> &octopusShapeFills = octopusShape.fills;
-    if (ImGui::CollapsingHeader("Shape fills")) {
+    if (ImGui::CollapsingHeader(layerHeaderLabel("Shape fills", layerId).c_str())) {
         ImGui::Dummy(ImVec2 { 0.0f, 10.0f });
         ImGui::SameLine(415);
         if (ImGui::SmallButton(layerPropName(layerId, "shape-fill-add", nonstd::nullopt, nonstd::nullopt, "+").c_str())) {
@@ -1636,7 +1641,7 @@ void drawLayerPropertiesWidget(DesignEditorContext &context,
 
                 // Text
                 const bool isTextLayer = (layer.type == ODE_LAYER_TYPE_TEXT && octopusLayer.type == octopus::Layer::Type::TEXT && octopusLayer.text.has_value());
-                if (isTextLayer && ImGui::CollapsingHeader("Text")) {
+                if (isTextLayer && ImGui::CollapsingHeader(layerHeaderLabel("Text", layer.id).c_str())) {
                     drawLayerText(layer.id, context, component, *octopusLayer.text);
                 }
 
@@ -1647,7 +1652,7 @@ void drawLayerPropertiesWidget(DesignEditorContext &context,
                 }
 
                 // Effects
-                if (ImGui::CollapsingHeader("Effects")) {
+                if (ImGui::CollapsingHeader(layerHeaderLabel("Effects", layer.id).c_str())) {
                     drawLayerEffects(layer.id, context, component, octopusLayer.effects);
                 }
 
