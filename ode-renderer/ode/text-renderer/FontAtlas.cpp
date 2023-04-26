@@ -1,10 +1,7 @@
 
 #ifdef ODE_REALTIME_TEXT_RENDERER
 
-// Making sure FreeType is included before first occurence of text-renderer-api.h
-#include <ft2build.h>
-#include FT_FREETYPE_H
-
+// Make sure FreeType is included before first occurence of text-renderer-api.h
 #include "FontAtlas.h"
 
 #include <open-design-text-renderer/text-renderer-api.h>

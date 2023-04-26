@@ -4,6 +4,7 @@
 #include <open-design-text-renderer/PlacedTextData.h>
 #include "TextMesh.h"
 #include "FontAtlas.h"
+#include "ColorFontAtlas.h"
 
 namespace ode {
 
@@ -24,6 +25,7 @@ static TransformationMatrix animationTransform(Component &component, const Layer
 TextRenderer::TextRenderer(GraphicsContext &gc, TextureFrameBufferManager &tfbManager, Mesh &billboard, BlitShader &blitShader) : tfbManager(tfbManager), billboard(billboard), blitShader(blitShader) {
     #ifdef ODE_REALTIME_TEXT_RENDERER
         sdfShader.initialize(false);
+        imageShader.initialize();
     #else
         transformShader.initialize();
     #endif
@@ -40,11 +42,18 @@ FontAtlas &TextRenderer::fontAtlas(const odtr::FontSpecifier &fontSpecifier) {
     return it->second;
 }
 
+ColorFontAtlas &TextRenderer::colorFontAtlas(const odtr::FontSpecifier &fontSpecifier) {
+    std::map<odtr::FontSpecifier, ColorFontAtlas>::iterator it = colorFontAtlases.find(fontSpecifier);
+    if (it == colorFontAtlases.end())
+        it = colorFontAtlases.insert(it, std::make_pair(fontSpecifier, ColorFontAtlas(this, fontSpecifier)));
+    return it->second;
+}
+
 PlacedImagePtr TextRenderer::drawLayerText(Component &component, const LayerInstanceSpecifier &layer, const ScaledBounds &visibleBounds, double scale, double time) {
     if (Result<TextShapeHolder *, DesignError> shape = component.getLayerTextShape(layer->id)) {
         if (!(shape.value() && *shape.value()))
             return nullptr;
-        if (!sdfShader.ready())
+        if (!(sdfShader.ready() && imageShader.ready()))
             return nullptr; // TODO report
         TextMesh *textMesh = static_cast<TextMesh *>(shape.value()->rendererData.get());
         if (!textMesh) {
@@ -77,8 +86,11 @@ PlacedImagePtr TextRenderer::drawLayerText(Component &component, const LayerInst
         glClear(GL_COLOR_BUFFER_BIT);
         glEnable(GL_BLEND);
         glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-        sdfShader.bind(pxBounds, Matrix3x3f(Matrix3x3d(transformation)));
-        textMesh->draw(sdfShader.texCoordFactorUniform(), SDFTextShader::UNIT_IN);
+        Matrix3x3f fTransformation((Matrix3x3d(transformation)));
+        sdfShader.bind(pxBounds, fTransformation);
+        textMesh->draw(sdfShader.texCoordFactorUniform(), SDFTextShader::UNIT_IN, TextMesh::SDF);
+        imageShader.bind(pxBounds, fTransformation);
+        textMesh->draw(imageShader.texCoordFactorUniform(), ImageTextShader::UNIT_IN, TextMesh::IMAGE);
         glDisable(GL_BLEND);
         outTex->unbind();
         return PlacedImagePtr(Image::fromTexture(outTex, Image::PREMULTIPLIED), marginBounds);

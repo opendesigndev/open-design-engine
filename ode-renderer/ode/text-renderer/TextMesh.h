@@ -16,13 +16,20 @@ class TextRenderer;
 class TextMesh : public TextShapeHolder::RendererData {
 
 public:
+    enum SegmentType {
+        SDF,
+        MSDF,
+        IMAGE
+    };
+
     static std::unique_ptr<TextMesh> build(TextRenderer *parent, odtr::TextShapeHandle handle);
 
-    void draw(Uniform &vec2TexCoordFactor, int textureUnit) const;
+    void draw(Uniform &vec2TexCoordFactor, int textureUnit, SegmentType type) const;
 
 private:
     struct FontSegment {
         int start, length;
+        SegmentType type;
         const Texture2D *texture;
     };
 

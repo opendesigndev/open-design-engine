@@ -39,7 +39,8 @@ public:
 
     inline bool renderOctopusIntoFile(const octopus::Octopus &octopus) {
         std::set<std::string> ids;
-        if (!octopus::validate(octopus, ids))
+        std::string validationError;
+        if (!octopus::validate(octopus, ids, &validationError))
             return false;
 
         std::string json;

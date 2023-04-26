@@ -12,6 +12,7 @@
 #include <msdf-atlas-gen/msdf-atlas-gen.h>
 #include <open-design-text-renderer/PlacedGlyph.h>
 #include <ode-graphics.h>
+#include "GlyphQuad.h"
 
 namespace ode {
 
@@ -20,10 +21,6 @@ class TextRenderer;
 class FontAtlas {
 
 public:
-    struct GlyphQuad {
-        Rectangle<double> planeBounds, atlasBounds;
-    };
-
     FontAtlas(TextRenderer *parentRenderer, const odtr::FontSpecifier &fontSpecifier);
     const Texture2D *getTexture() const;
     // Returns emRange on success, 0 on failure

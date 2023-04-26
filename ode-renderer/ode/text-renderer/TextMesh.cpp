@@ -5,7 +5,9 @@
 
 #include <open-design-text-renderer/PlacedTextData.h>
 
+#include "GlyphQuad.h"
 #include "FontAtlas.h"
+#include "ColorFontAtlas.h"
 #include "TextRenderer.h"
 
 namespace ode {
@@ -29,7 +31,7 @@ static void generateVertex(std::vector<float> &meshData, const Vector2d &coord, 
     meshData.push_back(outputRange);
 }
 
-static void generateQuadVertices(std::vector<float> &meshData, const FontAtlas::GlyphQuad &quad, uint32_t color, float outputRange) {
+static void generateQuadVertices(std::vector<float> &meshData, const GlyphQuad &quad, uint32_t color, float outputRange) {
     float fColor[4] = {
         channelByteToFloat(byte(color)),
         channelByteToFloat(byte(color>>8)),
@@ -54,23 +56,44 @@ std::unique_ptr<TextMesh> TextMesh::build(TextRenderer *parent, odtr::TextShapeH
     int quadCount = 0;
     for (const odtr::PlacedGlyphsPerFont::value_type &fontGlyphs : placedText->glyphs) {
         int segmentStart = 6*quadCount;
-        FontAtlas &fontAtlas = parent->fontAtlas(fontGlyphs.first);
-        for (const odtr::PlacedGlyph &glyph : fontGlyphs.second) {
-            FontAtlas::GlyphQuad quad;
-            double emRange = fontAtlas.getGlyphQuad(quad, glyph.codepoint);
-            if (!emRange)
-                continue; // error
-            float outputRange = glyph.fontSize*float(emRange);
-            Vector2d glyphPos(glyph.originPosition.x, glyph.originPosition.y);
-            quad.planeBounds *= glyph.fontSize;
-            quad.planeBounds += glyphPos;
-            generateQuadVertices(meshData, quad, glyph.color, outputRange);
-            ++quadCount;
+        SegmentType segmentType;
+        const Texture2D *texture = nullptr;
+        if (odtr::isColorFont(TEXT_RENDERER_CONTEXT, fontGlyphs.first.faceId)) {
+            ColorFontAtlas &fontAtlas = parent->colorFontAtlas(fontGlyphs.first);
+            for (const odtr::PlacedGlyph &glyph : fontGlyphs.second) {
+                GlyphQuad quad;
+                if (!fontAtlas.getGlyphQuad(quad, glyph.codepoint))
+                    continue; // error
+                Vector2d glyphPos(glyph.originPosition.x, glyph.originPosition.y);
+                quad.planeBounds *= glyph.fontSize;
+                quad.planeBounds += glyphPos;
+                generateQuadVertices(meshData, quad, glyph.color, 1.f);
+                ++quadCount;
+            }
+            segmentType = IMAGE;
+            texture = fontAtlas.getTexture();
+        } else {
+            FontAtlas &fontAtlas = parent->fontAtlas(fontGlyphs.first);
+            for (const odtr::PlacedGlyph &glyph : fontGlyphs.second) {
+                GlyphQuad quad;
+                double emRange = fontAtlas.getGlyphQuad(quad, glyph.codepoint);
+                if (!emRange)
+                    continue; // error
+                float outputRange = glyph.fontSize*float(emRange);
+                Vector2d glyphPos(glyph.originPosition.x, glyph.originPosition.y);
+                quad.planeBounds *= glyph.fontSize;
+                quad.planeBounds += glyphPos;
+                generateQuadVertices(meshData, quad, glyph.color, outputRange);
+                ++quadCount;
+            }
+            segmentType = SDF;
+            texture = fontAtlas.getTexture();
         }
-        if (const Texture2D *texture = fontAtlas.getTexture()) {
+        if (texture) {
             FontSegment &segment = mesh->segments.emplace_back();
             segment.start = segmentStart;
             segment.length = 6*quadCount-segmentStart;
+            segment.type = segmentType;
             segment.texture = texture;
         }
     }
@@ -79,15 +102,17 @@ std::unique_ptr<TextMesh> TextMesh::build(TextRenderer *parent, odtr::TextShapeH
     return mesh;
 }
 
-void TextMesh::draw(Uniform &vec2TexCoordFactor, int textureUnit) const {
+void TextMesh::draw(Uniform &vec2TexCoordFactor, int textureUnit, SegmentType type) const {
     for (const FontSegment &segment : segments) {
-        float texCoordFactor[2] = {
-            float(1./segment.texture->dimensions().x),
-            float(1./segment.texture->dimensions().y)
-        };
-        segment.texture->bind(textureUnit);
-        vec2TexCoordFactor.setVec2(texCoordFactor);
-        mesh.drawPart(segment.start, segment.length);
+        if (segment.type == type) {
+            float texCoordFactor[2] = {
+                float(1./segment.texture->dimensions().x),
+                float(1./segment.texture->dimensions().y)
+            };
+            segment.texture->bind(textureUnit);
+            vec2TexCoordFactor.setVec2(texCoordFactor);
+            mesh.drawPart(segment.start, segment.length);
+        }
     }
 }
 
