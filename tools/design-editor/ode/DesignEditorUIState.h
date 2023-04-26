@@ -36,9 +36,9 @@ struct DesignEditorUIState {
 
     /// State of the file dialog
     struct FileDialog {
-        std::string octopusFilePath = ".";
+        std::string octopusFilePath;
         std::string octopusFileName;
-        std::string imageFilePath = ".";
+        std::string imageFilePath;
         std::string imageFileName;
     } fileDialog;
 

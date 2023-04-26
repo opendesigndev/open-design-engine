@@ -435,5 +435,11 @@ int DesignEditorWindow::reloadOctopus(const FilePath &octopusPath, const FilePat
     CHECK(loadMissingFonts(fontDir));
     CHECK(ode_component_listLayers(newComponent.component, &newComponent.layerList));
     CHECK(ode_pr1_drawComponent(context.rc, newComponent.component, context.design.imageBase, &newComponent.bitmap, context.frameView));
+
+    if (ui.fileDialog.octopusFilePath.empty()) {
+        ui.fileDialog.octopusFilePath = (std::string)octopusPath.parent();
+        ui.fileDialog.octopusFileName = octopusPath.filename();
+    }
+
     return 0;
 }
