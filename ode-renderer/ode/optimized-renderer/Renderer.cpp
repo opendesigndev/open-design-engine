@@ -293,7 +293,7 @@ PlacedImagePtr Renderer::reframe(const PlacedImagePtr &image, const PixelBounds 
 }
 
 void Renderer::screenDraw(const PixelBounds &viewport, const PlacedImagePtr &image, const Color &bgColor) {
-    if (!image)
+    if (!(viewport && image))
         return;
     TexturePtr tex = image->asTexture();
     if (!tex)
