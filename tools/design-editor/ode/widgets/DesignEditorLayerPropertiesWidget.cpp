@@ -452,8 +452,9 @@ void drawLayerText(const ODE_StringRef &layerId,
     const octopus::TextStyle &defaultTextStyle = octopusText.defaultStyle;
 
     // Text value
+    const std::string text = std::regex_replace(octopusText.value, std::regex("\xe2\x80\xa9"), "\n");
     char textBuffer[1<<16] {};
-    strncpy(textBuffer, octopusText.value.c_str(), sizeof(textBuffer)-1);
+    strncpy(textBuffer, text.c_str(), sizeof(textBuffer)-1);
     ImGui::Text("Text value:");
     ImGui::SameLine(100);
     ImGui::InputTextMultiline(layerPropName(layerId, "text-value").c_str(), textBuffer, IM_ARRAYSIZE(textBuffer), ImVec2(327, ImGui::GetTextLineHeight() * 10), ImGuiInputTextFlags_AllowTabInput);
