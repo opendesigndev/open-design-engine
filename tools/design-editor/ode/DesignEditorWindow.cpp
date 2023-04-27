@@ -111,12 +111,15 @@ int DesignEditorWindow::display() {
     // Setup ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
 
     // Setup ImGui style
     ImGui::StyleColorsDark();
+
+    // Setup fonts to be displayed in the UI
+    setupUIFonts();
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -442,4 +445,15 @@ int DesignEditorWindow::reloadOctopus(const FilePath &octopusPath, const FilePat
     }
 
     return 0;
+}
+
+void DesignEditorWindow::setupUIFonts() {
+    ImGuiIO& io = ImGui::GetIO();
+
+    if (std::filesystem::exists((std::string)fontDirectory + "Ayuthaya.ttf")) {
+        io.Fonts->AddFontFromFileTTF(((std::string)fontDirectory + "Ayuthaya.ttf").c_str(), 16.0f, NULL, io.Fonts->GetGlyphRangesThai());
+    }
+    if (std::filesystem::exists((std::string)fontDirectory + "Arial.ttf")) {
+        io.Fonts->AddFontFromFileTTF(((std::string)fontDirectory + "Arial.ttf").c_str(), 16.0f, NULL, io.Fonts->GetGlyphRangesCyrillic());
+    }
 }

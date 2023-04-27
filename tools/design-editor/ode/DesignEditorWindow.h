@@ -41,6 +41,8 @@ private:
     int createEmptyDesign(const FilePath &fontDir);
     int reloadOctopus(const FilePath &octopusPath, const FilePath &fontDir);
 
+    void setupUIFonts();
+
     ode::FilePath imageDirectory;
     ode::FilePath fontDirectory;
 
