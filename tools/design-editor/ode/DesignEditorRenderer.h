@@ -13,7 +13,7 @@ public:
     ~DesignEditorRenderer() = default;
 
     /// Blend image on a background by the specified selectedDisplayMode and set to texture
-    TexturePtr blendImageToTexture(Bitmap &&bitmap,
+    TextureFrameBufferPtr blendImageToTexture(Bitmap &&bitmap,
                                    const ScaledBounds &placement,
                                    int selectedDisplayMode,
                                    const AnnotationRectangleOpt &selectionRectangle,

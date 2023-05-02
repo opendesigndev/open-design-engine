@@ -28,8 +28,8 @@ int DesignEditorContext::initialize() {
 
 int DesignEditorContext::destroy() {
     CHECK(ode_destroyDesignImageBase(design.imageBase));
-    CHECK(ode_destroyRendererContext(rc));
     CHECK(ode_destroyDesign(design.design));
+    CHECK(ode_destroyRendererContext(rc));
     CHECK(ode_destroyEngine(engine));
 
     return 0;

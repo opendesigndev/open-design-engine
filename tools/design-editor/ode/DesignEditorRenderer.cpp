@@ -30,14 +30,14 @@ DesignEditorRenderer::DesignEditorRenderer() : sharedVertexShader("design-editor
     billboard.initialize(billboardVertices, &attributeSize, 1, GL_TRIANGLES, 6);
 }
 
-TexturePtr DesignEditorRenderer::blendImageToTexture(Bitmap &&bitmap,
+TextureFrameBufferPtr DesignEditorRenderer::blendImageToTexture(Bitmap &&bitmap,
                                                      const ScaledBounds &placement,
                                                      int selectedDisplayMode,
                                                      const AnnotationRectangleOpt &selectionRectangle,
                                                      const AnnotationRectangles &highlightRectangles) {
     const bool ignoreAlpha = selectedDisplayMode == 3;
 
-    ImagePtr image = Image::fromBitmap(bitmap, Image::NORMAL);
+    ImagePtr image = Image::fromBitmap((Bitmap &&) bitmap, Image::NORMAL);
     TexturePtr texture = image->asTexture();
 
     PixelBounds bounds = outerPixelBounds(placement);

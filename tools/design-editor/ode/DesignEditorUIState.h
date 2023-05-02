@@ -44,7 +44,7 @@ struct DesignEditorUIState {
 
     /// Textures used by the design editor
     struct Textures {
-        ode::TexturePtr designImageTexture = nullptr;
+        ode::TextureFrameBufferPtr designImageTexture = nullptr;
     } textures;
 
     /// Canvas state

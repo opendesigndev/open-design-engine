@@ -112,8 +112,16 @@ ODE_Result ODE_API ode_pr1_drawComponent(ODE_RendererContextHandle rendererConte
         PixelBounds pixelBounds = outerPixelBounds(ScaledBounds(0, 0, frameView.width, frameView.height)+frameView.scale*Vector2d(frameView.offset.x, frameView.offset.y));
         if (PlacedImagePtr image = render(*rendererContext.ptr->renderer, designImageBase.ptr->imageBase, *component.ptr->accessor.TEMP_GET_COMPONENT_DELETE_ME_ASAP(), renderTree.value(), frameView.scale, pixelBounds, 0)) {
             if (BitmapPtr bitmap = image->asBitmap()) {
-                outputBitmap->format = ODE_PIXEL_FORMAT_RGBA;
-                ODE_ASSERT(bitmap->format() == PixelFormat::RGBA);
+                switch (bitmap->format()) {
+                    case PixelFormat::RGBA:
+                        outputBitmap->format = ODE_PIXEL_FORMAT_RGBA;
+                        break;
+                    case PixelFormat::PREMULTIPLIED_RGBA:
+                        outputBitmap->format = ODE_PIXEL_FORMAT_PREMULTIPLIED_RGBA;
+                        break;
+                    default:
+                        ODE_ASSERT(!"Unexpected bitmap format");
+                }
                 outputBitmap->width = bitmap->width();
                 outputBitmap->height = bitmap->height();
                 outputBitmap->pixels = reinterpret_cast<ODE_VarDataPtr>(bitmap->eject());

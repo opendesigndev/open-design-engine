@@ -98,6 +98,8 @@ DesignEditorWindow::DesignEditorWindow() {
 }
 
 DesignEditorWindow::~DesignEditorWindow() {
+    ui.textures.designImageTexture.reset();
+    renderer.reset();
     context.destroy();
 }
 
@@ -296,6 +298,7 @@ int DesignEditorWindow::display() {
         }
 
         // Rendering
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
         ImGui::Render();
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
@@ -304,14 +307,7 @@ int DesignEditorWindow::display() {
         glClearColor(clearColor.x * clearColor.w, clearColor.y * clearColor.w, clearColor.z * clearColor.w, clearColor.w);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        // ImGui:
-        // If you are using this code with non-legacy OpenGL header/contexts (which you should not, prefer using imgui_impl_opengl3.cpp!!),
-        // you may need to backup/reset/restore other state, e.g. for current shader using the commented lines below.
-        GLint last_program;
-        glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
-        glUseProgram(0);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-        glUseProgram(last_program);
 
         glfwSwapBuffers(window);
     }
