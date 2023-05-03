@@ -28,6 +28,3 @@ bool isImGuiMultiselectKeyModifierPressed();
 
 /// Detect if there is an intersection between the two rectangles
 bool isRectangleIntersection(const ODE_Rectangle &r1, const ODE_Rectangle &r2);
-
-/// Get the bounding rectangle of the specified layer
-ODE_Rectangle getBoundingRectangle(const ODE_LayerMetrics &layerMetrics);

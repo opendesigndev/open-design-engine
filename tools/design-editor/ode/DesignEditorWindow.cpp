@@ -266,9 +266,7 @@ int DesignEditorWindow::display() {
                     ODE_LayerMetrics layerMetrics;
                     ode_component_getLayerMetrics(component.component, layer.id, &layerMetrics);
 
-                    ODE_Rectangle boundingRectangle = getBoundingRectangle(layerMetrics);
-
-                    if (isRectangleIntersection(selectionRectangle, boundingRectangle)) {
+                    if (isRectangleIntersection(selectionRectangle, layerMetrics.transformedGraphicalBounds)) {
                         ui.layerSelection.add(layer.id.data);
                     }
                 }

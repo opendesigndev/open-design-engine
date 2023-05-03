@@ -109,13 +109,11 @@ void drawDesignViewWidget(const ODE_ComponentHandle &component,
             ODE_LayerMetrics layerMetrics;
             ode_component_getLayerMetrics(component, layerId, &layerMetrics);
 
-            const ODE_Rectangle boundingRectangle = getBoundingRectangle(layerMetrics);
-
             highlightRectangles.emplace_back(ode::Rectangle<float> {
-                std::clamp(static_cast<float>(boundingRectangle.a.x) / canvasWidth, 0.0f, 1.0f),
-                std::clamp(static_cast<float>(boundingRectangle.a.y) / canvasHeight, 0.0f, 1.0f),
-                std::clamp(static_cast<float>(boundingRectangle.b.x) / canvasWidth, 0.0f, 1.0f),
-                std::clamp(static_cast<float>(boundingRectangle.b.y) / canvasHeight, 0.0f, 1.0f),
+                std::clamp(static_cast<float>(layerMetrics.transformedGraphicalBounds.a.x) / canvasWidth, 0.0f, 1.0f),
+                std::clamp(static_cast<float>(layerMetrics.transformedGraphicalBounds.a.y) / canvasHeight, 0.0f, 1.0f),
+                std::clamp(static_cast<float>(layerMetrics.transformedGraphicalBounds.b.x) / canvasWidth, 0.0f, 1.0f),
+                std::clamp(static_cast<float>(layerMetrics.transformedGraphicalBounds.b.y) / canvasHeight, 0.0f, 1.0f),
             });
         }
 
