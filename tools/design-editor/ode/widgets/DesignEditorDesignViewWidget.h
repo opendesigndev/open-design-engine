@@ -12,6 +12,7 @@
 void drawDesignViewWidget(const ODE_ComponentHandle &component,
                           const ODE_Bitmap &bitmap,
                           DesignEditorRenderer &renderer,
+                          DesignEditorUIState::Mode uiMode,
                           DesignEditorUIState::Textures &texturesContext,
                           DesignEditorUIState::Canvas &canvasContext,
                           const DesignEditorUIState::LayerSelection &layerSelection,

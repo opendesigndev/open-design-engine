@@ -237,7 +237,7 @@ int DesignEditorWindow::display() {
                         ode_pr1_drawComponent(context.rc, component.component, context.design.imageBase, &component.bitmap, context.frameView);
                     }
 
-                } else if (ui.mode == DesignEditorUIState::Mode::SELECT) {
+                } else if (ui.mode == DesignEditorUIState::Mode::SELECT || ui.mode == DesignEditorUIState::Mode::MOVE) {
                     ODE_String selectedLayerId;
                     ode_component_identifyLayer(component.component, &selectedLayerId, mousePosImageSpace, 2.0f);
                     if (isImGuiMultiselectKeyModifierPressed()) {
@@ -273,6 +273,29 @@ int DesignEditorWindow::display() {
                     }
                 }
             }
+            // Mouse move
+            if (ui.mode == DesignEditorUIState::Mode::MOVE &&
+                !ui.layerSelection.empty() &&
+                ui.canvas.mouseDragPos.has_value() &&
+                ui.canvas.prevMouseDragPos.has_value() &&
+                (ui.canvas.mouseDragPos->x != ui.canvas.prevMouseDragPos->x || ui.canvas.mouseDragPos->y != ui.canvas.prevMouseDragPos->y)) {
+                const ODE_Vector2 prevPosInImageSpace = toImageSpace(*ui.canvas.prevMouseDragPos, ui.canvas, component);
+                const ODE_Vector2 posInImageSpace = toImageSpace(*ui.canvas.mouseDragPos, ui.canvas, component);
+
+                const ODE_Scalar trX = posInImageSpace.x - prevPosInImageSpace.x;
+                const ODE_Scalar trY = posInImageSpace.y - prevPosInImageSpace.y;
+
+                const ODE_Vector2 translationInImageSpace = ImGui::IsKeyDown(ImGuiKey_LeftShift)
+                    ? ODE_Vector2 { std::round(trX), std::round(trY) }
+                    : ODE_Vector2 { trX, trY };;
+
+                for (const ODE_StringRef &layerId : ui.layerSelection.layerIDs) {
+                    const ODE_Transformation newTransformation { 1,0,0,1,translationInImageSpace.x,translationInImageSpace.y };
+                    if (ode_component_transformLayer(component.component, layerId, ODE_TRANSFORMATION_BASIS_PARENT_COMPONENT, newTransformation) == ODE_RESULT_OK) {
+                        ode_pr1_drawComponent(context.rc, component.component, context.design.imageBase, &component.bitmap, context.frameView);
+                    }
+                }
+            }
 
             if (ui.canvas.isMouseOver) {
                 const ODE_Vector2 mousePosImageSpace = toImageSpace(ImGui::GetMousePos(), ui.canvas, component);
@@ -286,7 +309,7 @@ int DesignEditorWindow::display() {
                 drawLayerListWidget(component.layerList, ui.layerSelection);
             }
             if (ui.widgets.showDesignView) {
-                drawDesignViewWidget(component.component, component.bitmap, *renderer, ui.textures, ui.canvas, ui.layerSelection, component.layerList.entries[0].id, ui.imageVisualizationParams.selectedDisplayMode);
+                drawDesignViewWidget(component.component, component.bitmap, *renderer, ui.mode, ui.textures, ui.canvas, ui.layerSelection, component.layerList.entries[0].id, ui.imageVisualizationParams.selectedDisplayMode);
             }
             if (ui.widgets.showLayerProperties) {
                 drawLayerPropertiesWidget(context, component, ui.layerSelection, ui.fileDialog);
@@ -341,22 +364,24 @@ void DesignEditorWindow::handleKeyboardEvents() {
     const float minZoom = 1.0f;
     const float maxZoom = 10.0f;
 
-    if (ImGui::IsKeyPressed(ImGuiKey_LeftSuper)) {
-        if (ImGui::IsKeyPressed(ImGuiKey_1)) {
+    if (ImGui::IsKeyDown(ImGuiKey_LeftSuper) || ImGui::IsKeyDown(ImGuiKey_LeftCtrl)) {
+        if (ImGui::IsKeyDown(ImGuiKey_1)) {
             ui.mode = DesignEditorUIState::Mode::SELECT;
-        } else if (ImGui::IsKeyPressed(ImGuiKey_2)) {
+        } else if (ImGui::IsKeyDown(ImGuiKey_2)) {
+            ui.mode = DesignEditorUIState::Mode::MOVE;
+        } else if (ImGui::IsKeyDown(ImGuiKey_3)) {
             ui.mode = DesignEditorUIState::Mode::ADD_RECTANGLE;
-        } else if (ImGui::IsKeyPressed(ImGuiKey_3)) {
+        } else if (ImGui::IsKeyDown(ImGuiKey_4)) {
             ui.mode = DesignEditorUIState::Mode::ADD_ELLIPSE;
-        } else if (ImGui::IsKeyPressed(ImGuiKey_4)) {
+        } else if (ImGui::IsKeyDown(ImGuiKey_5)) {
             ui.mode = DesignEditorUIState::Mode::ADD_TEXT;
         }
-    }
 
-    if (ImGui::IsKeyDown(ImGuiKey_W)) {
-        ui.canvas.zoom = std::clamp(ui.canvas.zoom + zoomKeySpeed, minZoom, maxZoom);
-    } else if (ImGui::IsKeyDown(ImGuiKey_S)) {
-        ui.canvas.zoom = std::clamp(ui.canvas.zoom - zoomKeySpeed, minZoom, maxZoom);
+        if (ImGui::IsKeyDown(ImGuiKey_W)) {
+            ui.canvas.zoom = std::clamp(ui.canvas.zoom + zoomKeySpeed, minZoom, maxZoom);
+        } else if (ImGui::IsKeyDown(ImGuiKey_S)) {
+            ui.canvas.zoom = std::clamp(ui.canvas.zoom - zoomKeySpeed, minZoom, maxZoom);
+        }
     }
 }
 

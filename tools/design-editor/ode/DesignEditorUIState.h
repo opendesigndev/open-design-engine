@@ -15,6 +15,7 @@ struct DesignEditorUIState {
     /// Editor mode
     enum class Mode {
         SELECT,
+        MOVE,
         ADD_RECTANGLE,
         ADD_ELLIPSE,
         ADD_TEXT,
@@ -56,12 +57,14 @@ struct DesignEditorUIState {
         float zoom = 1.0f;
         std::optional<ImVec2> mouseClickPos;
         std::optional<ImVec2> mouseDragPos;
+        std::optional<ImVec2> prevMouseDragPos;
     } canvas;
 
     /// Layer selection
     struct LayerSelection {
         std::vector<ODE_StringRef> layerIDs {};
 
+        bool empty() const;
         void select(const char *layerID);
         void add(const char *layerID);
         void remove(const char *layerID);

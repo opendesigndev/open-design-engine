@@ -20,6 +20,7 @@ void drawImGuiWidgetTexture(GLuint textureHandle,
                             float &zoom,
                             std::optional<ImVec2> &mouseClickPos,
                             std::optional<ImVec2> &mouseDragPos,
+                            std::optional<ImVec2> &prevMouseDragPos,
                             size_t colsCount = 1, size_t rowsCount = 1) {
     const ImVec2 windowSize = ImGui::GetWindowSize();
 
@@ -47,8 +48,10 @@ void drawImGuiWidgetTexture(GLuint textureHandle,
     }
 
     if (ImGui::IsItemHovered() && ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+        prevMouseDragPos = mouseDragPos;
         mouseDragPos = ImGui::GetMousePos();
     } else {
+        prevMouseDragPos = std::nullopt;
         mouseDragPos = std::nullopt;
     }
 
@@ -60,6 +63,7 @@ void drawImGuiWidgetTexture(GLuint textureHandle,
 void drawDesignViewWidget(const ODE_ComponentHandle &component,
                           const ODE_Bitmap &bitmap,
                           DesignEditorRenderer &renderer,
+                          DesignEditorUIState::Mode uiMode,
                           DesignEditorUIState::Textures &texturesContext,
                           DesignEditorUIState::Canvas &canvasContext,
                           const DesignEditorUIState::LayerSelection &layerSelection,
@@ -80,7 +84,8 @@ void drawDesignViewWidget(const ODE_ComponentHandle &component,
         };
 
         AnnotationRectangleOpt selectionRectangle = std::nullopt;
-        if (canvasContext.mouseClickPos.has_value() &&
+        if (uiMode == DesignEditorUIState::Mode::SELECT &&
+            canvasContext.mouseClickPos.has_value() &&
             canvasContext.mouseDragPos.has_value()) {
             const ImVec2 rectStart = toCanvasSpace(*canvasContext.mouseClickPos);
             const ImVec2 rectEnd = toCanvasSpace(*canvasContext.mouseDragPos);
@@ -121,7 +126,8 @@ void drawDesignViewWidget(const ODE_ComponentHandle &component,
                                texturesContext.designImageTexture->dimensions().y,
                                canvasContext.zoom,
                                canvasContext.mouseClickPos,
-                               canvasContext.mouseDragPos);
+                               canvasContext.mouseDragPos,
+                               canvasContext.prevMouseDragPos);
 
         canvasContext.isMouseOver = ImGui::IsItemHovered();
         canvasContext.bbSize = ImGui::GetItemRectSize();

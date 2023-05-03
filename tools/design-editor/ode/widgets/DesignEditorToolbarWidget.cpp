@@ -133,6 +133,14 @@ void drawToolbarWidget(DesignEditorContext &context,
     ImGui::PopStyleColor(2);
     ImGui::SameLine();
 
+    ImGui::PushStyleColor(ImGuiCol_Button, mode == DesignEditorUIState::Mode::MOVE ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, mode == DesignEditorUIState::Mode::MOVE ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
+    if (ImGui::Button("Move")) {
+        mode = DesignEditorUIState::Mode::MOVE;
+    }
+    ImGui::PopStyleColor(2);
+    ImGui::SameLine();
+
     ImGui::PushStyleColor(ImGuiCol_Button, mode == DesignEditorUIState::Mode::ADD_RECTANGLE ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, mode == DesignEditorUIState::Mode::ADD_RECTANGLE ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
     if (ImGui::Button("Add Rectangle")) {

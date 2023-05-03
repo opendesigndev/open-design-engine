@@ -1,6 +1,11 @@
 
 #include "DesignEditorUIState.h"
 
+
+bool DesignEditorUIState::LayerSelection::empty() const {
+    return layerIDs.empty();
+}
+
 void DesignEditorUIState::LayerSelection::select(const char *layerID) {
     clear();
 
