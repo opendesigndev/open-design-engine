@@ -14,6 +14,7 @@
 #include <ImGuiFileDialog.h>
 
 // OD includes
+#include <ode-logic.h>
 #include <ode-renderer.h>
 #include <ode-diagnostics.h>
 #include <ode-media.h>
@@ -231,7 +232,15 @@ int DesignEditorWindow::display() {
                         ode_component_listLayers(component.component, &component.layerList);
                         const ODE_StringRef insertedLayerId = lastChildLayerId(component.layerList, insertionLayerId);
                         if (insertedLayerId.data!=nullptr && insertedLayerId.length>=0) {
-                            ode_component_transformLayer(component.component, insertedLayerId, ODE_TRANSFORMATION_BASIS_LAYER, translation);
+                            // First apply the inverse group transformation so that the new layer is at the origin of the component
+                            ODE_LayerMetrics parentLayerMetrics;
+                            ode_component_getLayerMetrics(component.component, insertionLayerId, &parentLayerMetrics);
+                            const TransformationMatrix parentTransformation(parentLayerMetrics.transformation.matrix);
+                            const TransformationMatrix invParentTransformation = inverse(parentTransformation);
+                            const ODE_Transformation invParentTr {{ invParentTransformation[0][0], invParentTransformation[0][1], invParentTransformation[1][0], invParentTransformation[1][1], invParentTransformation[2][0], invParentTransformation[2][1] }};
+                            ode_component_transformLayer(component.component, insertedLayerId, ODE_TRANSFORMATION_BASIS_PARENT_COMPONENT, invParentTr);
+                            // Translate to the position specified by mouse click
+                            ode_component_transformLayer(component.component, insertedLayerId, ODE_TRANSFORMATION_BASIS_PARENT_COMPONENT, translation);
                         }
 
                         ode_pr1_drawComponent(context.rc, component.component, context.design.imageBase, &component.bitmap, context.frameView);
