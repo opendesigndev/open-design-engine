@@ -459,8 +459,52 @@ void drawLayerText(const ODE_StringRef &layerId,
     ImGui::SameLine(100);
     ImGui::InputTextMultiline(layerPropName(layerId, "text-value").c_str(), textBuffer, IM_ARRAYSIZE(textBuffer), ImVec2(327, ImGui::GetTextLineHeight() * 10), ImGuiInputTextFlags_AllowTabInput);
     if (ImGui::IsItemEdited()) {
-        changeProperty(octopus::LayerChange::Subject::TEXT, context, component, layerId, nonstd::nullopt, [&textBuffer](octopus::LayerChange::Values &values) {
+        const std::string &oldText = text;
+        const std::string newText = textBuffer;
+        // Added and removed text start positions and lengths
+        std::pair<int, int> removedText, addedText;
+
+        for (size_t i = 0; i < std::max(oldText.size(), newText.size()); ++i) {
+            if (i >= oldText.size()) {
+                addedText = std::make_pair(oldText.size(), newText.size()-oldText.size());
+                break;
+            }
+            if (i >= newText.size()) {
+                removedText = std::make_pair(newText.size(), oldText.size()-newText.size());
+                break;
+            }
+            if (oldText[i] == newText[i]) {
+                continue;
+            }
+            const std::string remOldText(oldText.begin()+i, oldText.end());
+            const std::string remNewText(newText.begin()+i, newText.end());
+            const size_t addedEnd = remNewText.find(remOldText);
+            const size_t removedEnd = remOldText.find(remNewText);
+            if (addedEnd != std::string::npos) {
+                addedText = std::make_pair(i, addedEnd);
+                break;
+            }
+            if (removedEnd != std::string::npos) {
+                removedText = std::make_pair(i, removedEnd);
+                break;
+            }
+        }
+
+        nonstd::optional<std::vector<octopus::StyleRange>> newStyles = octopusText.styles;
+        if (newStyles.has_value()) {
+            for (octopus::StyleRange &style : newStyles.value()) {
+                for (octopus::StyleRange::Range &range : style.ranges) {
+                    if (range.to > addedText.first) range.to += addedText.second;
+                    if (range.from > addedText.first) range.from += addedText.second;
+                    if (range.to > removedText.first) range.to -= removedText.second;
+                    if (range.from > removedText.first) range.from -= removedText.second;
+                }
+            }
+        }
+
+        changeProperty(octopus::LayerChange::Subject::TEXT, context, component, layerId, nonstd::nullopt, [&textBuffer, &newStyles](octopus::LayerChange::Values &values) {
             values.value = textBuffer;
+            values.styles = newStyles;
         });
     }
 
