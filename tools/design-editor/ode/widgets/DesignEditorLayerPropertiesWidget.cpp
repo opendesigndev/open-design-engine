@@ -18,92 +18,152 @@ using namespace ode;
 
 namespace {
 
-const char *BLEND_MODES_STR[] = {
-    "NORMAL",
-    "PASS_THROUGH",
-    "COLOR",
-    "COLOR_BURN",
-    "COLOR_DODGE",
-    "DARKEN",
-    "DARKER_COLOR",
-    "DIFFERENCE",
-    "DIVIDE",
-    "EXCLUSION",
-    "HARD_LIGHT",
-    "HARD_MIX",
-    "HUE",
-    "LIGHTEN",
-    "LIGHTER_COLOR",
-    "LINEAR_BURN",
-    "LINEAR_DODGE",
-    "LINEAR_LIGHT",
-    "LUMINOSITY",
-    "MULTIPLY",
-    "OVERLAY",
-    "PIN_LIGHT",
-    "SATURATION",
-    "SCREEN",
-    "SOFT_LIGHT",
-    "SUBTRACT",
-    "VIVID_LIGHT",
+class EnumMap : private std::vector<const char *> {
+public:
+    template <typename E>
+    inline explicit EnumMap(E maxValue) : std::vector<const char *>(size_t(maxValue)+1, "???") { }
+    template <typename E>
+    const char *&operator[](E value) {
+        if (size_t(value) >= size())
+            resize(size_t(value)+1, "???");
+        return std::vector<const char *>::operator[](size_t(value));
+    }
+    template <typename E>
+    const char *operator[](E value) const {
+        if (size_t(value) >= size())
+            return "???";
+        return std::vector<const char *>::operator[](size_t(value));
+    }
+    inline size_t size() const {
+        return std::vector<const char *>::size();
+    }
 };
 
-const char *STROKE_POSITIONS_STR[] = {
-    "OUTSIDE",
-    "CENTER",
-    "INSIDE",
-};
+#define MAP_ENUM(ns, name) map[ns::name] = #name
 
-const char *STROKE_STYLES_STR[] = {
-    "SOLID",
-    "DASHED",
-    "DOTTED",
-};
+static EnumMap makeBlendModeMap() {
+    using octopus::BlendMode;
+    EnumMap map(BlendMode::VIVID_LIGHT);
+    MAP_ENUM(BlendMode, NORMAL);
+    MAP_ENUM(BlendMode, PASS_THROUGH);
+    MAP_ENUM(BlendMode, COLOR);
+    MAP_ENUM(BlendMode, COLOR_BURN);
+    MAP_ENUM(BlendMode, COLOR_DODGE);
+    MAP_ENUM(BlendMode, DARKEN);
+    MAP_ENUM(BlendMode, DARKER_COLOR);
+    MAP_ENUM(BlendMode, DIFFERENCE);
+    MAP_ENUM(BlendMode, DIVIDE);
+    MAP_ENUM(BlendMode, EXCLUSION);
+    MAP_ENUM(BlendMode, HARD_LIGHT);
+    MAP_ENUM(BlendMode, HARD_MIX);
+    MAP_ENUM(BlendMode, HUE);
+    MAP_ENUM(BlendMode, LIGHTEN);
+    MAP_ENUM(BlendMode, LIGHTER_COLOR);
+    MAP_ENUM(BlendMode, LINEAR_BURN);
+    MAP_ENUM(BlendMode, LINEAR_DODGE);
+    MAP_ENUM(BlendMode, LINEAR_LIGHT);
+    MAP_ENUM(BlendMode, LUMINOSITY);
+    MAP_ENUM(BlendMode, MULTIPLY);
+    MAP_ENUM(BlendMode, OVERLAY);
+    MAP_ENUM(BlendMode, PIN_LIGHT);
+    MAP_ENUM(BlendMode, SATURATION);
+    MAP_ENUM(BlendMode, SCREEN);
+    MAP_ENUM(BlendMode, SOFT_LIGHT);
+    MAP_ENUM(BlendMode, SUBTRACT);
+    MAP_ENUM(BlendMode, VIVID_LIGHT);
+    return map;
+}
 
-const char *FILL_TYPES_STR[] = {
-    "COLOR",
-    "GRADIENT",
-    "IMAGE",
-};
+static EnumMap makeStrokePositionMap() {
+    using octopus::Stroke;
+    EnumMap map(Stroke::Position::INSIDE);
+    MAP_ENUM(Stroke::Position, OUTSIDE);
+    MAP_ENUM(Stroke::Position, CENTER);
+    MAP_ENUM(Stroke::Position, INSIDE);
+    return map;
+}
 
-const char *FILL_GRADIENT_TYPES_STR[] = {
-    "LINEAR",
-    "RADIAL",
-    "ANGULAR",
-    "DIAMOND",
-};
+static EnumMap makeStrokeStyleMap() {
+    using octopus::VectorStroke;
+    EnumMap map(VectorStroke::Style::DOTTED);
+    MAP_ENUM(VectorStroke::Style, SOLID);
+    MAP_ENUM(VectorStroke::Style, DASHED);
+    MAP_ENUM(VectorStroke::Style, DOTTED);
+    return map;
+}
 
-const char *FILL_POSITIONING_LAYOUTS_STR[] = {
-    "STRETCH",
-    "FILL",
-    "FIT",
-    "TILE"
-};
+static EnumMap makeFillTypeMap() {
+    using octopus::Fill;
+    EnumMap map(Fill::Type::IMAGE);
+    MAP_ENUM(Fill::Type, COLOR);
+    MAP_ENUM(Fill::Type, GRADIENT);
+    MAP_ENUM(Fill::Type, IMAGE);
+    return map;
+}
 
-const char *FILL_POSITIONING_ORIGINS_STR[] = {
-    "LAYER",
-    "PARENT",
-    "COMPONENT",
-    "ARTBOARD"
-};
+static EnumMap makeGradientTypeMap() {
+    using octopus::Gradient;
+    EnumMap map(Gradient::Type::DIAMOND);
+    MAP_ENUM(Gradient::Type, LINEAR);
+    MAP_ENUM(Gradient::Type, RADIAL);
+    MAP_ENUM(Gradient::Type, ANGULAR);
+    MAP_ENUM(Gradient::Type, DIAMOND);
+    return map;
+}
 
-const char *IMAGE_REF_TYPES_STR[] = {
-    "PATH",
-    "RESOURCE_REF",
-};
+static EnumMap makeFillPositioningLayoutMap() {
+    using octopus::Fill;
+    EnumMap map(Fill::Positioning::Layout::TILE);
+    MAP_ENUM(Fill::Positioning::Layout, STRETCH);
+    MAP_ENUM(Fill::Positioning::Layout, FILL);
+    MAP_ENUM(Fill::Positioning::Layout, FIT);
+    MAP_ENUM(Fill::Positioning::Layout, TILE);
+    return map;
+}
 
-const char *EFFECT_TYPES_STR[] = {
-    "OVERLAY",
-    "STROKE",
-    "DROP_SHADOW",
-    "INNER_SHADOW",
-    "OUTER_GLOW",
-    "INNER_GLOW",
-    "GAUSSIAN_BLUR",
-    "BOUNDED_BLUR",
-    "BLUR",
-    "OTHER"
-};
+static EnumMap makeFillPositioningOriginMap() {
+    using octopus::Fill;
+    EnumMap map(Fill::Positioning::Origin::ARTBOARD);
+    MAP_ENUM(Fill::Positioning::Origin, LAYER);
+    MAP_ENUM(Fill::Positioning::Origin, PARENT);
+    MAP_ENUM(Fill::Positioning::Origin, COMPONENT);
+    MAP_ENUM(Fill::Positioning::Origin, ARTBOARD);
+    return map;
+}
+
+static EnumMap makeImageRefTypeMap() {
+    using octopus::ImageRef;
+    EnumMap map(ImageRef::Type::RESOURCE_REF);
+    MAP_ENUM(ImageRef::Type, PATH);
+    MAP_ENUM(ImageRef::Type, RESOURCE_REF);
+    return map;
+}
+
+static EnumMap makeEffectTypeMap() {
+    using octopus::Effect;
+    EnumMap map(Effect::Type::OTHER);
+    MAP_ENUM(Effect::Type, OVERLAY);
+    MAP_ENUM(Effect::Type, STROKE);
+    MAP_ENUM(Effect::Type, DROP_SHADOW);
+    MAP_ENUM(Effect::Type, INNER_SHADOW);
+    MAP_ENUM(Effect::Type, OUTER_GLOW);
+    MAP_ENUM(Effect::Type, INNER_GLOW);
+    MAP_ENUM(Effect::Type, GAUSSIAN_BLUR);
+    MAP_ENUM(Effect::Type, BOUNDED_BLUR);
+    MAP_ENUM(Effect::Type, BLUR);
+    MAP_ENUM(Effect::Type, OTHER);
+    return map;
+}
+
+static const EnumMap BLEND_MODES = makeBlendModeMap();
+static const EnumMap STROKE_POSITIONS = makeStrokePositionMap();
+static const EnumMap STROKE_STYLES = makeStrokeStyleMap();
+static const EnumMap FILL_TYPES = makeFillTypeMap();
+static const EnumMap GRADIENT_TYPES = makeGradientTypeMap();
+static const EnumMap FILL_POSITIONING_LAYOUTS = makeFillPositioningLayoutMap();
+static const EnumMap FILL_POSITIONING_ORIGINS = makeFillPositioningOriginMap();
+static const EnumMap IMAGE_REF_TYPES = makeImageRefTypeMap();
+static const EnumMap EFFECT_TYPES = makeEffectTypeMap();
 
 const std::map<int, const char*> EFFECT_BASIS_MAP {
     { 1, "BODY" },
@@ -366,13 +426,12 @@ void drawLayerCommonProperties(const ODE_StringRef &layerId,
 
     ImGui::Text("Blend mode:");
     ImGui::SameLine(100);
-    const int blendModeI = static_cast<int>(octopusLayer.blendMode);
-    if (ImGui::BeginCombo(layerPropName(layerId, "layer-blend-mode").c_str(), BLEND_MODES_STR[blendModeI])) {
-        for (int bmI = 0; bmI < IM_ARRAYSIZE(BLEND_MODES_STR); bmI++) {
-            const bool isSelected = (blendModeI == bmI);
-            if (ImGui::Selectable(BLEND_MODES_STR[bmI], isSelected)) {
-                changeProperty(octopus::LayerChange::Subject::LAYER, context, component, layerId, nonstd::nullopt, [bmI](octopus::LayerChange::Values &values) {
-                    values.blendMode = static_cast<octopus::BlendMode>(bmI);
+    if (ImGui::BeginCombo(layerPropName(layerId, "layer-blend-mode").c_str(), BLEND_MODES[octopusLayer.blendMode])) {
+        for (size_t i = 0; i < BLEND_MODES.size(); ++i) {
+            const bool isSelected = i == size_t(octopusLayer.blendMode);
+            if (ImGui::Selectable(BLEND_MODES[i], isSelected)) {
+                changeProperty(octopus::LayerChange::Subject::LAYER, context, component, layerId, nonstd::nullopt, [i](octopus::LayerChange::Values &values) {
+                    values.blendMode = static_cast<octopus::BlendMode>(i);
                 });
             }
             if (isSelected) {
@@ -574,14 +633,13 @@ void drawLayerShapeStroke(int strokeI,
     // Position
     ImGui::Text("Position:");
     ImGui::SameLine(100);
-    const int strokePositionI = static_cast<int>(octopusShapeStroke.position);
-    if (ImGui::BeginCombo(layerPropName(layerId, "shape-stroke-position", strokeI).c_str(), STROKE_POSITIONS_STR[strokePositionI])) {
-        for (int spI = 0; spI < IM_ARRAYSIZE(STROKE_POSITIONS_STR); spI++) {
-            const bool isSelected = (strokePositionI == spI);
-            if (ImGui::Selectable(STROKE_POSITIONS_STR[spI], isSelected)) {
-                changeReplace(octopus::LayerChange::Subject::STROKE, context, component, layerId, strokeI, nonstd::nullopt, [spI, &octopusShapeStroke](octopus::LayerChange::Values &values) {
+    if (ImGui::BeginCombo(layerPropName(layerId, "shape-stroke-position", strokeI).c_str(), STROKE_POSITIONS[octopusShapeStroke.position])) {
+        for (size_t i = 0; i < STROKE_POSITIONS.size(); ++i) {
+            const bool isSelected = i == size_t(octopusShapeStroke.position);
+            if (ImGui::Selectable(STROKE_POSITIONS[i], isSelected)) {
+                changeReplace(octopus::LayerChange::Subject::STROKE, context, component, layerId, strokeI, nonstd::nullopt, [i, &octopusShapeStroke](octopus::LayerChange::Values &values) {
                     values.stroke = octopusShapeStroke;
-                    values.stroke->position = static_cast<octopus::Stroke::Position>(spI);
+                    values.stroke->position = static_cast<octopus::Stroke::Position>(i);
                 });
             }
             if (isSelected) {
@@ -594,14 +652,14 @@ void drawLayerShapeStroke(int strokeI,
     // Style (dashing)
     ImGui::Text("Dashing:");
     ImGui::SameLine(100);
-    const int strokeStyleI = static_cast<int>(octopusShapeStroke.style.has_value() ? *octopusShapeStroke.style : octopus::VectorStroke::Style::SOLID);
-    if (ImGui::BeginCombo(layerPropName(layerId, "shape-stroke-style", strokeI).c_str(), STROKE_STYLES_STR[strokeStyleI])) {
-        for (int ssI = 0; ssI < IM_ARRAYSIZE(STROKE_STYLES_STR); ssI++) {
-            const bool isSelected = (strokeStyleI == ssI);
-            if (ImGui::Selectable(STROKE_STYLES_STR[ssI], isSelected)) {
-                changeReplace(octopus::LayerChange::Subject::STROKE, context, component, layerId, strokeI, nonstd::nullopt, [ssI, &octopusShapeStroke](octopus::LayerChange::Values &values) {
+    const octopus::VectorStroke::Style strokeStyle = octopusShapeStroke.style.value_or(octopus::VectorStroke::Style::SOLID);
+    if (ImGui::BeginCombo(layerPropName(layerId, "shape-stroke-style", strokeI).c_str(), STROKE_STYLES[strokeStyle])) {
+        for (size_t i = 0; i < STROKE_STYLES.size(); ++i) {
+            const bool isSelected = i == size_t(strokeStyle);
+            if (ImGui::Selectable(STROKE_STYLES[i], isSelected)) {
+                changeReplace(octopus::LayerChange::Subject::STROKE, context, component, layerId, strokeI, nonstd::nullopt, [i, &octopusShapeStroke](octopus::LayerChange::Values &values) {
                     values.stroke = octopusShapeStroke;
-                    values.stroke->style = static_cast<octopus::VectorStroke::Style>(ssI);
+                    values.stroke->style = static_cast<octopus::VectorStroke::Style>(i);
                 });
             }
             if (isSelected) {
@@ -694,14 +752,13 @@ void drawLayerShapeFill(int fillI,
     // Blend mode
     ImGui::Text("Blend mode:");
     ImGui::SameLine(100);
-    const int blendModeI = static_cast<int>(octopusFill.blendMode);
-    if (ImGui::BeginCombo(layerPropName(layerId, "shape-fill-blend-mode", fillI).c_str(), BLEND_MODES_STR[blendModeI])) {
-        for (int bmI = 0; bmI < IM_ARRAYSIZE(BLEND_MODES_STR); bmI++) {
-            const bool isSelected = (blendModeI == bmI);
-            if (ImGui::Selectable(BLEND_MODES_STR[bmI], isSelected)) {
-                changeReplace(octopus::LayerChange::Subject::FILL, context, component, layerId, fillI, nonstd::nullopt, [&octopusFill, bmI](octopus::LayerChange::Values &values) {
+    if (ImGui::BeginCombo(layerPropName(layerId, "shape-fill-blend-mode", fillI).c_str(), BLEND_MODES[octopusFill.blendMode])) {
+        for (size_t i = 0; i < BLEND_MODES.size(); ++i) {
+            const bool isSelected = i == size_t(octopusFill.blendMode);
+            if (ImGui::Selectable(BLEND_MODES[i], isSelected)) {
+                changeReplace(octopus::LayerChange::Subject::FILL, context, component, layerId, fillI, nonstd::nullopt, [&octopusFill, i](octopus::LayerChange::Values &values) {
                     values.fill = octopusFill;
-                    values.fill->blendMode = static_cast<octopus::BlendMode>(bmI);
+                    values.fill->blendMode = static_cast<octopus::BlendMode>(i);
                 });
             }
             if (isSelected) {
@@ -714,14 +771,13 @@ void drawLayerShapeFill(int fillI,
     // Type
     ImGui::Text("Type:");
     ImGui::SameLine(100);
-    const int fillTypeI = static_cast<int>(octopusFill.type);
-    if (ImGui::BeginCombo(layerPropName(layerId, "shape-fill-type", fillI).c_str(), FILL_TYPES_STR[fillTypeI])) {
-        for (int ftI = 0; ftI < IM_ARRAYSIZE(FILL_TYPES_STR); ftI++) {
-            const bool isSelected = (fillTypeI == ftI);
-            if (ImGui::Selectable(FILL_TYPES_STR[ftI], isSelected)) {
-                changeReplace(octopus::LayerChange::Subject::FILL, context, component, layerId, fillI, nonstd::nullopt, [&octopusFill, ftI, &defaultGradientFillPositioningTransform, &defaultImageFillPositioningTransform](octopus::LayerChange::Values &values) {
+    if (ImGui::BeginCombo(layerPropName(layerId, "shape-fill-type", fillI).c_str(), FILL_TYPES[octopusFill.type])) {
+        for (size_t i = 0; i < FILL_TYPES.size(); ++i) {
+            const bool isSelected = i == size_t(octopusFill.type);
+            if (ImGui::Selectable(FILL_TYPES[i], isSelected)) {
+                changeReplace(octopus::LayerChange::Subject::FILL, context, component, layerId, fillI, nonstd::nullopt, [&octopusFill, i, &defaultGradientFillPositioningTransform, &defaultImageFillPositioningTransform](octopus::LayerChange::Values &values) {
                     values.fill = octopusFill;
-                    values.fill->type = static_cast<octopus::Fill::Type>(ftI);
+                    values.fill->type = static_cast<octopus::Fill::Type>(i);
                     switch (values.fill->type) {
                         case octopus::Fill::Type::COLOR:
                             if (!octopusFill.color.has_value()) {
@@ -784,15 +840,15 @@ void drawLayerShapeFill(int fillI,
             ImGui::Text("Gradient:");
             ImGui::SameLine(100);
 
-            const int gradientTypeI = static_cast<int>(octopusFill.gradient.has_value() ? octopusFill.gradient->type : octopus::Gradient::Type::LINEAR);
-            if (ImGui::BeginCombo(layerPropName(layerId, "shape-fill-gradient-type", fillI).c_str(), FILL_GRADIENT_TYPES_STR[gradientTypeI])) {
-                for (int gtI = 0; gtI < IM_ARRAYSIZE(FILL_GRADIENT_TYPES_STR); gtI++) {
-                    const bool isSelected = (gradientTypeI == gtI);
-                    if (ImGui::Selectable(FILL_GRADIENT_TYPES_STR[gtI], isSelected)) {
-                        changeReplace(octopus::LayerChange::Subject::FILL, context, component, layerId, fillI, nonstd::nullopt, [&octopusFill, gtI](octopus::LayerChange::Values &values) {
+            const octopus::Gradient::Type gradientType = octopusFill.gradient.has_value() ? octopusFill.gradient->type : octopus::Gradient::Type::LINEAR;
+            if (ImGui::BeginCombo(layerPropName(layerId, "shape-fill-gradient-type", fillI).c_str(), GRADIENT_TYPES[gradientType])) {
+                for (size_t i = 0; i < GRADIENT_TYPES.size(); ++i) {
+                    const bool isSelected = i == size_t(gradientType);
+                    if (ImGui::Selectable(GRADIENT_TYPES[i], isSelected)) {
+                        changeReplace(octopus::LayerChange::Subject::FILL, context, component, layerId, fillI, nonstd::nullopt, [&octopusFill, i](octopus::LayerChange::Values &values) {
                             values.fill = octopusFill;
                             if (values.fill->gradient.has_value()) {
-                                values.fill->gradient->type = static_cast<octopus::Gradient::Type>(gtI);
+                                values.fill->gradient->type = static_cast<octopus::Gradient::Type>(i);
                             } else {
                                 values.fill->gradient = DEFAULT_FILL_GRADIENT;
                             }
@@ -904,18 +960,18 @@ void drawLayerShapeFill(int fillI,
             ImGui::Text("  Ref type:");
             ImGui::SameLine(100);
 
-            const int imageRefTypeI = static_cast<int>(octopusFill.image.has_value() ? octopusFill.image->ref.type : octopus::ImageRef::Type::PATH);
-            if (ImGui::BeginCombo(layerPropName(layerId, "shape-fill-image-ref-type", fillI).c_str(), IMAGE_REF_TYPES_STR[imageRefTypeI])) {
-                for (int irI = 0; irI < IM_ARRAYSIZE(IMAGE_REF_TYPES_STR); irI++) {
-                    const bool isSelected = (imageRefTypeI == irI);
-                    if (ImGui::Selectable(IMAGE_REF_TYPES_STR[irI], isSelected)) {
-                        changeReplace(octopus::LayerChange::Subject::FILL, context, component, layerId, fillI, nonstd::nullopt, [&octopusFill, irI](octopus::LayerChange::Values &values) {
+            const octopus::ImageRef::Type imageRefType = octopusFill.image.has_value() ? octopusFill.image->ref.type : octopus::ImageRef::Type::PATH;
+            if (ImGui::BeginCombo(layerPropName(layerId, "shape-fill-image-ref-type", fillI).c_str(), IMAGE_REF_TYPES[imageRefType])) {
+                for (size_t i = 0; i < IMAGE_REF_TYPES.size(); ++i) {
+                    const bool isSelected = i == size_t(imageRefType);
+                    if (ImGui::Selectable(IMAGE_REF_TYPES[i], isSelected)) {
+                        changeReplace(octopus::LayerChange::Subject::FILL, context, component, layerId, fillI, nonstd::nullopt, [&octopusFill, i](octopus::LayerChange::Values &values) {
                             values.fill = octopusFill;
                             if (values.fill->image.has_value()) {
-                                values.fill->image->ref.type = static_cast<octopus::ImageRef::Type>(irI);
+                                values.fill->image->ref.type = static_cast<octopus::ImageRef::Type>(i);
                             } else {
                                 values.fill->image = octopus::Image {
-                                    octopus::ImageRef { static_cast<octopus::ImageRef::Type>(irI), "" },
+                                    octopus::ImageRef { static_cast<octopus::ImageRef::Type>(i), "" },
                                     nonstd::nullopt
                                 };
                             }
@@ -958,17 +1014,17 @@ void drawLayerShapeFill(int fillI,
         ImGui::Text("  Pos. Layout:");
         ImGui::SameLine(100);
 
-        const int positioningLayoutI = static_cast<int>(octopusFill.positioning.has_value() ? octopusFill.positioning->layout : octopus::Fill::Positioning::Layout::STRETCH);
-        if (ImGui::BeginCombo(layerPropName(layerId, "shape-fill-positioning-layout", fillI).c_str(), FILL_POSITIONING_LAYOUTS_STR[positioningLayoutI])) {
-            for (int plI = 0; plI < IM_ARRAYSIZE(FILL_POSITIONING_LAYOUTS_STR); plI++) {
-                const bool isSelected = (positioningLayoutI == plI);
-                if (ImGui::Selectable(FILL_POSITIONING_LAYOUTS_STR[plI], isSelected)) {
-                    changeReplace(octopus::LayerChange::Subject::FILL, context, component, layerId, fillI, nonstd::nullopt, [&octopusFill, plI, &defaultGradientFillPositioningTransform](octopus::LayerChange::Values &values) {
+        const octopus::Fill::Positioning::Layout positioningLayout = octopusFill.positioning.has_value() ? octopusFill.positioning->layout : octopus::Fill::Positioning::Layout::STRETCH;
+        if (ImGui::BeginCombo(layerPropName(layerId, "shape-fill-positioning-layout", fillI).c_str(), FILL_POSITIONING_LAYOUTS[positioningLayout])) {
+            for (size_t i = 0; i < FILL_POSITIONING_LAYOUTS.size(); ++i) {
+                const bool isSelected = i == size_t(positioningLayout);
+                if (ImGui::Selectable(FILL_POSITIONING_LAYOUTS[i], isSelected)) {
+                    changeReplace(octopus::LayerChange::Subject::FILL, context, component, layerId, fillI, nonstd::nullopt, [&octopusFill, i, &defaultGradientFillPositioningTransform](octopus::LayerChange::Values &values) {
                         values.fill = octopusFill;
                         if (values.fill->positioning.has_value()) {
-                            values.fill->positioning->layout = static_cast<octopus::Fill::Positioning::Layout>(plI);
+                            values.fill->positioning->layout = static_cast<octopus::Fill::Positioning::Layout>(i);
                         } else {
-                            values.fill->positioning = octopus::Fill::Positioning { static_cast<octopus::Fill::Positioning::Layout>(plI), octopus::Fill::Positioning::Origin::LAYER,
+                            values.fill->positioning = octopus::Fill::Positioning { static_cast<octopus::Fill::Positioning::Layout>(i), octopus::Fill::Positioning::Origin::LAYER,
                             };
                             memcpy(values.fill->positioning->transform, defaultGradientFillPositioningTransform, sizeof(defaultGradientFillPositioningTransform));
                         }
@@ -985,17 +1041,17 @@ void drawLayerShapeFill(int fillI,
         ImGui::Text("  Pos. Orig.:");
         ImGui::SameLine(100);
 
-        const int positioningOriginI = static_cast<int>(octopusFill.positioning.has_value() ? octopusFill.positioning->origin : octopus::Fill::Positioning::Origin::LAYER);
-        if (ImGui::BeginCombo(layerPropName(layerId, "shape-fill-positioning-origin", fillI).c_str(), FILL_POSITIONING_ORIGINS_STR[positioningOriginI])) {
-            for (int poI = 0; poI < IM_ARRAYSIZE(FILL_POSITIONING_ORIGINS_STR); poI++) {
-                const bool isSelected = (positioningOriginI == poI);
-                if (ImGui::Selectable(FILL_POSITIONING_ORIGINS_STR[poI], isSelected)) {
-                    changeReplace(octopus::LayerChange::Subject::FILL, context, component, layerId, fillI, nonstd::nullopt, [&octopusFill, poI, &defaultGradientFillPositioningTransform](octopus::LayerChange::Values &values) {
+        const octopus::Fill::Positioning::Origin positioningOrigin = octopusFill.positioning.has_value() ? octopusFill.positioning->origin : octopus::Fill::Positioning::Origin::LAYER;
+        if (ImGui::BeginCombo(layerPropName(layerId, "shape-fill-positioning-origin", fillI).c_str(), FILL_POSITIONING_ORIGINS[positioningOrigin])) {
+            for (size_t i = 0; i < FILL_POSITIONING_ORIGINS.size(); ++i) {
+                const bool isSelected = i == size_t(positioningOrigin);
+                if (ImGui::Selectable(FILL_POSITIONING_ORIGINS[i], isSelected)) {
+                    changeReplace(octopus::LayerChange::Subject::FILL, context, component, layerId, fillI, nonstd::nullopt, [&octopusFill, i, &defaultGradientFillPositioningTransform](octopus::LayerChange::Values &values) {
                         values.fill = octopusFill;
                         if (values.fill->positioning.has_value()) {
-                            values.fill->positioning->origin = static_cast<octopus::Fill::Positioning::Origin>(poI);
+                            values.fill->positioning->origin = static_cast<octopus::Fill::Positioning::Origin>(i);
                         } else {
-                            values.fill->positioning = octopus::Fill::Positioning { octopus::Fill::Positioning::Layout::STRETCH, static_cast<octopus::Fill::Positioning::Origin>(poI),
+                            values.fill->positioning = octopus::Fill::Positioning { octopus::Fill::Positioning::Layout::STRETCH, static_cast<octopus::Fill::Positioning::Origin>(i),
                             };
                             memcpy(values.fill->positioning->transform, defaultGradientFillPositioningTransform, sizeof(defaultGradientFillPositioningTransform));
                         }
@@ -1216,14 +1272,13 @@ void drawLayerEffects(const ODE_StringRef &layerId,
 
         ImGui::Text("Blend mode:");
         ImGui::SameLine(100);
-        const int blendModeI = static_cast<int>(octopusEffect.blendMode);
-        if (ImGui::BeginCombo(layerPropName(layerId, "effect-blend-mode", ei).c_str(), BLEND_MODES_STR[blendModeI])) {
-            for (int bmI = 0; bmI < IM_ARRAYSIZE(BLEND_MODES_STR); bmI++) {
-                const bool isSelected = (blendModeI == bmI);
-                if (ImGui::Selectable(BLEND_MODES_STR[bmI], isSelected)) {
-                    changeReplace(octopus::LayerChange::Subject::EFFECT, context, component, layerId, ei, nonstd::nullopt, [&octopusEffect, bmI](octopus::LayerChange::Values &values) {
+        if (ImGui::BeginCombo(layerPropName(layerId, "effect-blend-mode", ei).c_str(), BLEND_MODES[octopusEffect.blendMode])) {
+            for (size_t i = 0; i < BLEND_MODES.size(); ++i) {
+                const bool isSelected = i == size_t(octopusEffect.blendMode);
+                if (ImGui::Selectable(BLEND_MODES[i], isSelected)) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, context, component, layerId, ei, nonstd::nullopt, [&octopusEffect, i](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
-                        values.effect->blendMode = static_cast<octopus::BlendMode>(bmI);
+                        values.effect->blendMode = static_cast<octopus::BlendMode>(i);
                     });
                 }
                 if (isSelected) {
@@ -1257,14 +1312,13 @@ void drawLayerEffects(const ODE_StringRef &layerId,
         // Type
         ImGui::Text("Type:");
         ImGui::SameLine(100);
-        const int effectTypeI = static_cast<int>(octopusEffect.type);
-        if (ImGui::BeginCombo(layerPropName(layerId, "effect-type", ei).c_str(), EFFECT_TYPES_STR[effectTypeI])) {
-            for (int etI = 0; etI < IM_ARRAYSIZE(EFFECT_TYPES_STR); etI++) {
-                const bool isSelected = (effectTypeI == etI);
-                if (ImGui::Selectable(EFFECT_TYPES_STR[etI], isSelected)) {
-                    changeReplace(octopus::LayerChange::Subject::EFFECT, context, component, layerId, ei, nonstd::nullopt, [&octopusEffect, etI](octopus::LayerChange::Values &values) {
+        if (ImGui::BeginCombo(layerPropName(layerId, "effect-type", ei).c_str(), EFFECT_TYPES[octopusEffect.type])) {
+            for (size_t i = 0; i < EFFECT_TYPES.size(); ++i) {
+                const bool isSelected = i == size_t(octopusEffect.type);
+                if (ImGui::Selectable(EFFECT_TYPES[i], isSelected)) {
+                    changeReplace(octopus::LayerChange::Subject::EFFECT, context, component, layerId, ei, nonstd::nullopt, [&octopusEffect, i](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
-                        values.effect->type = static_cast<octopus::Effect::Type>(etI);
+                        values.effect->type = static_cast<octopus::Effect::Type>(i);
                         switch (values.effect->type) {
                             case octopus::Effect::Type::OVERLAY:
                                 if (!octopusEffect.overlay.has_value()) {
@@ -1388,14 +1442,13 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                 // Position
                 ImGui::Text("Position:");
                 ImGui::SameLine(100);
-                const int strokePositionI = static_cast<int>(octopusEffectStroke.position);
-                if (ImGui::BeginCombo(layerPropName(layerId, "effect-stroke-position", ei).c_str(), STROKE_POSITIONS_STR[strokePositionI])) {
-                    for (int spI = 0; spI < IM_ARRAYSIZE(STROKE_POSITIONS_STR); spI++) {
-                        const bool isSelected = (strokePositionI == spI);
-                        if (ImGui::Selectable(STROKE_POSITIONS_STR[spI], isSelected)) {
-                            changeReplace(octopus::LayerChange::Subject::EFFECT, context, component, layerId, ei,nonstd::nullopt,  [spI, &octopusEffect](octopus::LayerChange::Values &values) {
+                if (ImGui::BeginCombo(layerPropName(layerId, "effect-stroke-position", ei).c_str(), STROKE_POSITIONS[octopusEffectStroke.position])) {
+                    for (size_t i = 0; i < STROKE_POSITIONS.size(); ++i) {
+                        const bool isSelected = i == size_t(octopusEffectStroke.position);
+                        if (ImGui::Selectable(STROKE_POSITIONS[i], isSelected)) {
+                            changeReplace(octopus::LayerChange::Subject::EFFECT, context, component, layerId, ei,nonstd::nullopt, [i, &octopusEffect](octopus::LayerChange::Values &values) {
                                 values.effect = octopusEffect;
-                                values.effect->stroke->position = static_cast<octopus::Stroke::Position>(spI);
+                                values.effect->stroke->position = static_cast<octopus::Stroke::Position>(i);
                             });
                         }
                         if (isSelected) {
