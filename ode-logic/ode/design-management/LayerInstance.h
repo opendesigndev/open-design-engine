@@ -44,6 +44,7 @@ public:
     double featureScale() const;
     Rasterizer::Shape *getShape();
     odtr::TextShapeHandle getTextShape();
+    const std::string &getParentId() const;
 
     octopus::Layer *operator->();
     const octopus::Layer *operator->() const;

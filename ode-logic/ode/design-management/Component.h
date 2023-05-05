@@ -134,6 +134,8 @@ private:
 
     LayerInstance *findInstance(const std::string &id);
 
+    bool isInstanceInSubtree(const std::string &subtreeId, const std::string &instanceId);
+
     DesignError requireBuild();
     DesignError rebuild();
     Result<LayerInstance *, DesignError> rebuildSubtree(octopus::Layer *layer, const TransformationMatrix &parentTransform, double parentFeatureScale, const std::string &parentId);

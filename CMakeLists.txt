@@ -143,6 +143,7 @@ if(ODE_TEST_MODULES)
     add_subdirectory(tests/renderer-output-tests)
     add_subdirectory(tools/animation-prototype)
     add_subdirectory(tools/render-graph-inspector)
+    add_subdirectory(tools/design-editor)
 endif()
 
 # Select which project will be initially selected as "Startup Project" in Visual Studio

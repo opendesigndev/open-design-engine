@@ -8,6 +8,7 @@
 #include "../render-assembly/assembly.h"
 #include "../render-assembly/graph-transform.h"
 #include "../animation/animate.h"
+#include "layer-change-apply.h"
 
 namespace ode {
 
@@ -195,78 +196,65 @@ DesignError Component::addLayer(const std::string &parent, const std::string &be
 }
 
 DesignError Component::removeLayer(const std::string &id) {
-    return DesignError::NOT_IMPLEMENTED;
-}
-
-DesignError Component::modifyLayer(const std::string &id, const octopus::LayerChange &layerChange) {
-    enum ChangeLevel {
-        NO_CHANGE,
-        LOGICAL_CHANGE, // non-visual changes like layer name
-        VISUAL_CHANGE, // visual change with no side effects (e.g. color change)
-        BOUNDS_CHANGE, // change that affects bounds of layer(s)
-        COMPOSITION_CHANGE, // change that affects generated render expression tree
-        HIERARCHY_CHANGE // changes the layer hierarchy or component linkage
-    } changeLevel = NO_CHANGE;
     if (DesignError error = requireBuild())
         return error;
     if (LayerInstance *instance = findInstance(id)) {
-        octopus::Layer &layer = *(octopus::Layer *) *instance;
-        switch (layerChange.subject) {
-            case octopus::LayerChange::Subject::LAYER:
-                switch (layerChange.op) {
-                    case octopus::LayerChange::Op::PROPERTY_CHANGE:
-                        #define MOD_APPLY(attrib, level) \
-                            if (layerChange.values.attrib.has_value()) { \
-                                layer.attrib = layerChange.values.attrib.value(); \
-                                if ((level) > changeLevel) \
-                                    changeLevel = (level); \
-                            }
-                        if (
-                            (layerChange.values.shape.has_value() && layer.type != octopus::Layer::Type::SHAPE) ||
-                            (layerChange.values.text.has_value() && layer.type != octopus::Layer::Type::TEXT) ||
-                            (layerChange.values.maskBasis.has_value() && layer.type != octopus::Layer::Type::MASK_GROUP) ||
-                            (layerChange.values.maskChannels.has_value() && layer.type != octopus::Layer::Type::MASK_GROUP) ||
-                            (layerChange.values.componentId.has_value() && layer.type != octopus::Layer::Type::COMPONENT_REFERENCE)
-                        )
-                            return DesignError::WRONG_LAYER_TYPE;
-                        if (layerChange.values.transform.has_value()) {
-                            if (layerChange.values.transform.value()[0]*layerChange.values.transform.value()[3] == layerChange.values.transform.value()[1]*layerChange.values.transform.value()[2])
-                                return DesignError::SINGULAR_TRANSFORMATION;
-                            memcpy(layer.transform, layerChange.values.transform->data(), sizeof(layer.transform));
-                            changeLevel = BOUNDS_CHANGE;
-                        }
-                        MOD_APPLY(name, LOGICAL_CHANGE);
-                        MOD_APPLY(visible, COMPOSITION_CHANGE);
-                        MOD_APPLY(opacity, COMPOSITION_CHANGE); // composition change if opacity changes between zero / non-zero
-                        MOD_APPLY(blendMode, COMPOSITION_CHANGE); // composition change if blend mode changed from/to PASS_THROUGH
-                        MOD_APPLY(shape, BOUNDS_CHANGE);
-                        MOD_APPLY(text, BOUNDS_CHANGE);
-                        MOD_APPLY(maskBasis, COMPOSITION_CHANGE);
-                        MOD_APPLY(maskChannels, COMPOSITION_CHANGE);
-                        MOD_APPLY(componentId, HIERARCHY_CHANGE);
-                        MOD_APPLY(effects, COMPOSITION_CHANGE);
-                        break;
-                    default:
-                        return DesignError::NOT_IMPLEMENTED;
+        const std::string &parentId = instance->getParentId();
+        if (LayerInstance *parentInstance = findInstance(parentId)) {
+            nonstd::optional<std::list<octopus::Layer>> &layers = (*parentInstance)->layers;
+            ODE_ASSERT(layers.has_value());
+            const std::list<octopus::Layer>::iterator layerInParentIt = std::find_if(layers->begin(), layers->end(), [&id](const octopus::Layer &layer) {
+                return layer.id == id;
+            });
+            if (layerInParentIt != layers->end()) {
+                layers->erase(layerInParentIt);
+                std::vector<std::string> instancesToErase;
+                for (const std::pair<const std::string, ode::LayerInstance> &instance : instances) {
+                    if (isInstanceInSubtree(id, instance.first)) {
+                        instancesToErase.emplace_back(instance.first);
+                    }
                 }
-                break;
-            default:
-                return DesignError::NOT_IMPLEMENTED;
-        }
-        switch (changeLevel) {
-            case HIERARCHY_CHANGE:
-            case COMPOSITION_CHANGE:
+                for (const std::string &instanceToErase : instancesToErase) {
+                    instances.erase(instanceToErase);
+                }
                 ++rev;
-                // fallthrough
-            case BOUNDS_CHANGE:
-                instance->invalidateBounds();
                 buildComplete = false;
-                // fallthrough
-            case VISUAL_CHANGE:
-            case LOGICAL_CHANGE:
-            case NO_CHANGE:;
+                return DesignError::OK;
+            }
         }
-        return DesignError::OK;
+    }
+    return DesignError::LAYER_NOT_FOUND;
+}
+
+DesignError Component::modifyLayer(const std::string &id, const octopus::LayerChange &layerChange) {
+    if (DesignError error = requireBuild())
+        return error;
+    if (LayerInstance *instance = findInstance(id)) {
+        octopus::Layer &layer = **instance;
+        if (Result<ChangeLevel, DesignError> result = applyLayerChange(layer, layerChange)) {
+            switch (result.value()) {
+                case ChangeLevel::HIERARCHY:
+                    buildComplete = false;
+                    // fallthrough
+                case ChangeLevel::COMPOSITION:
+                    ++rev;
+                    // fallthrough
+                case ChangeLevel::BOUNDS:
+                case ChangeLevel::VISUAL:
+                case ChangeLevel::LOGICAL:
+                case ChangeLevel::NONE:;
+            }
+            // TODO: Force re-initialize instance shape and text
+            instance->invalidate();
+            if (layer.type == octopus::Layer::Type::SHAPE) {
+                instance->initializeShape();
+            }
+            if (layer.type == octopus::Layer::Type::TEXT) {
+                instance->initializeText(fontBase.get());
+            }
+            return DesignError::OK;
+        } else
+            return result.error();
     }
     return DesignError::LAYER_NOT_FOUND;
 }
@@ -508,6 +496,16 @@ LayerInstance *Component::findInstance(const std::string &id) {
     if (it != instances.end())
         return &it->second;
     return nullptr;
+}
+
+bool Component::isInstanceInSubtree(const std::string &subtreeId, const std::string &instanceId) {
+    if (LayerInstance *instance = findInstance(instanceId)) {
+        if (instanceId == subtreeId) {
+            return true;
+        }
+        return isInstanceInSubtree(subtreeId, instance->getParentId());
+    }
+    return false;
 }
 
 RendexSubtree Component::assembleLayer(const LayerInstance &instance, const nonstd::optional<octopus::MaskBasis> &maskBasis) {

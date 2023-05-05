@@ -26,8 +26,8 @@ public:
     bool readOctopusFile(const FilePath &octopusPath);
 
     void setImageDirectory(const FilePath &imageDirectory_);
-    void setFontDirectory(const FilePath &fontDirectory);
-    void setIgnoreValidation(bool ignoreValidation);
+    void setFontDirectory(const FilePath &fontDirectory_);
+    void setIgnoreValidation(bool ignoreValidation_);
 
 private:
     void drawControlsWidget();

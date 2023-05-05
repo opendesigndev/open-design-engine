@@ -3,6 +3,20 @@
 
 namespace ode {
 
+// TODO: Duplicated from Renderer.cpp - unify or remove
+static UnscaledBounds transformBounds(const UntransformedBounds &bounds, const TransformationMatrix &matrix) {
+    Vector2d a = matrix*Vector3d(bounds.a.x, bounds.a.y, 1);
+    Vector2d b = matrix*Vector3d(bounds.b.x, bounds.a.y, 1);
+    Vector2d c = matrix*Vector3d(bounds.a.x, bounds.b.y, 1);
+    Vector2d d = matrix*Vector3d(bounds.b.x, bounds.b.y, 1);
+    return UnscaledBounds(
+        std::min(std::min(std::min(a.x, b.x), c.x), d.x),
+        std::min(std::min(std::min(a.y, b.y), c.y), d.y),
+        std::max(std::max(std::max(a.x, b.x), c.x), d.x),
+        std::max(std::max(std::max(a.y, b.y), c.y), d.y)
+    );
+}
+
 LayerInstance::LayerInstance(octopus::Layer *layer, const TransformationMatrix &parentTransform, double parentFeatureScale, const std::string &parentId) : layer(layer), parentTransform(parentTransform), parentFeatureScale(parentFeatureScale), parentId(parentId) { }
 
 bool LayerInstance::initializeShape() {
@@ -31,6 +45,7 @@ bool LayerInstance::initializeShape() {
 bool LayerInstance::initializeText(FontBase *fontBase) {
     if ((statusFlags&(FLAG_SHAPE_UP_TO_DATE|FLAG_BOUNDS_UP_TO_DATE)) == (FLAG_SHAPE_UP_TO_DATE|FLAG_BOUNDS_UP_TO_DATE))
         return true;
+    ODE_ASSERT(layer && layer->type == octopus::Layer::Type::TEXT);
     // TODO layer transformation & bounds
     if (layer->text.has_value()) {
         if (!(statusFlags&FLAG_SHAPE_UP_TO_DATE)) {
@@ -39,9 +54,9 @@ bool LayerInstance::initializeText(FontBase *fontBase) {
             textShape = odtr::shapeText(TEXT_RENDERER_CONTEXT, layer->text.value());
         }
         if (textShape) {
-            layerBounds.bounds = fromTextRendererBounds(odtr::getBounds(TEXT_RENDERER_CONTEXT, textShape));
-            layerBounds.logicalBounds = (UntransformedBounds) layerBounds.bounds;
+            layerBounds.logicalBounds = (UntransformedBounds) fromTextRendererBounds(odtr::getBounds(TEXT_RENDERER_CONTEXT, textShape));
             layerBounds.untransformedBounds = layerBounds.logicalBounds;
+            layerBounds.bounds = transformBounds(layerBounds.logicalBounds, transformation());
         } else
             layerBounds = LayerBounds();
         statusFlags |= FLAG_SHAPE_UP_TO_DATE|FLAG_BOUNDS_UP_TO_DATE;
@@ -120,6 +135,10 @@ Rasterizer::Shape *LayerInstance::getShape() {
 
 odtr::TextShapeHandle LayerInstance::getTextShape() {
     return textShape;
+}
+
+const std::string &LayerInstance::getParentId() const {
+    return parentId;
 }
 
 octopus::Layer *LayerInstance::operator->() {

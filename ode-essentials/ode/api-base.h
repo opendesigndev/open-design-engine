@@ -188,7 +188,7 @@ inline ODE_String ode_makeString(const std::string &str) {
     if ((string.data = reinterpret_cast<char *>(malloc(str.size()+1)))) {
         memcpy(string.data, str.c_str(), str.size());
         string.data[str.size()] = '\0';
-        string.length = str.size();
+        string.length = int(str.size());
     }
     return string;
 }
