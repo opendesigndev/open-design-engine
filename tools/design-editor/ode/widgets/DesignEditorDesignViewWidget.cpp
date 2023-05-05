@@ -26,11 +26,12 @@ void drawImGuiWidgetTexture(GLuint textureHandle,
 
     const int horizontalPadding = 18;
     const int verticalPadding = 100;
-    const float scaling = std::min(
-        static_cast<float>(windowSize.x / static_cast<float>(colsCount) - horizontalPadding) / static_cast<float>(width),
-        static_cast<float>(windowSize.y / static_cast<float>(rowsCount) - verticalPadding) / static_cast<float>(height));
+    const double scaling = std::min(
+        ((double) windowSize.x / colsCount - horizontalPadding) / width,
+        ((double) windowSize.y / rowsCount - verticalPadding) / height
+    );
 
-    const ImVec2 newImageSize(std::max(scaling * width, 0.0f) * zoom, std::max(scaling * height, 0.0f) * zoom);
+    const ImVec2 newImageSize(float(std::max(scaling * width, 0.0) * zoom), float(std::max(scaling * height, 0.0) * zoom));
 
     ImGui::Text("GL Handle:        %d", textureHandle);
     ImGui::Text("Texture size:     %d x %d", width, height);
@@ -90,7 +91,7 @@ void drawDesignViewWidget(const ODE_ComponentHandle &component,
             const ImVec2 rectStart = toCanvasSpace(*canvasContext.mouseClickPos);
             const ImVec2 rectEnd = toCanvasSpace(*canvasContext.mouseDragPos);
 
-            selectionRectangle = ode::Rectangle<float> {
+            selectionRectangle = AnnotationRectangle {
                 std::min(rectStart.x, rectEnd.x),
                 std::min(rectStart.y, rectEnd.y),
                 std::max(rectStart.x, rectEnd.x),
@@ -103,17 +104,17 @@ void drawDesignViewWidget(const ODE_ComponentHandle &component,
             ode_component_getLayerMetrics(component, topLayerId, &topLayerMetrics);
 
             const ODE_Rectangle &topLayerBounds = topLayerMetrics.logicalBounds;
-            const float canvasWidth = topLayerBounds.b.x - topLayerBounds.a.x;
-            const float canvasHeight = topLayerBounds.b.y - topLayerBounds.a.y;
+            const double canvasWidth = topLayerBounds.b.x - topLayerBounds.a.x;
+            const double canvasHeight = topLayerBounds.b.y - topLayerBounds.a.y;
 
             ODE_LayerMetrics layerMetrics;
             ode_component_getLayerMetrics(component, layerId, &layerMetrics);
 
-            highlightRectangles.emplace_back(ode::Rectangle<float> {
-                std::clamp(static_cast<float>(layerMetrics.transformedGraphicalBounds.a.x) / canvasWidth, 0.0f, 1.0f),
-                std::clamp(static_cast<float>(layerMetrics.transformedGraphicalBounds.a.y) / canvasHeight, 0.0f, 1.0f),
-                std::clamp(static_cast<float>(layerMetrics.transformedGraphicalBounds.b.x) / canvasWidth, 0.0f, 1.0f),
-                std::clamp(static_cast<float>(layerMetrics.transformedGraphicalBounds.b.y) / canvasHeight, 0.0f, 1.0f),
+            highlightRectangles.emplace_back(AnnotationRectangle {
+                std::clamp(layerMetrics.transformedGraphicalBounds.a.x / canvasWidth, 0.0, 1.0),
+                std::clamp(layerMetrics.transformedGraphicalBounds.a.y / canvasHeight, 0.0, 1.0),
+                std::clamp(layerMetrics.transformedGraphicalBounds.b.x / canvasWidth, 0.0, 1.0),
+                std::clamp(layerMetrics.transformedGraphicalBounds.b.y / canvasHeight, 0.0, 1.0),
             });
         }
 

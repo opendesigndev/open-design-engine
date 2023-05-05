@@ -23,10 +23,10 @@ void CanvasShader::bind(const ScaledBounds& srcBounds,
         float(resolution.y)
     };
     const float selectionRect[4] = {
-        selectionRectangle.has_value() ? selectionRectangle->a.x : 0,
-        selectionRectangle.has_value() ? selectionRectangle->a.y : 0,
-        selectionRectangle.has_value() ? selectionRectangle->b.x : 0,
-        selectionRectangle.has_value() ? selectionRectangle->b.y : 0,
+        selectionRectangle.has_value() ? (float) selectionRectangle->a.x : 0.f,
+        selectionRectangle.has_value() ? (float) selectionRectangle->a.y : 0.f,
+        selectionRectangle.has_value() ? (float) selectionRectangle->b.x : 0.f,
+        selectionRectangle.has_value() ? (float) selectionRectangle->b.y : 0.f,
     };
 
     unifSrcImage_.setInt(srcUnit);
@@ -36,10 +36,10 @@ void CanvasShader::bind(const ScaledBounds& srcBounds,
 
     for (size_t i = 0; i < MAX_HIGHLIGHT_RECTANGLES; i++) {
         const float highlightRect_i[4] = {
-            highlightRectangles.size() > i ? highlightRectangles[i].a.x : 0,
-            highlightRectangles.size() > i ? highlightRectangles[i].a.y : 0,
-            highlightRectangles.size() > i ? highlightRectangles[i].b.x : 0,
-            highlightRectangles.size() > i ? highlightRectangles[i].b.y : 0,
+            highlightRectangles.size() > i ? (float) highlightRectangles[i].a.x : 0.f,
+            highlightRectangles.size() > i ? (float) highlightRectangles[i].a.y : 0.f,
+            highlightRectangles.size() > i ? (float) highlightRectangles[i].b.x : 0.f,
+            highlightRectangles.size() > i ? (float) highlightRectangles[i].b.y : 0.f,
         };
         unifHighlightRectangles_[i].setMat2(highlightRect_i);
     }

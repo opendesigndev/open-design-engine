@@ -6,7 +6,7 @@
 using namespace ode;
 
 /// Rectangle canvas annotation. In canvas space <0,1>x<0,1>.
-using AnnotationRectangle = ode::Rectangle<float>;
+using AnnotationRectangle = ode::Rectangle<double>;
 using AnnotationRectangleOpt = std::optional<AnnotationRectangle>;
 using AnnotationRectangles = std::vector<AnnotationRectangle>;
 

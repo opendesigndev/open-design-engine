@@ -357,7 +357,7 @@ void drawLayerCommonProperties(const ODE_StringRef &layerId,
 
     ImGui::Text("Opacity:");
     ImGui::SameLine(100);
-    float layerOpacity = octopusLayer.opacity;
+    float layerOpacity = float(octopusLayer.opacity);
     if (ImGui::SliderFloat(layerPropName(layerId, "layer-opacity").c_str(), &layerOpacity, 0.0f, 1.0f)) {
         changeProperty(octopus::LayerChange::Subject::LAYER, context, component, layerId, nonstd::nullopt, [layerOpacity](octopus::LayerChange::Values &values) {
             values.opacity = layerOpacity;
@@ -389,18 +389,18 @@ void drawLayerTransformation(const ODE_StringRef &layerId,
                              DesignEditorContext &context,
                              DesignEditorComponent &component,
                              const ODE_LayerMetrics &layerMetrics) {
-    const float a = static_cast<float>(layerMetrics.transformation.matrix[0]);
-    const float b = static_cast<float>(layerMetrics.transformation.matrix[1]);
-    const float c = static_cast<float>(layerMetrics.transformation.matrix[2]);
-    const float d = static_cast<float>(layerMetrics.transformation.matrix[3]);
-    const float trX = static_cast<float>(layerMetrics.transformation.matrix[4]);
-    const float trY = static_cast<float>(layerMetrics.transformation.matrix[5]);
-    const float r = sqrt(a*a+b*b);
-    const float s = sqrt(c*c+d*d);
+    const double a = layerMetrics.transformation.matrix[0];
+    const double b = layerMetrics.transformation.matrix[1];
+    const double c = layerMetrics.transformation.matrix[2];
+    const double d = layerMetrics.transformation.matrix[3];
+    const double trX = layerMetrics.transformation.matrix[4];
+    const double trY = layerMetrics.transformation.matrix[5];
+    const double r = sqrt(a*a+b*b);
+    const double s = sqrt(c*c+d*d);
 
-    Vector2f translation { trX, trY };
-    Vector2f scale { r, s };
-    float rotation = (b < 0 ? acos(a/r) : -acos(a/r)) * (180.0/M_PI);
+    Vector2f translation { float(trX), float(trY) };
+    Vector2f scale { float(r), float(s) };
+    float rotation = float((b < 0 ? acos(a/r) : -acos(a/r)) * (180.0/M_PI));
     if (rotation < 0.0f) {
         rotation += 360.0f;
     }
@@ -430,7 +430,7 @@ void drawLayerTransformation(const ODE_StringRef &layerId,
     ImGui::Text("Rotation:");
     ImGui::SameLine(100);
     if (ImGui::DragFloat(layerPropName(layerId, "layer-rotation").c_str(), &rotation)) {
-        const float rotationChangeRad = (rotation-origRotation)*M_PI/180.0f;
+        const double rotationChangeRad = (rotation-origRotation)*(M_PI/180.0);
         const ODE_Transformation trToOrigin { 1,0,0,1,-translation.x,-translation.y };
         const ODE_Transformation newTransformation { cos(rotationChangeRad),-sin(rotationChangeRad),sin(rotationChangeRad),cos(rotationChangeRad),0,0 };
         const ODE_Transformation trFromOrigin { 1,0,0,1,translation.x,translation.y };
@@ -509,7 +509,7 @@ void drawLayerText(const ODE_StringRef &layerId,
     }
 
     // Font size
-    float fontSize = defaultTextStyle.fontSize.has_value() ? *defaultTextStyle.fontSize : 0.0;
+    float fontSize = float(defaultTextStyle.fontSize.has_value() ? *defaultTextStyle.fontSize : 0.0);
     ImGui::Text("Font size:");
     ImGui::SameLine(100);
     if (ImGui::DragFloat(layerPropName(layerId, "text-font-size").c_str(), &fontSize, 0.1f, 0.0f, 10000.0f)) {
@@ -563,7 +563,7 @@ void drawLayerShapeStroke(int strokeI,
     // Thickness
     ImGui::Text("Thickness:");
     ImGui::SameLine(100);
-    float strokeThickness = octopusShapeStroke.thickness;
+    float strokeThickness = float(octopusShapeStroke.thickness);
     if (ImGui::DragFloat(layerPropName(layerId, "shape-stroke-thickness", strokeI).c_str(), &strokeThickness, 0.1f, 0.0f, 100.0f)) {
         changeReplace(octopus::LayerChange::Subject::STROKE, context, component, layerId, strokeI, nonstd::nullopt, [&strokeThickness, &octopusShapeStroke](octopus::LayerChange::Values &values) {
             values.stroke = octopusShapeStroke;
@@ -1012,18 +1012,18 @@ void drawLayerShapeFill(int fillI,
         ImGui::Text("  Pos. transformation:");
         const auto positioningTransform = octopusFill.positioning.has_value() ? octopusFill.positioning->transform : defaultGradientFillPositioningTransform;
 
-        const float a = static_cast<float>(positioningTransform[0]);
-        const float b = static_cast<float>(positioningTransform[1]);
-        const float c = static_cast<float>(positioningTransform[2]);
-        const float d = static_cast<float>(positioningTransform[3]);
-        const float trX = static_cast<float>(positioningTransform[4]);
-        const float trY = static_cast<float>(positioningTransform[5]);
-        const float r = sqrt(a*a+b*b);
-        const float s = sqrt(c*c+d*d);
+        const double a = positioningTransform[0];
+        const double b = positioningTransform[1];
+        const double c = positioningTransform[2];
+        const double d = positioningTransform[3];
+        const double trX = positioningTransform[4];
+        const double trY = positioningTransform[5];
+        const double r = sqrt(a*a+b*b);
+        const double s = sqrt(c*c+d*d);
 
-        Vector2f translation { trX, trY };
-        Vector2f scale { r, s };
-        float rotation = (b < 0 ? acos(a/r) : -acos(a/r)) * (180.0/M_PI);
+        Vector2f translation { float(trX), float(trY) };
+        Vector2f scale { float(r), float(s) };
+        float rotation = float((b < 0 ? acos(a/r) : -acos(a/r)) * (180.0/M_PI));
         if (rotation < 0.0f) {
             rotation += 360.0f;
         }
@@ -1036,7 +1036,7 @@ void drawLayerShapeFill(int fillI,
                     octopus::Fill::Positioning::Origin::LAYER,
                 };
             }
-            const float rotationRad = -rotation * (M_PI/180.0f);
+            const double rotationRad = -rotation * (M_PI/180.0);
             values.fill->positioning->transform[0] = scale.x * cos(rotationRad);
             values.fill->positioning->transform[1] = scale.x * sin(rotationRad);
             values.fill->positioning->transform[2] = - scale.y * sin(rotationRad);
@@ -1115,7 +1115,7 @@ void drawLayerShape(const ODE_StringRef &layerId,
     const bool isRectangle = (octopusShape.path.has_value() && octopusShape.path->type == octopus::Path::Type::RECTANGLE);
     if (isRectangle) {
         const octopus::Path &octopusShapePath = *octopusShape.path;
-        float cornerRadius = octopusShape.path->cornerRadius.has_value() ? *octopusShape.path->cornerRadius : 0.0f;
+        float cornerRadius = float(octopusShape.path->cornerRadius.has_value() ? *octopusShape.path->cornerRadius : 0.0);
         ImGui::Text("Corner radius:");
         ImGui::SameLine(100);
         if (ImGui::DragFloat(layerPropName(layerId, "shape-rectangle-corner-radius").c_str(), &cornerRadius, 1.0f, 0.0f, 1000.0f)) {
@@ -1377,7 +1377,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                 // Thickness
                 ImGui::Text("Thickess:");
                 ImGui::SameLine(100);
-                float strokeThickness = octopusEffectStroke.thickness;
+                float strokeThickness = float(octopusEffectStroke.thickness);
                 if (ImGui::DragFloat(layerPropName(layerId, "effect-stroke-thickness", ei).c_str(), &strokeThickness, 0.1f, 0.0f, 100.0f)) {
                     changeReplace(octopus::LayerChange::Subject::EFFECT, context, component, layerId, ei, nonstd::nullopt, [&strokeThickness, &octopusEffect](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
@@ -1478,7 +1478,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                 // Effect shadow blur
                 ImGui::Text("Blur:");
                 ImGui::SameLine(100);
-                float shadowBlur = octopusEffectShadow.blur;
+                float shadowBlur = float(octopusEffectShadow.blur);
                 if (ImGui::DragFloat(layerPropName(layerId, "effect-shadow-blur", ei).c_str(), &shadowBlur, 0.1f, -1000.0f, 1000.0f)) {
                     changeReplace(octopus::LayerChange::Subject::EFFECT, context, component, layerId, ei, nonstd::nullopt, [&shadowBlur, &octopusEffect](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
@@ -1489,7 +1489,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                 // Effect shadow choke
                 ImGui::Text("Thickess:");
                 ImGui::SameLine(100);
-                float shadowChoke = octopusEffectShadow.choke;
+                float shadowChoke = float(octopusEffectShadow.choke);
                 if (ImGui::DragFloat(layerPropName(layerId, "effect-shadow-choke", ei).c_str(), &shadowChoke, 0.1f, 0.0f, 100.0f)) {
                     changeReplace(octopus::LayerChange::Subject::EFFECT, context, component, layerId, ei, nonstd::nullopt, [&shadowChoke, &octopusEffect](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
@@ -1529,7 +1529,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                 // Effect shadow blur
                 ImGui::Text("Blur:");
                 ImGui::SameLine(100);
-                float shadowBlur = octopusEffectGlow.blur;
+                float shadowBlur = float(octopusEffectGlow.blur);
                 if (ImGui::DragFloat(layerPropName(layerId, "effect-glow-blur", ei).c_str(), &shadowBlur, 0.1f, 0.0f, 100.0f)) {
                     changeReplace(octopus::LayerChange::Subject::EFFECT, context, component, layerId, ei, nonstd::nullopt, [&shadowBlur, &octopusEffect](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
@@ -1540,7 +1540,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
                 // Effect shadow choke
                 ImGui::Text("Thickess:");
                 ImGui::SameLine(100);
-                float shadowChoke = octopusEffectGlow.choke;
+                float shadowChoke = float(octopusEffectGlow.choke);
                 if (ImGui::DragFloat(layerPropName(layerId, "effect-glow-choke", ei).c_str(), &shadowChoke, 0.1f, 0.0f, 100.0f)) {
                     changeReplace(octopus::LayerChange::Subject::EFFECT, context, component, layerId, ei, nonstd::nullopt, [&shadowChoke, &octopusEffect](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
@@ -1566,7 +1566,7 @@ void drawLayerEffects(const ODE_StringRef &layerId,
             {
                 ImGui::Text("Blur:");
                 ImGui::SameLine(100);
-                float blurAmount = octopusEffect.blur.has_value() ? *octopusEffect.blur : DEFAULT_EFFECT_BLUR;
+                float blurAmount = float(octopusEffect.blur.has_value() ? *octopusEffect.blur : DEFAULT_EFFECT_BLUR);
                 if (ImGui::DragFloat(layerPropName(layerId, "effect-blur-amount", ei).c_str(), &blurAmount, 0.1f, 0.0f, 100.0f)) {
                     changeReplace(octopus::LayerChange::Subject::EFFECT, context, component, layerId, ei, nonstd::nullopt, [&octopusEffect, blurAmount](octopus::LayerChange::Values &values) {
                         values.effect = octopusEffect;
