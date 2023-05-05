@@ -20,8 +20,6 @@ ONBUILD RUN jq -r '."builtin-baseline"' /tmp/vcpkg.json > /home/vcpkg-commit
 
 FROM ode-debian-build-config-from-${VCPKG_COMMIT_SOURCE} AS ode-debian-build-base
 
-ARG VCPKG_COMMIT
-
 ENV VCPKG_DEFAULT_TRIPLET x64-linux-release
 ENV VCPKG_DEFAULT_HOST_TRIPLET x64-linux-release
 
