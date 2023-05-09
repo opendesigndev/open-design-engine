@@ -16,5 +16,4 @@ void drawDesignViewWidget(const ODE_ComponentHandle &component,
                           DesignEditorUIState::Textures &texturesContext,
                           DesignEditorUIState::Canvas &canvasContext,
                           const DesignEditorUIState::LayerSelection &layerSelection,
-                          const ODE_StringRef &topLayerId,
                           int selectedDisplayMode);

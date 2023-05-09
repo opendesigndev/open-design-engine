@@ -65,24 +65,15 @@ ODE_StringRef lastChildLayerId(const ODE_LayerList &layerList,
 }
 
 ODE_Vector2 toImageSpace(const ImVec2 &posInScreenSpace, const DesignEditorUIState::Canvas &canvas, const DesignEditorComponent &component) {
-    // Image space position from top layer bounds
-    const ODE_StringRef &topLayerId = component.layerList.entries[0].id;
-
     const ImVec2 inCanvasSpace = ImVec2 {
         (posInScreenSpace.x - canvas.bbMin.x) / canvas.bbSize.x,
         (posInScreenSpace.y - canvas.bbMin.y) / canvas.bbSize.y,
     };
 
-    ODE_LayerMetrics topLayerMetrics;
-    ode_component_getLayerMetrics(component.component, topLayerId, &topLayerMetrics);
-
-    const ODE_Rectangle &topLayerBounds = topLayerMetrics.logicalBounds;
-    const ODE_Vector2 imageSpacePosition {
-        inCanvasSpace.x * topLayerBounds.b.x,
-        inCanvasSpace.y * topLayerBounds.b.y
+    return ODE_Vector2 {
+        inCanvasSpace.x * component.bitmap.width,
+        inCanvasSpace.y * component.bitmap.height
     };
-
-    return imageSpacePosition;
 }
 
 }
@@ -316,7 +307,7 @@ int DesignEditorWindow::display() {
                 drawLayerListWidget(component.layerList, ui.layerSelection);
             }
             if (ui.widgets.showDesignView) {
-                drawDesignViewWidget(component.component, component.bitmap, *renderer, ui.mode, ui.textures, ui.canvas, ui.layerSelection, component.layerList.entries[0].id, ui.imageVisualizationParams.selectedDisplayMode);
+                drawDesignViewWidget(component.component, component.bitmap, *renderer, ui.mode, ui.textures, ui.canvas, ui.layerSelection, ui.imageVisualizationParams.selectedDisplayMode);
             }
             if (ui.widgets.showLayerProperties) {
                 drawLayerPropertiesWidget(context, component, ui.layerSelection, ui.fileDialog);

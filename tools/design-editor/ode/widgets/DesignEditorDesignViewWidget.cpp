@@ -68,7 +68,6 @@ void drawDesignViewWidget(const ODE_ComponentHandle &component,
                           DesignEditorUIState::Textures &texturesContext,
                           DesignEditorUIState::Canvas &canvasContext,
                           const DesignEditorUIState::LayerSelection &layerSelection,
-                          const ODE_StringRef &topLayerId,
                           int selectedDisplayMode) {
     ImGui::Begin("Design View");
 
@@ -100,21 +99,14 @@ void drawDesignViewWidget(const ODE_ComponentHandle &component,
 
         AnnotationRectangles highlightRectangles;
         for (const ODE_StringRef &layerId : layerSelection.layerIDs) {
-            ODE_LayerMetrics topLayerMetrics;
-            ode_component_getLayerMetrics(component, topLayerId, &topLayerMetrics);
-
-            const ODE_Rectangle &topLayerBounds = topLayerMetrics.logicalBounds;
-            const double canvasWidth = topLayerBounds.b.x - topLayerBounds.a.x;
-            const double canvasHeight = topLayerBounds.b.y - topLayerBounds.a.y;
-
             ODE_LayerMetrics layerMetrics;
             ode_component_getLayerMetrics(component, layerId, &layerMetrics);
 
             highlightRectangles.emplace_back(AnnotationRectangle {
-                std::clamp(layerMetrics.transformedGraphicalBounds.a.x / canvasWidth, 0.0, 1.0),
-                std::clamp(layerMetrics.transformedGraphicalBounds.a.y / canvasHeight, 0.0, 1.0),
-                std::clamp(layerMetrics.transformedGraphicalBounds.b.x / canvasWidth, 0.0, 1.0),
-                std::clamp(layerMetrics.transformedGraphicalBounds.b.y / canvasHeight, 0.0, 1.0),
+                std::clamp(layerMetrics.transformedGraphicalBounds.a.x / bitmap.width, 0.0, 1.0),
+                std::clamp(layerMetrics.transformedGraphicalBounds.a.y / bitmap.height, 0.0, 1.0),
+                std::clamp(layerMetrics.transformedGraphicalBounds.b.x / bitmap.width, 0.0, 1.0),
+                std::clamp(layerMetrics.transformedGraphicalBounds.b.y / bitmap.height, 0.0, 1.0),
             });
         }
 
