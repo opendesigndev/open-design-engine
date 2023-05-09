@@ -19,6 +19,7 @@ public:
     Mesh &operator=(const Mesh &) = delete;
     bool initialize(const float *data, const int *attributeSizes, int attributeCount, GLenum primitives, int vertexCount);
     void draw() const;
+    void drawPart(int start, int count) const;
 
 private:
     static GLint maxVertexAttribs;
@@ -31,7 +32,7 @@ private:
 #endif
     GLuint vbo;
     GLenum primitives;
-    GLuint vertexCount;
+    int vertexCount;
 
 };
 

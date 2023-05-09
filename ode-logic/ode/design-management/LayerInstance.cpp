@@ -25,15 +25,15 @@ bool LayerInstance::initializeShape() {
     ODE_ASSERT(layer && layer->type == octopus::Layer::Type::SHAPE);
     if (layer->shape.has_value()) {
         TransformationMatrix transform = transformation();
-        if (!((statusFlags&FLAG_SHAPE_UP_TO_DATE) || (shape = Rasterizer::createShape(layer->shape.value()))))
+        if (!((statusFlags&FLAG_SHAPE_UP_TO_DATE) || (rasterizerShape = Rasterizer::createShape(layer->shape.value()))))
             return false;
-        layerBounds.logicalBounds = (UntransformedBounds) Rasterizer::getBounds(shape.get(), Rasterizer::BODY, Matrix3x2d(1));
+        layerBounds.logicalBounds = (UntransformedBounds) Rasterizer::getBounds(rasterizerShape.get(), Rasterizer::BODY, Matrix3x2d(1));
         layerBounds.untransformedBounds = layerBounds.logicalBounds;
-        layerBounds.bounds = (UnscaledBounds) Rasterizer::getBounds(shape.get(), Rasterizer::BODY, transform);
+        layerBounds.bounds = (UnscaledBounds) Rasterizer::getBounds(rasterizerShape.get(), Rasterizer::BODY, transform);
         for (size_t i = 0; i < layer->shape->strokes.size(); ++i) {
             if (layer->shape->strokes[i].position != octopus::Stroke::Position::INSIDE) {
-                layerBounds.untransformedBounds |= (UntransformedBounds) Rasterizer::getBounds(shape.get(), int(i), Matrix3x2d(1));
-                layerBounds.bounds |= (UnscaledBounds) Rasterizer::getBounds(shape.get(), int(i), transform);
+                layerBounds.untransformedBounds |= (UntransformedBounds) Rasterizer::getBounds(rasterizerShape.get(), int(i), Matrix3x2d(1));
+                layerBounds.bounds |= (UnscaledBounds) Rasterizer::getBounds(rasterizerShape.get(), int(i), transform);
             }
         }
         statusFlags |= FLAG_SHAPE_UP_TO_DATE|FLAG_BOUNDS_UP_TO_DATE;
@@ -51,10 +51,10 @@ bool LayerInstance::initializeText(FontBase *fontBase) {
         if (!(statusFlags&FLAG_SHAPE_UP_TO_DATE)) {
             if (fontBase)
                 fontBase->loadFonts(layer->text.value());
-            textShape = odtr::shapeText(TEXT_RENDERER_CONTEXT, layer->text.value());
+            textShapeHolder = odtr::shapeText(TEXT_RENDERER_CONTEXT, layer->text.value());
         }
-        if (textShape) {
-            layerBounds.logicalBounds = (UntransformedBounds) fromTextRendererBounds(odtr::getBounds(TEXT_RENDERER_CONTEXT, textShape));
+        if (textShapeHolder) {
+            layerBounds.logicalBounds = (UntransformedBounds) fromTextRendererBounds(odtr::getBounds(TEXT_RENDERER_CONTEXT, textShapeHolder));
             layerBounds.untransformedBounds = layerBounds.logicalBounds;
             layerBounds.bounds = transformBounds(layerBounds.logicalBounds, transformation());
         } else
@@ -129,12 +129,12 @@ double LayerInstance::featureScale() const {
     return parentFeatureScale*layer->featureScale.value_or(1);
 }
 
-Rasterizer::Shape *LayerInstance::getShape() {
-    return shape.get();
+Rasterizer::Shape *LayerInstance::shape() {
+    return rasterizerShape.get();
 }
 
-odtr::TextShapeHandle LayerInstance::getTextShape() {
-    return textShape;
+TextShapeHolder &LayerInstance::textShape() {
+    return textShapeHolder;
 }
 
 const std::string &LayerInstance::getParentId() const {

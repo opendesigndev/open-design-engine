@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <memory>
 #include <open-design-text-renderer/text-renderer-api.h>
 #include <ode-essentials.h>
 #include "../core/bounds.h"
@@ -14,6 +15,13 @@ class TextShapeHolder {
     odtr::TextShapeHandle handle;
 
 public:
+    class RendererData {
+    public:
+        virtual ~RendererData() = default;
+    };
+
+    std::unique_ptr<RendererData> rendererData;
+
     inline TextShapeHolder(odtr::TextShapeHandle handle = nullptr) : handle(handle) { }
 
     TextShapeHolder(const TextShapeHolder &) = delete;
@@ -23,10 +31,13 @@ public:
             odtr::destroyTextShapes(TEXT_RENDERER_CONTEXT, &handle, 1);
     }
 
+    TextShapeHolder &operator=(TextShapeHolder &&orig) = default;
+
     inline TextShapeHolder &operator=(odtr::TextShapeHandle newHandle) {
         if (handle)
             odtr::destroyTextShapes(TEXT_RENDERER_CONTEXT, &handle, 1);
         handle = newHandle;
+        rendererData.reset();
         return *this;
     }
 

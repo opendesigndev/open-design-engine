@@ -4,12 +4,9 @@
 #include <cstring>
 #include <algorithm>
 #include <vector>
-#include <ode/graphics/gl.h>
+#include <ode-graphics.h>
 
 namespace ode {
-
-// Implementation in Texture2D.cpp
-void convertPixelFormat(PixelFormat format, GLint &internalFormat, GLenum &pixelFormat, GLenum &pixelType);
 
 static Bitmap convertToRGBA(const BitmapConstRef &bitmap) {
     Bitmap dst(isPixelPremultiplied(bitmap.format) ? PixelFormat::PREMULTIPLIED_RGBA : PixelFormat::RGBA, bitmap.dimensions);
@@ -69,20 +66,19 @@ ImagePtr processAssetBitmap(const BitmapConstRef &bitmap) {
     int w = bitmap.width(), h = bitmap.height();
     // Create texture with 1 pixel transparent border
     TexturePtr texture(new Texture2D);
-    if (!texture->initialize(nullptr, w+2, h+2, bitmap.format))
+    if (!texture->initialize(bitmap.format, Vector2i(w+2, h+2)))
         return nullptr;
-    GLint internalFormat = GL_INVALID_INDEX;
-    GLenum pixelFormat = GL_INVALID_INDEX;
-    GLenum pixelType = GL_INVALID_INDEX;
-    convertPixelFormat(bitmap.format, internalFormat, pixelFormat, pixelType);
-    // Fill border
     std::vector<byte> borderPixels(pixelSize(bitmap.format)*(std::max(w, h)+2), (byte) 0);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w+2, 1, pixelFormat, pixelType, borderPixels.data());
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, h+1, w+2, 1, pixelFormat, pixelType, borderPixels.data());
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 1, h+2, pixelFormat, pixelType, borderPixels.data());
-    glTexSubImage2D(GL_TEXTURE_2D, 0, w+1, 0, 1, h+2, pixelFormat, pixelType, borderPixels.data());
-    // Fill center
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 1, 1, w, h, pixelFormat, pixelType, bitmap.pixels);
+    if (!(
+        // Fill border
+        texture->put(Vector2i(0, 0), BitmapConstRef(bitmap.format, borderPixels.data(), w+2, 1)) &&
+        texture->put(Vector2i(0, h+1), BitmapConstRef(bitmap.format, borderPixels.data(), w+2, 1)) &&
+        texture->put(Vector2i(0, 0), BitmapConstRef(bitmap.format, borderPixels.data(), 1, h+2)) &&
+        texture->put(Vector2i(w+1, 0), BitmapConstRef(bitmap.format, borderPixels.data(), 1, h+2)) &&
+        // Fill center
+        texture->put(Vector2i(1, 1), BitmapConstRef(bitmap.format, bitmap.pixels, w, h))
+    ))
+        return nullptr;
     return Image::fromTexture((TexturePtr &&) texture, Image::PREMULTIPLIED, Image::ONE_PIXEL_BORDER);
 }
 

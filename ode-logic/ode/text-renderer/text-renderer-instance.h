@@ -5,6 +5,7 @@
 
 namespace ode {
 
+// TODO non-global
 extern const odtr::ContextHandle TEXT_RENDERER_CONTEXT;
 
 }

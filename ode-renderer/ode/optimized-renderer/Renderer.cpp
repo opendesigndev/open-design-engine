@@ -32,24 +32,27 @@ static TransformationMatrix animationTransform(Component &component, const Layer
     return result;
 }
 
-Renderer::Renderer(GraphicsContext &gc) : gc(gc), effectRenderer(gc, tfbManager, billboard, blitShader), compositingShaderRes(CompositingShader::prepare()), fillShaderRes(FillShader::prepare()) {
+Renderer::Renderer(GraphicsContext &gc) :
+    gc(gc),
+    textRenderer(gc, tfbManager, billboard, blitShader),
+    effectRenderer(gc, tfbManager, billboard, blitShader),
+    compositingShaderRes(CompositingShader::prepare()),
+    fillShaderRes(FillShader::prepare())
+{
     const float billboardVertices[] = { 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f };
     int attributeSize = 2;
     billboard.initialize(billboardVertices, &attributeSize, 1, GL_TRIANGLES, 6);
 
     int pels[4] = { };
-    transparentTexture.initialize(pels, 1, 1, PixelFormat::RGBA);
+    transparentTexture.initialize(BitmapConstRef(PixelFormat::RGBA, pels, 1, 1));
     memset(pels, 0xff, sizeof(pels));
-    whiteTexture.initialize(pels, 1, 1, PixelFormat::RGBA);
+    whiteTexture.initialize(BitmapConstRef(PixelFormat::RGBA, pels, 1, 1));
 
     solidColorShader.initialize(compositingShaderRes);
     blitShader.initialize(compositingShaderRes);
     mixShader.initialize(compositingShaderRes);
     mixMaskShader.initialize(compositingShaderRes);
     alphaMultShader.initialize(compositingShaderRes);
-
-    // TODO DELETE:
-    transformShader.initialize();
 }
 
 PlacedImagePtr Renderer::blend(const PlacedImagePtr &dst, const PlacedImagePtr &src, octopus::BlendMode blendMode, bool ignoreSrcAlpha) {
@@ -252,35 +255,7 @@ PlacedImagePtr Renderer::drawLayerStrokeFill(Component &component, const LayerIn
 }
 
 PlacedImagePtr Renderer::drawLayerText(Component &component, const LayerInstanceSpecifier &layer, double scale, double time) {
-    // TODO new text rendering
-    if (Result<odtr::TextShapeHandle, DesignError> shape = component.getLayerTextShape(layer->id)) {
-        odtr::Dimensions dimensions = odtr::getDrawBufferDimensions(TEXT_RENDERER_CONTEXT, shape.value());
-        // Hack to add 1 pixel padding for clamp-to-edge, in-place pixel move
-        BitmapPtr bitmap(new Bitmap(PixelFormat::PREMULTIPLIED_RGBA, Vector2i(dimensions.width+2, dimensions.height+2)));
-        size_t pxSize = pixelSize(bitmap->format());
-        size_t bitmapStride = pxSize*bitmap->width();
-        bitmap->clear();
-        BitmapRef misalignedBitmap(bitmap->format(), (*bitmap)(1, 1), dimensions.width, dimensions.height);
-        SparseBitmapRef bitmapMid(bitmap->format(), (*bitmap)(1, 1), dimensions.width, dimensions.height, bitmapStride);
-        odtr::DrawTextResult result = odtr::drawText(TEXT_RENDERER_CONTEXT, shape.value(), misalignedBitmap.pixels, misalignedBitmap.width(), misalignedBitmap.height());
-        // Fix misaligned pixel rows
-        for (int y = bitmapMid.height()-1; y > 0; --y) {
-            memmove(bitmapMid(0, y), misalignedBitmap(0, y), pxSize*bitmapMid.width());
-            // Re-clear leftmost and rightmost column
-            memset((*bitmap)(0, y+1), 0, pxSize);
-            memset((*bitmap)(bitmap->width()-1, y+1), 0, pxSize);
-        }
-        memset((*bitmap)(bitmap->width()-1, 1), 0, pxSize);
-        ScaledBounds bounds(result.bounds.l, result.bounds.t, result.bounds.l+result.bounds.w, result.bounds.t+result.bounds.h);
-        ScaledMargin padding;
-        padding.a.x = padding.b.x = bounds.dimensions().x/dimensions.width;
-        padding.a.y = padding.b.y = bounds.dimensions().y/dimensions.height;
-        bounds += padding;
-        PlacedImagePtr image(ImagePtr(new BitmapImage(bitmap, Image::NORMAL, Image::NO_BORDER)), bounds);
-        Matrix3x3d imageTransform = Matrix3x3d(TransformationMatrix::scale(scale)*layer.parentTransform*TransformationMatrix(layer->transform)*animationTransform(component, layer, time))*fromTextRendererMatrix(result.transform);
-        return transformImage(image, imageTransform);
-    }
-    return nullptr;
+    return textRenderer.drawLayerText(component, layer, ScaledBounds::infinite, scale, time);
 }
 
 PlacedImagePtr Renderer::drawLayerEffect(Component &component, const LayerInstanceSpecifier &layer, int index, ImageBase &imageBase, const PlacedImagePtr &basis, double scale, double time) {
@@ -318,7 +293,7 @@ PlacedImagePtr Renderer::reframe(const PlacedImagePtr &image, const PixelBounds 
 }
 
 void Renderer::screenDraw(const PixelBounds &viewport, const PlacedImagePtr &image, const Color &bgColor) {
-    if (!image)
+    if (!(viewport && image))
         return;
     TexturePtr tex = image->asTexture();
     if (!tex)
@@ -366,96 +341,6 @@ PlacedImagePtr Renderer::resolveAlphaChannel(const PlacedImagePtr &image) {
     billboard.draw();
     outTex->unbind();
     return PlacedImagePtr(Image::fromTexture(outTex, Image::PREMULTIPLIED), pxBounds);
-}
-
-// THE REST IS TEMPORARILY BORROWED FROM OLD RENDERER - TODO REMAKE
-
-static Matrix3x3d translationMatrix(const Vector2i &v) {
-    return Matrix3x3d(1, 0, 0, 0, 1, 0, v.x, v.y, 1);
-}
-
-static Matrix3x3d scaleMatrix(const Vector2d &v) {
-    return Matrix3x3d(v.x, 0, 0, 0, v.y, 0, 0, 0, 1);
-}
-
-static byte cComp_f2b(float v) {
-    return (byte) std::min(std::max(int(256.f*v), 0x00), 0xff);
-}
-
-static UnscaledBounds transformBounds(const UntransformedBounds &bounds, const TransformationMatrix &matrix) {
-    Vector2d a = matrix*Vector3d(bounds.a.x, bounds.a.y, 1);
-    Vector2d b = matrix*Vector3d(bounds.b.x, bounds.a.y, 1);
-    Vector2d c = matrix*Vector3d(bounds.a.x, bounds.b.y, 1);
-    Vector2d d = matrix*Vector3d(bounds.b.x, bounds.b.y, 1);
-    return UnscaledBounds(
-        std::min(std::min(std::min(a.x, b.x), c.x), d.x),
-        std::min(std::min(std::min(a.y, b.y), c.y), d.y),
-        std::max(std::max(std::max(a.x, b.x), c.x), d.x),
-        std::max(std::max(std::max(a.y, b.y), c.y), d.y)
-    );
-}
-
-static ScaledBounds transformBounds(const ScaledBounds &bounds, const Matrix3x3d &matrix) {
-    Vector3d a = matrix*Vector3d(bounds.a.x, bounds.a.y, 1);
-    Vector3d b = matrix*Vector3d(bounds.b.x, bounds.a.y, 1);
-    Vector3d c = matrix*Vector3d(bounds.a.x, bounds.b.y, 1);
-    Vector3d d = matrix*Vector3d(bounds.b.x, bounds.b.y, 1);
-    a /= a.z, b /= b.z, c /= c.z, d /= d.z;
-    return ScaledBounds(
-        std::min(std::min(std::min(a.x, b.x), c.x), d.x),
-        std::min(std::min(std::min(a.y, b.y), c.y), d.y),
-        std::max(std::max(std::max(a.x, b.x), c.x), d.x),
-        std::max(std::max(std::max(a.y, b.y), c.y), d.y)
-    );
-}
-
-PlacedImagePtr Renderer::transformImage(const PlacedImagePtr &image, const Matrix3x3d &transformation) {
-
-    if (transformation[0][1] == 0 && transformation[0][2] == 0 && transformation[1][0] == 0 && transformation[1][2] == 0) {
-        // transform placement only
-        return PlacedImagePtr(image, transformBounds(image.bounds(), transformation));
-    }
-
-    Vector3 a = transformation*Vector3(image.bounds().a.x, image.bounds().a.y, 1.);
-    Vector3 b = transformation*Vector3(image.bounds().a.x, image.bounds().b.y, 1.);
-    Vector3 c = transformation*Vector3(image.bounds().b.x, image.bounds().a.y, 1.);
-    Vector3 d = transformation*Vector3(image.bounds().b.x, image.bounds().b.y, 1.);
-    ScaledBounds sOutBounds(
-        std::min(std::min(std::min(a.x, b.x), c.x), d.x),
-        std::min(std::min(std::min(a.y, b.y), c.y), d.y),
-        std::max(std::max(std::max(a.x, b.x), c.x), d.x),
-        std::max(std::max(std::max(a.y, b.y), c.y), d.y)
-    );
-    PixelBounds outputBounds = outerPixelBounds(sOutBounds);
-    if (!outputBounds)
-        return nullptr;
-    TextureFrameBufferPtr outputTexture = tfbManager.acquire(outputBounds);
-
-    Matrix3x3f toInputBounds(
-        .5f*image.bounds().dimensions().x, 0.f, 0.f,
-        0.f, .5f*image.bounds().dimensions().y, 0.f,
-        .5f*image.bounds().dimensions().x+image.bounds().a.x, .5f*image.bounds().dimensions().y+image.bounds().a.y, 1.f
-    );
-    Matrix3x3f fromOutputBoundsToPolar(
-        2.f/(float) outputBounds.dimensions().x, 0.f, 0.f,
-        0.f, 2.f/(float) outputBounds.dimensions().y, 0.f,
-        -2.f*(float) outputBounds.a.x/(float) outputBounds.dimensions().x-1.f, -2.f*(float) outputBounds.a.y/(float) outputBounds.dimensions().y-1.f, 1.f
-    );
-    Matrix3x3f vertexTransform = fromOutputBoundsToPolar*Matrix3x3f(transformation)*toInputBounds;
-
-    TexturePtr tex = image->asTexture();
-
-    tex->bind(0);
-    outputTexture->bind();
-    glViewport(0, 0, outputBounds.dimensions().x, outputBounds.dimensions().y);
-    glClearColor(0.f, 0.f, 0.f, 0.f);
-    glClear(GL_COLOR_BUFFER_BIT);
-    const int ss[] = { 1, 1 };
-    transformShader.bind(vertexTransform, outputBounds.dimensions());
-    billboard.draw();
-    outputTexture->unbind();
-
-    return PlacedImagePtr(Image::fromTexture(outputTexture, Image::NORMAL), outputBounds);
 }
 
 PlacedImagePtr Renderer::drawLayerVector(Component &component, const LayerInstanceSpecifier &layer, int strokeIndex, double scale, double time) {

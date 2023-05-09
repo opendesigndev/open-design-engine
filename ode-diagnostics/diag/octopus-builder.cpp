@@ -100,7 +100,7 @@ TextLayer::TextLayer(const std::string &text) {
     static int i = 0;
     id = "TEXT_"+std::to_string(i++);
     type = octopus::Layer::Type::TEXT;
-    name = id;
+    name = text;
     this->text = octopus::Text();
     this->text->value = text;
     this->text->defaultStyle.font = octopus::Font();

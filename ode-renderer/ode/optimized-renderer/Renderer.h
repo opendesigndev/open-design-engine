@@ -10,10 +10,10 @@
 #include "../image/Image.h"
 #include "../image/ImageBase.h"
 #include "../frame-buffer-management/TextureFrameBufferManager.h"
+#include "../text-renderer/TextRenderer.h"
 #include "EffectRenderer.h"
 #include "compositing-shaders/compositing-shaders.h"
 #include "fill-shaders/fill-shaders.h"
-#include "TransformShader.h"
 
 namespace ode {
 
@@ -49,6 +49,7 @@ private:
     GraphicsContext &gc;
     Rasterizer rasterizer;
     TextureFrameBufferManager tfbManager;
+    TextRenderer textRenderer;
     EffectRenderer effectRenderer;
 
     PlacedImagePtr resolveAlphaChannel(const PlacedImagePtr &image);
@@ -69,7 +70,6 @@ private:
     MixShader mixShader;
     MixMaskShader mixMaskShader;
     AlphaMultShader alphaMultShader;
-    TransformShader transformShader;
     std::map<octopus::BlendMode, BlendShader> blendShaders;
     std::map<octopus::Gradient::Type, GradientFillShader> gradientFillShaders;
     std::map<int, ImageFillShader> imageFillShaders;

@@ -17,7 +17,7 @@ public:
     ~ShaderProgram();
     ShaderProgram &operator=(const ShaderProgram &) = delete;
     /// Initializes using a vertex and a fragment shader component
-    bool initialize(const VertexShader *vertexShader, const FragmentShader *fragmentShader);
+    bool initialize(const VertexShader *vertexShader, const FragmentShader *fragmentShader, const char *const *attribOrder = nullptr);
     /// Returns true if successfully initialized
     explicit operator bool() const;
     /// Returns an accessor object of a uniform variable with the specified name

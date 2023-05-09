@@ -1,5 +1,9 @@
 /build
-/third-party
+/third-party/skia
+/third-party/wasm-cmake
+/third-party/imgui
+/third-party/ImGuiFileDialog
+/third-party/imnodes
 /.git
 /.github
 /dockerfiles/debian-build/Dockerfile

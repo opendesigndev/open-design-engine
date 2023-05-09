@@ -147,6 +147,12 @@ int main(int argc, const char *const *argv) {
     if (outputImagePath.empty())
         outputImagePath = (const std::string &) octopusPath+".png";
 
+    GraphicsContext gc(GraphicsContext::OFFSCREEN);
+    if (!gc) {
+        fprintf(stderr, "Failed to establish OpenGL context\n");
+        return 1;
+    }
+
     FontBasePtr fontBase(new FontBase);
     fontBase->setFontDirectory(fontDirectory);
 
@@ -160,12 +166,6 @@ int main(int argc, const char *const *argv) {
     Result<Rendexptr, DesignError> renderExpression = artboard.assemble();
     if (renderExpression.failure()) {
         fprintf(stderr, "Failed to assemble render expression\n");
-        return 1;
-    }
-
-    GraphicsContext gc(GraphicsContext::OFFSCREEN);
-    if (!gc) {
-        fprintf(stderr, "Failed to establish OpenGL context\n");
         return 1;
     }
 

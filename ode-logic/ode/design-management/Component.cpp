@@ -342,16 +342,16 @@ Result<Rasterizer::Shape *, DesignError> Component::getLayerShape(const std::str
     if (DesignError error = requireBuild())
         return error;
     if (LayerInstance *instance = findInstance(id))
-        return instance->getShape();
+        return instance->shape();
     else
         return DesignError::LAYER_NOT_FOUND;
 }
 
-Result<odtr::TextShapeHandle, DesignError> Component::getLayerTextShape(const std::string &id) {
+Result<TextShapeHolder *, DesignError> Component::getLayerTextShape(const std::string &id) {
     if (DesignError error = requireBuild())
         return error;
     if (LayerInstance *instance = findInstance(id))
-        return instance->getTextShape();
+        return &instance->textShape();
     else
         return DesignError::LAYER_NOT_FOUND;
 }

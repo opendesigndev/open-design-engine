@@ -97,7 +97,7 @@ public:
     /// Returns the pointer to Rasterizer Shape of a given SHAPE layer
     Result<Rasterizer::Shape *, DesignError> getLayerShape(const std::string &id);
     /// Returns the Text Renderer TextShapeHandle of a given TEXT layer
-    Result<odtr::TextShapeHandle, DesignError> getLayerTextShape(const std::string &id);
+    Result<TextShapeHolder *, DesignError> getLayerTextShape(const std::string &id);
     /// Returns animations of a given layer
     Result<const DocumentAnimation *, DesignError> getAnimation(const std::string &id);
     /// Returns value of a specific animation at a given time

@@ -70,11 +70,21 @@ int main(int argc, const char *const *argv) {
     //ODE_ComponentHandle component; // global
     CHECK(ode_design_addComponentFromOctopusString(design, &component, metadata, ode_stringRef(octopusJson), nullptr));
 
+    if (argc > 3) {
+        ODE_StringList fontList = { };
+        ode_component_listMissingFonts(component, &fontList);
+        for (int i = 0; i < fontList.n; ++i) {
+            std::string fontPath = std::string(argv[3])+'/'+ode_stringDeref(fontList.entries[i])+".ttf";
+            ode_design_loadFontFile(design, fontList.entries[i], ode_stringRef(fontPath), ODE_StringRef());
+        }
+        ode_destroyMissingFontList(fontList);
+    }
+
     if (!animationDefJson.empty())
         CHECK(ode_pr1_component_loadAnimation(component, ode_stringRef(animationDefJson), nullptr));
 
     ODE_RendererContextHandle rc;
-    CHECK(ode_createRendererContext(engine, &rc, ode_stringRef("Squid")));
+    CHECK(ode_createRendererContext(engine, &rc, ode_stringRef("ODE Animation window")));
 
     ODE_DesignImageBaseHandle imageBase;
     CHECK(ode_createDesignImageBase(rc, design, &imageBase));
@@ -114,8 +124,8 @@ int main(int argc, const char *const *argv) {
 
     CHECK(ode_pr1_destroyAnimationRenderer(renderer));
     CHECK(ode_destroyDesignImageBase(imageBase));
-    CHECK(ode_destroyRendererContext(rc));
     CHECK(ode_destroyDesign(design));
+    CHECK(ode_destroyRendererContext(rc));
     CHECK(ode_destroyEngine(engine));
 
     return 0;

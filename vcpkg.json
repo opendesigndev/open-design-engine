@@ -49,6 +49,10 @@
             "description": "Bidirectional text resolution by ICU",
             "dependencies": [ "icu" ]
         },
+        "msdf-atlas": {
+            "description": "MSDF font atlas generation",
+            "dependencies": [ "msdfgen" ]
+        },
         "image-formats": {
             "description": "Libraries for decoding & encoding image files: PNG, JPEG, TIFF, GIF, WEBP",
             "dependencies": [

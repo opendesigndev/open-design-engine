@@ -5,8 +5,8 @@
 
 namespace ode {
 
-void bitmapPremultiply(Bitmap &bitmap) {
-    PixelFormat format = bitmap.format();
+void bitmapPremultiply(BitmapRef &bitmap) {
+    PixelFormat format = bitmap.format;
     if (!pixelHasAlpha(format))
         return;
     ODE_ASSERT(!isPixelPremultiplied(format));
@@ -57,11 +57,11 @@ void bitmapPremultiply(Bitmap &bitmap) {
                 return;
         }
     }
-    bitmap.reinterpret(PixelFormat(int(format)|PIXEL_PREMULTIPLIED_BIT));
+    bitmap.format = PixelFormat(int(format)|PIXEL_PREMULTIPLIED_BIT);
 }
 
-void bitmapUnpremultiply(Bitmap &bitmap) {
-    PixelFormat format = bitmap.format();
+void bitmapUnpremultiply(BitmapRef &bitmap) {
+    PixelFormat format = bitmap.format;
     if (!pixelHasAlpha(format))
         return;
     ODE_ASSERT(isPixelPremultiplied(format));
@@ -116,7 +116,19 @@ void bitmapUnpremultiply(Bitmap &bitmap) {
                 return;
         }
     }
-    bitmap.reinterpret(PixelFormat(int(format)&~PIXEL_PREMULTIPLIED_BIT));
+    bitmap.format = PixelFormat(int(format)&~PIXEL_PREMULTIPLIED_BIT);
+}
+
+void bitmapPremultiply(Bitmap &bitmap) {
+    BitmapRef bitmapRef(bitmap);
+    bitmapPremultiply(bitmapRef);
+    bitmap.reinterpret(bitmapRef.format);
+}
+
+void bitmapUnpremultiply(Bitmap &bitmap) {
+    BitmapRef bitmapRef(bitmap);
+    bitmapUnpremultiply(bitmapRef);
+    bitmap.reinterpret(bitmapRef.format);
 }
 
 }

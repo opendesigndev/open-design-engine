@@ -56,17 +56,21 @@ bool Mesh::initialize(const float *data, const int *attributeSizes, int attribut
 }
 
 void Mesh::draw() const {
+    drawPart(0, vertexCount);
+}
+
+void Mesh::drawPart(int start, int count) const {
     #ifdef ODE_GL_ENABLE_VERTEX_ARRAYS
         glBindVertexArray(vao);
     #else
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-        size_t start = 0;
+        size_t initial = 0;
         size_t i = 0;
         for (; i < attrSizes.size(); ++i) {
             glEnableVertexAttribArray((GLuint) i);
-            glVertexAttribPointer((GLuint) i, attrSizes[i], GL_FLOAT, GL_FALSE, totalAttrSize*sizeof(GLfloat), (const void *) start);
-            start += attrSizes[i]*sizeof(GLfloat);
+            glVertexAttribPointer((GLuint) i, attrSizes[i], GL_FLOAT, GL_FALSE, totalAttrSize*sizeof(GLfloat), (const void *) initial);
+            initial += attrSizes[i]*sizeof(GLfloat);
         }
         // TODO optimize this
         for (; i < maxVertexAttribs; ++i) {
@@ -74,9 +78,10 @@ void Mesh::draw() const {
         }
     #endif
     ODE_CHECK_GL_ERROR();
-    glDrawArrays(primitives, 0, vertexCount);
+    ODE_ASSERT(start >= 0 && start+count <= vertexCount);
+    glDrawArrays(primitives, start, count);
     ODE_CHECK_GL_ERROR();
-    //LOG_OWN_ACTION(DRAW_CALL, vertexCount, "");
+    //LOG_OWN_ACTION(DRAW_CALL, count, "");
 }
 
 }
