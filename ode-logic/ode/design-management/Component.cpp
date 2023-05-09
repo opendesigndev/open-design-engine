@@ -566,6 +566,9 @@ static bool intersects(const UntransformedBounds &bounds, const TransformationMa
         Vector2d(bounds.a.x, bounds.b.y),
         bounds.a
     };
+    if (transformation[0][0]*transformation[1][1] < transformation[0][1]*transformation[1][0]) { // negative determinant - inversion transform
+        std::swap(polygon[1], polygon[3]);
+    }
     for (Vector2d &v : polygon)
         v = transformation*Vector3d(v.x, v.y, 1);
     return convexPolygonCircleIntersection(polygon, 4, center, radius);
