@@ -1,4 +1,12 @@
 
+## Version 0.4.0 (2023-05-10)
+
+- New real-time text renderer based on signed distance fields, which greatly improves performance of re-rendering text, even at different scales
+- Added Design Editor module - an internal GUI-based tool
+- Fixed layer identification by position for inverted layers
+- Fixed an OpenGL synchronization bug that manifested on some systems
+- Updated Text Renderer submodule to `fba1cdd`
+
 ## Version 0.3.1 (2023-04-12)
 
 - Added new functions to ODE API:
