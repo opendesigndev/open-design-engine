@@ -26,6 +26,19 @@
 #include "widgets/DesignEditorLayerPropertiesWidget.h"
 #include "widgets/DesignEditorUIHelpers.h"
 
+#ifdef _WIN32
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#include <ShlObj.h>
+static std::string windowsFontPath() {
+    char buffer[MAX_PATH+1];
+    *buffer = '\0';
+    SHGetFolderPathA(NULL, CSIDL_FONTS, NULL, 0, buffer);
+    return std::string(buffer);
+}
+#endif
+
 namespace {
 
 #define CHECK(x) do { if ((x)) return -1; } while (false)
@@ -42,7 +55,10 @@ const Color DEFAULT_NEW_SHAPE_COLOR(0.5, 0.5, 0.5, 1.0);
 
 // TODO: Add system font directories for Windows
 const std::vector<std::string> SYSTEM_FONT_DIRECTORIES {
-#if defined(__APPLE__)
+#ifdef _WIN32
+    windowsFontPath()
+#endif
+#ifdef __APPLE__
     std::string(getenv("HOME"))+"/Library/Fonts/",
     "/Library/Fonts/",
     "/Network/Library/Fonts/",
