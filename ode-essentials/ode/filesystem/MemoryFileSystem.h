@@ -44,6 +44,9 @@ public:
     void clear();
 
 private:
+    /// Check if the file from the file stream has a valid Octopus header
+    bool checkOctopusFileHeader(std::ifstream &file, Error *error = nullptr);
+
     std::vector<File> files;
 };
 

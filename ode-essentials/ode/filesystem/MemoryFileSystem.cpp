@@ -8,8 +8,27 @@
 
 namespace ode {
 
+#define PK_SIGNATURE "PK\x03\x04"
+
 #define COMPRESSION_STORE       0
 #define COMPRESSION_DEFLATE     8
+
+#define CHECK(condition, err) \
+    if (!(condition)) { \
+        if (error) { \
+            *error = Error::err; \
+        } \
+        clear(); \
+        return false; \
+    }
+
+#define CHECK_HEADER(offset, value, length) \
+    { \
+        file.seekg(offset, std::ios::beg); \
+        std::string str(length, '\0'); \
+        file.read(&str[0], length); \
+        CHECK(str == value, INVALID_OCTOPUS_FILE); \
+    }
 
 bool MemoryFileSystem::openOctopusFile(const FilePath &octopusFilePath, Error *error) {
     clear();
@@ -24,6 +43,9 @@ bool MemoryFileSystem::openOctopusFile(const FilePath &octopusFilePath, Error *e
             *error = Error::ERROR_OPENING_FILE;
         return false;
     }
+
+    // Check if the file is a valid Octopus file
+    CHECK(checkOctopusFileHeader(file), INVALID_OCTOPUS_FILE);
 
     // Read end-of-central-directory record
     file.seekg(-22, std::ios::end);
@@ -49,19 +71,14 @@ bool MemoryFileSystem::openOctopusFile(const FilePath &octopusFilePath, Error *e
         const uint16_t m = *(uint16_t*)(centralDir.data() + centralDirFileOffset + 30);
         const uint16_t k = *(uint16_t*)(centralDir.data() + centralDirFileOffset + 32);
 
-        std::string filename(filenameLengthCentralDir, '\0');
-        std::memcpy(filename.data(), centralDir.data() + centralDirFileOffset + 46, filenameLengthCentralDir);
+        std::string filePath(filenameLengthCentralDir, '\0');
+        std::memcpy(filePath.data(), centralDir.data() + centralDirFileOffset + 46, filenameLengthCentralDir);
 
         file.seekg(headerOffset, std::ios::beg);
         std::string signature(4, '\0');
         file.read(&signature[0], 4);
 
-        if (signature != "PK\x03\x04") {
-            if (error)
-                *error = Error::INVALID_OCTOPUS_FILE;
-            clear();
-            return false;
-        }
+        CHECK(signature == PK_SIGNATURE, INVALID_OCTOPUS_FILE);
 
         File &newFile = files.emplace_back();
 
@@ -69,18 +86,13 @@ bool MemoryFileSystem::openOctopusFile(const FilePath &octopusFilePath, Error *e
         newFile.compressed_size = *(uint32_t*)(centralDir.data() + centralDirFileOffset + 20);
         newFile.uncompressed_size = *(uint32_t*)(centralDir.data() + centralDirFileOffset + 24);
 
-        newFile.path = filename;
+        newFile.path = filePath;
 
         file.seekg(22, std::ios::cur);
         uint16_t filenameLength;
         file.read(reinterpret_cast<char*>(&filenameLength), 2);
 
-        if (filenameLength != filenameLengthCentralDir) {
-            if (error)
-                *error = Error::INVALID_OCTOPUS_FILE;
-            clear();
-            return false;
-        }
+        CHECK(filenameLength == filenameLengthCentralDir, INVALID_OCTOPUS_FILE);
 
         uint16_t extraFieldLength;
         file.read(reinterpret_cast<char*>(&extraFieldLength), 2);
@@ -172,6 +184,34 @@ std::optional<std::string> MemoryFileSystem::getFileData(const FilePath& filePat
 
 void MemoryFileSystem::clear() {
     files.clear();
+}
+
+bool MemoryFileSystem::checkOctopusFileHeader(std::ifstream &file, Error *error) {
+    CHECK(file.tellg() < 134, INVALID_OCTOPUS_FILE);
+
+    CHECK_HEADER(0, PK_SIGNATURE, 4);
+    CHECK_HEADER(8, std::string(3, 0), 3);
+    CHECK_HEADER(12, std::string(1, 33), 1);
+    CHECK_HEADER(13, std::string(1, 0), 1);
+    CHECK_HEADER(26, std::string(1, 7), 1);
+    CHECK_HEADER(27, std::string(3, 0), 3);
+    CHECK_HEADER(30, "Octopus is universal design format. opendesign.dev.", 51);
+
+    file.seekg(18, std::ios::beg);
+    std::string s18(3, '\0');
+    file.read(&s18[0], 3);
+    const uint32_t i18 = (s18[0]<<0) | (s18[1]<<8) | (s18[2]<<16);
+    CHECK(i18 >= 44, INVALID_OCTOPUS_FILE);
+
+    file.seekg(22, std::ios::beg);
+    std::string s22(3, '\0');
+    file.read(&s22[0], 3);
+    const uint32_t i22 = (s22[0]<<0) | (s22[1]<<8) | (s22[2]<<16);
+    CHECK(i22 >= 44, INVALID_OCTOPUS_FILE);
+
+    CHECK(s18 == s22, INVALID_OCTOPUS_FILE);
+
+    return true;
 }
 
 } // namespace ode
