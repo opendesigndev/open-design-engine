@@ -91,7 +91,7 @@ DesignEditorWindow::DesignEditorWindow() {
 }
 
 DesignEditorWindow::~DesignEditorWindow() {
-    ui.textures.designImageTexture.reset();
+    ui.textures.clear();
     renderer.reset();
     context.destroy();
 }
@@ -316,13 +316,15 @@ int DesignEditorWindow::display() {
                 }
                 if (ui.widgets.showDesignView) {
                     for (const DesignEditorComponent &component : context.design.components) {
-                        DesignEditorUIState::Canvas &canvas = ui.canvases[ode_stringDeref(component.id)];
+                        const std::string componentId = ode_stringDeref(component.id);
+
+                        DesignEditorUIState::Canvas &canvas = ui.canvases[componentId];
 
                         drawDesignViewWidget(component.component,
                                              component.id,
                                              component.bitmap,
                                              *renderer,
-                                             ui.textures.designImageTexture,
+                                             ui.textures.textures[componentId],
                                              ui.mode,
                                              canvas,
                                              ui.componentSelection,
@@ -459,6 +461,7 @@ int DesignEditorWindow::reloadOctopus(const FilePath &octopusPath, const FilePat
     }
 
     ui.layerSelection.clear();
+    ui.textures.clear();
 
     if (context.design.design.ptr) {
         CHECK(ode_destroyDesign(context.design.design));
@@ -523,7 +526,9 @@ int DesignEditorWindow::reloadOctopus(const FilePath &octopusPath, const FilePat
         ui.componentSelection.componentId = componentIds.entries[0];
     }
     for (int i = 0; i < componentIds.n; ++i) {
-        ui.canvases[ode_stringDeref(componentIds.entries[i])] = DesignEditorUIState::Canvas {};
+        const std::string componentId = ode_stringDeref(componentIds.entries[i]);
+        ui.canvases[componentId] = DesignEditorUIState::Canvas {};
+        ui.textures.textures[componentId] = ode::TextureFrameBufferPtr();
     }
 
     if (ui.fileDialog.octopusFilePath.empty()) {

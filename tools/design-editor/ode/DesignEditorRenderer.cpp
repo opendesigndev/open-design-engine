@@ -31,10 +31,10 @@ DesignEditorRenderer::DesignEditorRenderer() : sharedVertexShader("design-editor
 }
 
 TextureFrameBufferPtr DesignEditorRenderer::blendImageToTexture(Bitmap &&bitmap,
-                                                     const ScaledBounds &placement,
-                                                     int selectedDisplayMode,
-                                                     const AnnotationRectangleOpt &selectionRectangle,
-                                                     const AnnotationRectangles &highlightRectangles) {
+                                                                const ScaledBounds &placement,
+                                                                int selectedDisplayMode,
+                                                                const AnnotationRectangleOpt &selectionRectangle,
+                                                                const AnnotationRectangles &highlightRectangles) {
     const bool ignoreAlpha = selectedDisplayMode == 3;
 
     ImagePtr image = Image::fromBitmap((Bitmap &&) bitmap, Image::NORMAL);
