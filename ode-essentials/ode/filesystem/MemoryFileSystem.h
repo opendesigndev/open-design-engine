@@ -23,9 +23,9 @@ public:
     /// A single file in the filesystem, its contents and metadata.
     struct File {
         FilePath path;
-        uint16_t compression_method;
-        uint32_t compressed_size;
-        uint32_t uncompressed_size;
+        uint16_t compressionMethod;
+        uint32_t compressedSize;
+        uint32_t uncompressedSize;
         std::string data;
     };
 

@@ -82,9 +82,9 @@ bool MemoryFileSystem::openOctopusFile(const FilePath &octopusFilePath, Error *e
 
         File &newFile = files.emplace_back();
 
-        newFile.compression_method = *(uint16_t*)(centralDir.data() + centralDirFileOffset + 10);
-        newFile.compressed_size = *(uint32_t*)(centralDir.data() + centralDirFileOffset + 20);
-        newFile.uncompressed_size = *(uint32_t*)(centralDir.data() + centralDirFileOffset + 24);
+        newFile.compressionMethod = *(uint16_t*)(centralDir.data() + centralDirFileOffset + 10);
+        newFile.compressedSize = *(uint32_t*)(centralDir.data() + centralDirFileOffset + 20);
+        newFile.uncompressedSize = *(uint32_t*)(centralDir.data() + centralDirFileOffset + 24);
 
         newFile.path = filePath;
 
@@ -98,8 +98,8 @@ bool MemoryFileSystem::openOctopusFile(const FilePath &octopusFilePath, Error *e
         file.read(reinterpret_cast<char*>(&extraFieldLength), 2);
         file.seekg(filenameLength+extraFieldLength, std::ios::cur);
 
-        newFile.data.resize(newFile.compressed_size, '\0');
-        file.read(&newFile.data[0], newFile.compressed_size);
+        newFile.data.resize(newFile.compressedSize, '\0');
+        file.read(&newFile.data[0], newFile.compressedSize);
 
         centralDirFileOffset += 46 + filenameLengthCentralDir + m + k;
     }
@@ -127,7 +127,7 @@ std::optional<std::string> MemoryFileSystem::getFileData(const FilePath& filePat
         return std::nullopt;
     }
 
-    switch (fileIt->compression_method) {
+    switch (fileIt->compressionMethod) {
         case COMPRESSION_STORE:
         {
             return fileIt->data;

@@ -237,8 +237,33 @@ ODE_Result ODE_API ode_createDesign(ODE_EngineHandle engine, ODE_DesignHandle *d
     return ODE_RESULT_OK;
 }
 
-// Design file format does not exist yet
-//ODE_Result ODE_NATIVE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_DesignHandle *design, ODE_StringRef path, ODE_ParseError *parseError);
+ODE_Result ODE_NATIVE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_DesignHandle *design, ODE_StringRef path, ODE_ParseError *parseError) {
+    ODE_ASSERT(engine.ptr && design && design->ptr);
+
+    // TODO: read Octopus design file to the MemoryFileSystem
+
+    MemoryFileSystem fileSystem;
+    if (!fileSystem.openOctopusFile(ode_stringDeref(path))) {
+        return ODE_RESULT_OCTOPUS_UNAVAILABLE;
+    }
+
+    for (const FilePath &filePath : fileSystem.filePaths()) {
+        const std::string filePathStr = (std::string)filePath;
+        const bool isJson = (filePathStr.substr(filePathStr.find_last_of(".")+1) == "json");
+        const bool isOctopusComponentFile = isJson && filePathStr != "octopus-manifest.json";
+
+        if (isOctopusComponentFile) {
+            const std::optional<std::string> fileData = fileSystem.getFileData(filePath);
+            if (fileData.has_value()) {
+                ODE_ComponentHandle component = {};
+                ODE_ComponentMetadata metadata = {};
+                ode_design_addComponentFromOctopusString(*design, &component, metadata, ode_stringRef(*fileData), parseError);
+            }
+        }
+    }
+
+    return ODE_RESULT_OK;
+}
 
 ODE_Result ODE_NATIVE_API ode_loadDesignFromManifestFile(ODE_EngineHandle engine, ODE_DesignHandle *design, ODE_StringRef path, ODE_ParseError *parseError) {
     ODE_ASSERT(design && path.data);
