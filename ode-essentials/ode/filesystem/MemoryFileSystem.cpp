@@ -13,7 +13,7 @@ namespace ode {
 #define COMPRESSION_STORE       0
 #define COMPRESSION_DEFLATE     8
 
-#define CHECK(condition, err) \
+#define CHECK_OPEN(condition, err) \
     if (!(condition)) { \
         if (error) { \
             *error = Error::err; \
@@ -22,12 +22,20 @@ namespace ode {
         return false; \
     }
 
+#define CHECK_DATA(condition, err) \
+    if (!(condition)) { \
+        if (error) { \
+            *error = Error::err; \
+        } \
+        return std::nullopt; \
+    }
+
 #define CHECK_HEADER(offset, value, length) \
     { \
         file.seekg(offset, std::ios::beg); \
         std::string str(length, '\0'); \
         file.read(&str[0], length); \
-        CHECK(str == value, INVALID_OCTOPUS_FILE); \
+        CHECK_OPEN(str == value, INVALID_OCTOPUS_FILE); \
     }
 
 bool MemoryFileSystem::openOctopusFile(const FilePath &octopusFilePath, Error *error) {
@@ -38,14 +46,10 @@ bool MemoryFileSystem::openOctopusFile(const FilePath &octopusFilePath, Error *e
 
     std::ifstream file((std::string)octopusFilePath, std::ios::binary);
 
-    if (!file) {
-        if (error)
-            *error = Error::ERROR_OPENING_FILE;
-        return false;
-    }
+    CHECK_OPEN(file, ERROR_OPENING_FILE);
 
     // Check if the file is a valid Octopus file
-    CHECK(checkOctopusFileHeader(file), INVALID_OCTOPUS_FILE);
+    CHECK_OPEN(checkOctopusFileHeader(file), INVALID_OCTOPUS_FILE);
 
     // Read end-of-central-directory record
     file.seekg(-22, std::ios::end);
@@ -78,7 +82,7 @@ bool MemoryFileSystem::openOctopusFile(const FilePath &octopusFilePath, Error *e
         std::string signature(4, '\0');
         file.read(&signature[0], 4);
 
-        CHECK(signature == PK_SIGNATURE, INVALID_OCTOPUS_FILE);
+        CHECK_OPEN(signature == PK_SIGNATURE, INVALID_OCTOPUS_FILE);
 
         File &newFile = files.emplace_back();
 
@@ -92,7 +96,7 @@ bool MemoryFileSystem::openOctopusFile(const FilePath &octopusFilePath, Error *e
         uint16_t filenameLength;
         file.read(reinterpret_cast<char*>(&filenameLength), 2);
 
-        CHECK(filenameLength == filenameLengthCentralDir, INVALID_OCTOPUS_FILE);
+        CHECK_OPEN(filenameLength == filenameLengthCentralDir, INVALID_OCTOPUS_FILE);
 
         uint16_t extraFieldLength;
         file.read(reinterpret_cast<char*>(&extraFieldLength), 2);
@@ -137,11 +141,7 @@ std::optional<std::string> MemoryFileSystem::getFileData(const FilePath& filePat
             z_stream zs;
             memset(&zs, 0, sizeof(zs));
 
-            if (inflateInit2(&zs, -15) != Z_OK) {
-                if (error)
-                    *error = Error::DECOMPRESSION_FAILED;
-                return std::nullopt;
-            }
+            CHECK_DATA(inflateInit2(&zs, -15) == Z_OK, DECOMPRESSION_FAILED);
 
             zs.next_in = (Bytef*)fileIt->data.data();
             zs.avail_in = (uInt)fileIt->data.size();
@@ -161,15 +161,8 @@ std::optional<std::string> MemoryFileSystem::getFileData(const FilePath& filePat
                 }
             } while (ret == Z_OK);
 
-            if (inflateEnd(&zs) != Z_OK) {
-                return std::nullopt;
-            }
-
-            if (ret != Z_STREAM_END) {
-                if (error)
-                    *error = Error::DECOMPRESSION_FAILED;
-                return std::nullopt;
-            }
+            CHECK_DATA(inflateEnd(&zs) == Z_OK, DECOMPRESSION_FAILED);
+            CHECK_DATA(ret == Z_STREAM_END, DECOMPRESSION_FAILED);
 
             return decompressedData;
         }
@@ -187,7 +180,7 @@ void MemoryFileSystem::clear() {
 }
 
 bool MemoryFileSystem::checkOctopusFileHeader(std::ifstream &file, Error *error) {
-    CHECK(file.tellg() < 134, INVALID_OCTOPUS_FILE);
+    CHECK_OPEN(file.tellg() < 134, INVALID_OCTOPUS_FILE);
 
     CHECK_HEADER(0, PK_SIGNATURE, 4);
     CHECK_HEADER(8, std::string(3, 0), 3);
@@ -201,15 +194,15 @@ bool MemoryFileSystem::checkOctopusFileHeader(std::ifstream &file, Error *error)
     std::string s18(3, '\0');
     file.read(&s18[0], 3);
     const uint32_t i18 = (s18[0]<<0) | (s18[1]<<8) | (s18[2]<<16);
-    CHECK(i18 >= 44, INVALID_OCTOPUS_FILE);
+    CHECK_OPEN(i18 >= 44, INVALID_OCTOPUS_FILE);
 
     file.seekg(22, std::ios::beg);
     std::string s22(3, '\0');
     file.read(&s22[0], 3);
     const uint32_t i22 = (s22[0]<<0) | (s22[1]<<8) | (s22[2]<<16);
-    CHECK(i22 >= 44, INVALID_OCTOPUS_FILE);
+    CHECK_OPEN(i22 >= 44, INVALID_OCTOPUS_FILE);
 
-    CHECK(s18 == s22, INVALID_OCTOPUS_FILE);
+    CHECK_OPEN(s18 == s22, INVALID_OCTOPUS_FILE);
 
     return true;
 }
