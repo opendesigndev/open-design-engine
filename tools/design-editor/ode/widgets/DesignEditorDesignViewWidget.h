@@ -10,10 +10,12 @@
 
 /// Draw DE Design View widget
 void drawDesignViewWidget(const ODE_ComponentHandle &component,
+                          const ODE_StringRef &componentId,
                           const ODE_Bitmap &bitmap,
                           DesignEditorRenderer &renderer,
+                          ode::TextureFrameBufferPtr texture,
                           DesignEditorUIState::Mode uiMode,
-                          DesignEditorUIState::Textures &texturesContext,
-                          DesignEditorUIState::Canvas &canvasContext,
+                          DesignEditorUIState::Canvas &canvas,
+                          DesignEditorUIState::ComponentSelection &componentSelection,
                           const DesignEditorUIState::LayerSelection &layerSelection,
                           int selectedDisplayMode);

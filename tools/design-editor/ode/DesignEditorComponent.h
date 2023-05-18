@@ -10,8 +10,8 @@ struct DesignEditorComponent {
     DesignEditorComponent() = default;
     ~DesignEditorComponent();
 
-    /// Json representation of the component
-    std::string octopusJson;
+    /// Id.
+    ODE_StringRef id;
 
     /// Component handle
     ODE_ComponentHandle component;

@@ -33,6 +33,7 @@ namespace {
 struct {
     const Vector2f size { 1920, 1080 };
     const Color color { 1.0, 1.0, 1.0, 1.0 };
+    const std::string id = "NEW_COMPONENT";
     const std::string rootId = "COMPONENT_ROOT";
     const std::string backgroundId = "BACKGROUND";
 } DEFAULT_NEW_COMPONENT;
@@ -142,175 +143,196 @@ int DesignEditorWindow::display() {
         drawControlsWidget(context.design, ui);
 
         if (!context.design.empty()) {
-            DesignEditorComponent &component = context.design.components.back();
+            const ODE_StringRef &selectedComponentId = ui.componentSelection.componentId;
+            const auto selectedComponentIt = std::find_if(context.design.components.begin(), context.design.components.end(), [&selectedComponentId](const DesignEditorComponent &component) {
+                return component.id.length == selectedComponentId.length && strcmp(component.id.data, selectedComponentId.data) == 0;
+            });
 
-            // Mouse click
-            if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && ui.canvas.isMouseOver) {
-                const ODE_Vector2 mousePosImageSpace = toImageSpace(ImGui::GetMousePos(), ui.canvas, component);
+            if (selectedComponentIt != context.design.components.end()) {
+                const DesignEditorUIState::Canvas &selectedCanvas = ui.canvases[ode_stringDeref(selectedComponentId)];
 
-                // If a single group or mask group is selected, insert into it, otherwise to the top layer
-                const ODE_StringRef &topLayerID = component.layerList.entries[0].id;
-                ODE_StringRef insertionLayerId = topLayerID;
-                const std::vector<ODE_StringRef> &selectedLayerIds = ui.layerSelection.layerIDs;
+                // Mouse click
+                if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && selectedCanvas.isMouseOver) {
+                    const ODE_Vector2 mousePosImageSpace = toImageSpace(ImGui::GetMousePos(), selectedCanvas, *selectedComponentIt);
 
-                if (selectedLayerIds.size() == 1) {
-                    ODE_String octopusString;
-                    if (ode_component_getOctopus(component.component, &octopusString) == ODE_RESULT_OK) {
-                        octopus::Octopus componentOctopus;
-                        octopus::Parser::parse(componentOctopus, octopusString.data);
+                    // If a single group or mask group is selected, insert into it, otherwise to the top layer
+                    const ODE_StringRef &topLayerID = selectedComponentIt->layerList.entries[0].id;
+                    ODE_StringRef insertionLayerId = topLayerID;
+                    const std::vector<ODE_StringRef> &selectedLayerIds = ui.layerSelection.layerIDs;
 
-                        if (componentOctopus.content.has_value()) {
-                            const ODE_StringRef &selectedLayerId = selectedLayerIds.front();
-                            const octopus::Layer *layer = findLayer(*componentOctopus.content, ode_stringDeref(selectedLayerId));
+                    if (selectedLayerIds.size() == 1) {
+                        ODE_String octopusString;
+                        if (ode_component_getOctopus(selectedComponentIt->component, &octopusString) == ODE_RESULT_OK) {
+                            octopus::Octopus componentOctopus;
+                            octopus::Parser::parse(componentOctopus, octopusString.data);
 
-                            if (layer != nullptr && (layer->type == octopus::Layer::Type::GROUP || layer->type == octopus::Layer::Type::MASK_GROUP)) {
-                                insertionLayerId = selectedLayerId;
+                            if (componentOctopus.content.has_value()) {
+                                const ODE_StringRef &selectedLayerId = selectedLayerIds.front();
+                                const octopus::Layer *layer = findLayer(*componentOctopus.content, ode_stringDeref(selectedLayerId));
+
+                                if (layer != nullptr && (layer->type == octopus::Layer::Type::GROUP || layer->type == octopus::Layer::Type::MASK_GROUP)) {
+                                    insertionLayerId = selectedLayerId;
+                                }
                             }
                         }
                     }
-                }
 
-                // Layer insertion
-                if (ui.mode == DesignEditorUIState::Mode::ADD_RECTANGLE ||
-                    ui.mode == DesignEditorUIState::Mode::ADD_ELLIPSE ||
-                    ui.mode == DesignEditorUIState::Mode::ADD_TEXT) {
-                    const octopus::Octopus octopus = [mode = ui.mode, &layerList = component.layerList]()->octopus::Octopus {
-                        if (mode == DesignEditorUIState::Mode::ADD_RECTANGLE) {
-                            ode::octopus_builder::ShapeLayer rectangleShape(0, 0, DEFAULT_NEW_SHAPE_SIZE.x, DEFAULT_NEW_SHAPE_SIZE.y);
-                            rectangleShape.setColor(DEFAULT_NEW_SHAPE_COLOR);
-                            const std::optional<std::string> idOpt = findAvailableLayerId("RECTANGLE", layerList);
-                            if (idOpt.has_value()) {
-                                rectangleShape.id = *idOpt;
-                                rectangleShape.name = *idOpt;
+                    // Layer insertion
+                    if (ui.mode == DesignEditorUIState::Mode::ADD_RECTANGLE ||
+                        ui.mode == DesignEditorUIState::Mode::ADD_ELLIPSE ||
+                        ui.mode == DesignEditorUIState::Mode::ADD_TEXT) {
+                        const octopus::Octopus octopus = [mode = ui.mode, &layerList = selectedComponentIt->layerList]()->octopus::Octopus {
+                            if (mode == DesignEditorUIState::Mode::ADD_RECTANGLE) {
+                                ode::octopus_builder::ShapeLayer rectangleShape(0, 0, DEFAULT_NEW_SHAPE_SIZE.x, DEFAULT_NEW_SHAPE_SIZE.y);
+                                rectangleShape.setColor(DEFAULT_NEW_SHAPE_COLOR);
+                                const std::optional<std::string> idOpt = findAvailableLayerId("RECTANGLE", layerList);
+                                if (idOpt.has_value()) {
+                                    rectangleShape.id = *idOpt;
+                                    rectangleShape.name = *idOpt;
+                                }
+                                return ode::octopus_builder::buildOctopus("Rectangle", rectangleShape);
+
+                            } else if (mode == DesignEditorUIState::Mode::ADD_ELLIPSE) {
+                                const std::string w = std::to_string(DEFAULT_NEW_SHAPE_SIZE.x);
+                                const std::string ratio = std::to_string(DEFAULT_NEW_SHAPE_SIZE.x / DEFAULT_NEW_SHAPE_SIZE.y);
+                                ode::octopus_builder::ShapeLayer ellipseShape(0, 0, DEFAULT_NEW_SHAPE_SIZE.x, DEFAULT_NEW_SHAPE_SIZE.y);
+                                ellipseShape.setPath("M 0,0 a " + ratio + " 1 0 0 0 " + w + " 0 a " + ratio + " 1 0 0 0 -" + w + " 0");
+                                ellipseShape.setColor(DEFAULT_NEW_SHAPE_COLOR);
+                                const std::optional<std::string> idOpt = findAvailableLayerId("ELLIPSE", layerList);
+                                if (idOpt.has_value()) {
+                                    ellipseShape.id = *idOpt;
+                                    ellipseShape.name = *idOpt;
+                                }
+                                return ode::octopus_builder::buildOctopus("Ellipse", ellipseShape);
+
+                            } else {
+                                ode::octopus_builder::TextLayer textShape("Text");
+                                textShape.setColor(DEFAULT_NEW_SHAPE_COLOR);
+                                const std::optional<std::string> idOpt = findAvailableLayerId("TEXT", layerList);
+                                if (idOpt.has_value()) {
+                                    textShape.id = *idOpt;
+                                    textShape.name = *idOpt;
+                                }
+                                return ode::octopus_builder::buildOctopus("Text", textShape);
                             }
-                            return ode::octopus_builder::buildOctopus("Rectangle", rectangleShape);
+                        } ();
 
-                        } else if (mode == DesignEditorUIState::Mode::ADD_ELLIPSE) {
-                            const std::string w = std::to_string(DEFAULT_NEW_SHAPE_SIZE.x);
-                            const std::string ratio = std::to_string(DEFAULT_NEW_SHAPE_SIZE.x / DEFAULT_NEW_SHAPE_SIZE.y);
-                            ode::octopus_builder::ShapeLayer ellipseShape(0, 0, DEFAULT_NEW_SHAPE_SIZE.x, DEFAULT_NEW_SHAPE_SIZE.y);
-                            ellipseShape.setPath("M 0,0 a " + ratio + " 1 0 0 0 " + w + " 0 a " + ratio + " 1 0 0 0 -" + w + " 0");
-                            ellipseShape.setColor(DEFAULT_NEW_SHAPE_COLOR);
-                            const std::optional<std::string> idOpt = findAvailableLayerId("ELLIPSE", layerList);
-                            if (idOpt.has_value()) {
-                                ellipseShape.id = *idOpt;
-                                ellipseShape.name = *idOpt;
+                        std::string octopusLayerJson;
+                        octopus::Serializer::serialize(octopusLayerJson, *octopus.content);
+
+                        ODE_ParseError parseError;
+                        const ODE_Result result = ode_component_addLayer(selectedComponentIt->component, insertionLayerId, {}, ode_stringRef(octopusLayerJson), &parseError);
+
+                        if (result == ODE_RESULT_OK) {
+                            loadMissingFonts(fontDirectory);
+
+                            const ODE_Transformation translation { 1, 0, 0, 1, std::round(mousePosImageSpace.x), std::round(mousePosImageSpace.y) };
+                            ode_component_listLayers(selectedComponentIt->component, &selectedComponentIt->layerList);
+                            const ODE_StringRef insertedLayerId = lastChildLayerId(selectedComponentIt->layerList, insertionLayerId);
+
+                            if (insertedLayerId.data!=nullptr && insertedLayerId.length>=0) {
+                                // First apply the inverse group transformation so that the new layer is at the origin of the component
+                                ODE_LayerMetrics parentLayerMetrics;
+                                ode_component_getLayerMetrics(selectedComponentIt->component, insertionLayerId, &parentLayerMetrics);
+                                const TransformationMatrix parentTransformation(parentLayerMetrics.transformation.matrix);
+                                const TransformationMatrix invParentTransformation = inverse(parentTransformation);
+                                const ODE_Transformation invParentTr {{ invParentTransformation[0][0], invParentTransformation[0][1], invParentTransformation[1][0], invParentTransformation[1][1], invParentTransformation[2][0], invParentTransformation[2][1] }};
+                                ode_component_transformLayer(selectedComponentIt->component, insertedLayerId, ODE_TRANSFORMATION_BASIS_PARENT_COMPONENT, invParentTr);
+                                // Translate to the position specified by mouse click
+                                ode_component_transformLayer(selectedComponentIt->component, insertedLayerId, ODE_TRANSFORMATION_BASIS_PARENT_COMPONENT, translation);
                             }
-                            return ode::octopus_builder::buildOctopus("Ellipse", ellipseShape);
 
+                            ode_pr1_drawComponent(context.rc, selectedComponentIt->component, context.design.imageBase, &selectedComponentIt->bitmap, context.frameView);
+                        }
+
+                    } else if (ui.mode == DesignEditorUIState::Mode::SELECT || ui.mode == DesignEditorUIState::Mode::MOVE) {
+                        ODE_String selectedLayerId;
+                        ode_component_identifyLayer(selectedComponentIt->component, &selectedLayerId, mousePosImageSpace, 2.0f);
+                        if (isImGuiMultiselectKeyModifierPressed()) {
+                            ui.layerSelection.add(selectedLayerId.data);
                         } else {
-                            ode::octopus_builder::TextLayer textShape("Text");
-                            textShape.setColor(DEFAULT_NEW_SHAPE_COLOR);
-                            const std::optional<std::string> idOpt = findAvailableLayerId("TEXT", layerList);
-                            if (idOpt.has_value()) {
-                                textShape.id = *idOpt;
-                                textShape.name = *idOpt;
-                            }
-                            return ode::octopus_builder::buildOctopus("Text", textShape);
+                            ui.layerSelection.select(selectedLayerId.data);
                         }
-                    } ();
-
-                    std::string octopusLayerJson;
-                    octopus::Serializer::serialize(octopusLayerJson, *octopus.content);
-
-                    ODE_ParseError parseError;
-                    const ODE_Result result = ode_component_addLayer(component.component, insertionLayerId, {}, ode_stringRef(octopusLayerJson), &parseError);
-
-                    if (result == ODE_RESULT_OK) {
-                        loadMissingFonts(fontDirectory);
-
-                        const ODE_Transformation translation { 1, 0, 0, 1, std::round(mousePosImageSpace.x), std::round(mousePosImageSpace.y) };
-                        ode_component_listLayers(component.component, &component.layerList);
-                        const ODE_StringRef insertedLayerId = lastChildLayerId(component.layerList, insertionLayerId);
-                        if (insertedLayerId.data!=nullptr && insertedLayerId.length>=0) {
-                            // First apply the inverse group transformation so that the new layer is at the origin of the component
-                            ODE_LayerMetrics parentLayerMetrics;
-                            ode_component_getLayerMetrics(component.component, insertionLayerId, &parentLayerMetrics);
-                            const TransformationMatrix parentTransformation(parentLayerMetrics.transformation.matrix);
-                            const TransformationMatrix invParentTransformation = inverse(parentTransformation);
-                            const ODE_Transformation invParentTr {{ invParentTransformation[0][0], invParentTransformation[0][1], invParentTransformation[1][0], invParentTransformation[1][1], invParentTransformation[2][0], invParentTransformation[2][1] }};
-                            ode_component_transformLayer(component.component, insertedLayerId, ODE_TRANSFORMATION_BASIS_PARENT_COMPONENT, invParentTr);
-                            // Translate to the position specified by mouse click
-                            ode_component_transformLayer(component.component, insertedLayerId, ODE_TRANSFORMATION_BASIS_PARENT_COMPONENT, translation);
-                        }
-
-                        ode_pr1_drawComponent(context.rc, component.component, context.design.imageBase, &component.bitmap, context.frameView);
-                    }
-
-                } else if (ui.mode == DesignEditorUIState::Mode::SELECT || ui.mode == DesignEditorUIState::Mode::MOVE) {
-                    ODE_String selectedLayerId;
-                    ode_component_identifyLayer(component.component, &selectedLayerId, mousePosImageSpace, 2.0f);
-                    if (isImGuiMultiselectKeyModifierPressed()) {
-                        ui.layerSelection.add(selectedLayerId.data);
-                    } else {
-                        ui.layerSelection.select(selectedLayerId.data);
                     }
                 }
-            }
 
-            // Mouse rectangle selection
-            if (ui.mode == DesignEditorUIState::Mode::SELECT &&
-                ui.canvas.mouseClickPos.has_value() &&
-                ui.canvas.mouseDragPos.has_value()) {
-                const ODE_Vector2 rectStartInImageSpace = toImageSpace(*ui.canvas.mouseClickPos, ui.canvas, component);
-                const ODE_Vector2 rectEndInImageSpace = toImageSpace(*ui.canvas.mouseDragPos, ui.canvas, component);
-                const ODE_Rectangle selectionRectangle {
-                    ODE_Vector2 { std::min(rectStartInImageSpace.x, rectEndInImageSpace.x), std::min(rectStartInImageSpace.y, rectEndInImageSpace.y) },
-                    ODE_Vector2 { std::max(rectStartInImageSpace.x, rectEndInImageSpace.x), std::max(rectStartInImageSpace.y, rectEndInImageSpace.y) } };
+                // Mouse rectangle selection
+                if (ui.mode == DesignEditorUIState::Mode::SELECT &&
+                    selectedCanvas.mouseClickPos.has_value() &&
+                    selectedCanvas.mouseDragPos.has_value()) {
+                    const ODE_Vector2 rectStartInImageSpace = toImageSpace(*selectedCanvas.mouseClickPos, selectedCanvas, *selectedComponentIt);
+                    const ODE_Vector2 rectEndInImageSpace = toImageSpace(*selectedCanvas.mouseDragPos, selectedCanvas, *selectedComponentIt);
+                    const ODE_Rectangle selectionRectangle {
+                        ODE_Vector2 { std::min(rectStartInImageSpace.x, rectEndInImageSpace.x), std::min(rectStartInImageSpace.y, rectEndInImageSpace.y) },
+                        ODE_Vector2 { std::max(rectStartInImageSpace.x, rectEndInImageSpace.x), std::max(rectStartInImageSpace.y, rectEndInImageSpace.y) } };
 
-                ui.layerSelection.clear();
+                    ui.layerSelection.clear();
 
-                for (int i = 0; i < component.layerList.n; ++i) {
-                    const ODE_LayerList::Entry &layer = component.layerList.entries[i];
+                    for (int i = 0; i < selectedComponentIt->layerList.n; ++i) {
+                        const ODE_LayerList::Entry &layer = selectedComponentIt->layerList.entries[i];
 
-                    ODE_LayerMetrics layerMetrics;
-                    ode_component_getLayerMetrics(component.component, layer.id, &layerMetrics);
+                        ODE_LayerMetrics layerMetrics;
+                        ode_component_getLayerMetrics(selectedComponentIt->component, layer.id, &layerMetrics);
 
-                    if (isRectangleIntersection(selectionRectangle, layerMetrics.transformedGraphicalBounds)) {
-                        ui.layerSelection.add(layer.id.data);
+                        if (isRectangleIntersection(selectionRectangle, layerMetrics.transformedGraphicalBounds)) {
+                            ui.layerSelection.add(layer.id.data);
+                        }
                     }
                 }
-            }
-            // Mouse move
-            if (ui.mode == DesignEditorUIState::Mode::MOVE &&
-                !ui.layerSelection.empty() &&
-                ui.canvas.mouseDragPos.has_value() &&
-                ui.canvas.prevMouseDragPos.has_value() &&
-                (ui.canvas.mouseDragPos->x != ui.canvas.prevMouseDragPos->x || ui.canvas.mouseDragPos->y != ui.canvas.prevMouseDragPos->y)) {
-                const ODE_Vector2 prevPosInImageSpace = toImageSpace(*ui.canvas.prevMouseDragPos, ui.canvas, component);
-                const ODE_Vector2 posInImageSpace = toImageSpace(*ui.canvas.mouseDragPos, ui.canvas, component);
+                // Mouse move
+                if (ui.mode == DesignEditorUIState::Mode::MOVE &&
+                    !ui.layerSelection.empty() &&
+                    selectedCanvas.mouseDragPos.has_value() &&
+                    selectedCanvas.prevMouseDragPos.has_value() &&
+                    (selectedCanvas.mouseDragPos->x != selectedCanvas.prevMouseDragPos->x || selectedCanvas.mouseDragPos->y != selectedCanvas.prevMouseDragPos->y)) {
+                    const ODE_Vector2 prevPosInImageSpace = toImageSpace(*selectedCanvas.prevMouseDragPos, selectedCanvas, *selectedComponentIt);
+                    const ODE_Vector2 posInImageSpace = toImageSpace(*selectedCanvas.mouseDragPos, selectedCanvas, *selectedComponentIt);
 
-                const ODE_Scalar trX = posInImageSpace.x - prevPosInImageSpace.x;
-                const ODE_Scalar trY = posInImageSpace.y - prevPosInImageSpace.y;
+                    const ODE_Scalar trX = posInImageSpace.x - prevPosInImageSpace.x;
+                    const ODE_Scalar trY = posInImageSpace.y - prevPosInImageSpace.y;
 
-                const ODE_Vector2 translationInImageSpace = ImGui::IsKeyDown(ImGuiKey_LeftShift)
+                    const ODE_Vector2 translationInImageSpace = ImGui::IsKeyDown(ImGuiKey_LeftShift)
                     ? ODE_Vector2 { std::round(trX), std::round(trY) }
                     : ODE_Vector2 { trX, trY };;
 
-                for (const ODE_StringRef &layerId : ui.layerSelection.layerIDs) {
-                    const ODE_Transformation newTransformation { 1,0,0,1,translationInImageSpace.x,translationInImageSpace.y };
-                    if (ode_component_transformLayer(component.component, layerId, ODE_TRANSFORMATION_BASIS_PARENT_COMPONENT, newTransformation) == ODE_RESULT_OK) {
-                        ode_pr1_drawComponent(context.rc, component.component, context.design.imageBase, &component.bitmap, context.frameView);
+                    for (const ODE_StringRef &layerId : ui.layerSelection.layerIDs) {
+                        const ODE_Transformation newTransformation { 1,0,0,1,translationInImageSpace.x,translationInImageSpace.y };
+                        if (ode_component_transformLayer(selectedComponentIt->component, layerId, ODE_TRANSFORMATION_BASIS_PARENT_COMPONENT, newTransformation) == ODE_RESULT_OK) {
+                            ode_pr1_drawComponent(context.rc, selectedComponentIt->component, context.design.imageBase, &selectedComponentIt->bitmap, context.frameView);
+                        }
                     }
                 }
-            }
 
-            if (ui.canvas.isMouseOver) {
-                const ODE_Vector2 mousePosImageSpace = toImageSpace(ImGui::GetMousePos(), ui.canvas, component);
-                ImGui::SetTooltip("[%.2f, %.2f]", mousePosImageSpace.x, mousePosImageSpace.y);
-            }
+                if (selectedCanvas.isMouseOver) {
+                    const ODE_Vector2 mousePosImageSpace = toImageSpace(ImGui::GetMousePos(), selectedCanvas, *selectedComponentIt);
+                    ImGui::SetTooltip("[%.2f, %.2f]", mousePosImageSpace.x, mousePosImageSpace.y);
+                }
 
-            if (ui.widgets.showToolbar) {
-                drawToolbarWidget(context, component, ui.layerSelection, ui.mode);
-            }
-            if (ui.widgets.showLayerList) {
-                drawLayerListWidget(component.layerList, ui.layerSelection);
-            }
-            if (ui.widgets.showDesignView) {
-                drawDesignViewWidget(component.component, component.bitmap, *renderer, ui.mode, ui.textures, ui.canvas, ui.layerSelection, ui.imageVisualizationParams.selectedDisplayMode);
-            }
-            if (ui.widgets.showLayerProperties) {
-                drawLayerPropertiesWidget(context, component, ui.layerSelection, ui.fileDialog);
+                if (ui.widgets.showToolbar) {
+                    drawToolbarWidget(context, *selectedComponentIt, ui.layerSelection, ui.mode);
+                }
+                if (ui.widgets.showLayerList) {
+                    drawLayerListWidget(selectedComponentIt->layerList, ui.layerSelection);
+                }
+                if (ui.widgets.showDesignView) {
+                    for (const DesignEditorComponent &component : context.design.components) {
+                        DesignEditorUIState::Canvas &canvas = ui.canvases[ode_stringDeref(component.id)];
+
+                        drawDesignViewWidget(component.component,
+                                             component.id,
+                                             component.bitmap,
+                                             *renderer,
+                                             ui.textures.designImageTexture,
+                                             ui.mode,
+                                             canvas,
+                                             ui.componentSelection,
+                                             component.component.ptr==selectedComponentIt->component.ptr ? ui.layerSelection : DesignEditorUIState::LayerSelection(),
+                                             ui.imageVisualizationParams.selectedDisplayMode);
+                    }
+                }
+                if (ui.widgets.showLayerProperties) {
+                    drawLayerPropertiesWidget(context, *selectedComponentIt, ui.layerSelection, ui.fileDialog);
+                }
             }
         }
 
@@ -358,10 +380,6 @@ void DesignEditorWindow::setFontDirectory(const FilePath &fontDirectory_) {
 }
 
 void DesignEditorWindow::handleKeyboardEvents() {
-    const float zoomKeySpeed = 0.03f;
-    const float minZoom = 1.0f;
-    const float maxZoom = 10.0f;
-
     if (ImGui::IsKeyDown(ImGuiKey_LeftSuper) || ImGui::IsKeyDown(ImGuiKey_LeftCtrl)) {
         if (ImGui::IsKeyDown(ImGuiKey_1)) {
             ui.mode = DesignEditorUIState::Mode::SELECT;
@@ -373,12 +391,6 @@ void DesignEditorWindow::handleKeyboardEvents() {
             ui.mode = DesignEditorUIState::Mode::ADD_ELLIPSE;
         } else if (ImGui::IsKeyDown(ImGuiKey_5)) {
             ui.mode = DesignEditorUIState::Mode::ADD_TEXT;
-        }
-
-        if (ImGui::IsKeyDown(ImGuiKey_W)) {
-            ui.canvas.zoom = std::clamp(ui.canvas.zoom + zoomKeySpeed, minZoom, maxZoom);
-        } else if (ImGui::IsKeyDown(ImGuiKey_S)) {
-            ui.canvas.zoom = std::clamp(ui.canvas.zoom - zoomKeySpeed, minZoom, maxZoom);
         }
     }
 }
@@ -402,7 +414,6 @@ int DesignEditorWindow::loadMissingFonts(const FilePath &fontDir) {
 int DesignEditorWindow::createEmptyDesign(const FilePath &fontDir) {
     ui.layerSelection.clear();
 
-    // TODO: Allow multiple components
     if (context.design.design.ptr) {
         CHECK(ode_destroyDesign(context.design.design));
         CHECK(ode_createDesign(context.engine, &context.design.design));
@@ -413,6 +424,7 @@ int DesignEditorWindow::createEmptyDesign(const FilePath &fontDir) {
 
     context.design.components.clear();
     DesignEditorComponent &newComponent = context.design.components.emplace_back();
+    newComponent.id = ode_stringRef(DEFAULT_NEW_COMPONENT.id);
 
     ode::octopus_builder::ShapeLayer backgroundShape(0, 0, DEFAULT_NEW_COMPONENT.size.x, DEFAULT_NEW_COMPONENT.size.y);
     backgroundShape.setColor(DEFAULT_NEW_COMPONENT.color);
@@ -424,39 +436,95 @@ int DesignEditorWindow::createEmptyDesign(const FilePath &fontDir) {
     octopus::Octopus oc = ode::octopus_builder::buildOctopus("Mask Group", maskGroup);
     oc.dimensions = { DEFAULT_NEW_COMPONENT.size.x, DEFAULT_NEW_COMPONENT.size.y };
 
-    octopus::Serializer::serialize(newComponent.octopusJson, oc);
+    std::string octopusJson;
+    octopus::Serializer::serialize(octopusJson, oc);
 
-    CHECK(ode_design_addComponentFromOctopusString(context.design.design, &newComponent.component, newComponent.metadata, ode_stringRef(newComponent.octopusJson), nullptr));
+    CHECK(ode_design_addComponentFromOctopusString(context.design.design, &newComponent.component, newComponent.metadata, ode_stringRef(octopusJson), nullptr));
     CHECK(loadMissingFonts(fontDir));
     CHECK(ode_component_listLayers(newComponent.component, &newComponent.layerList));
     CHECK(ode_pr1_drawComponent(context.rc, newComponent.component, context.design.imageBase, &newComponent.bitmap, context.frameView));
+
+    ui.componentSelection.componentId = newComponent.id;
+
     return 0;
 }
 
 int DesignEditorWindow::reloadOctopus(const FilePath &octopusPath, const FilePath &fontDir) {
+    const std::string octopusPathStr = (std::string)octopusPath;
+    const bool isOctopusFile = (octopusPathStr.substr(octopusPathStr.find_last_of(".")+1) == "octopus");
+    const bool isOctopusComponentFile = (octopusPathStr.substr(octopusPathStr.find_last_of(".")+1) == "json");
+
+    if (!(isOctopusFile || isOctopusComponentFile)) {
+        return 0;
+    }
+
     ui.layerSelection.clear();
 
-    // TODO: Allow multiple components
     if (context.design.design.ptr) {
         CHECK(ode_destroyDesign(context.design.design));
         CHECK(ode_createDesign(context.engine, &context.design.design));
     }
 
+    ODE_ParseError parseError;
+
     context.design.components.clear();
-    DesignEditorComponent &newComponent = context.design.components.emplace_back();
+    ODE_StringList componentIds;
 
-    if (!readFile(octopusPath, newComponent.octopusJson)) {
-        fprintf(stderr, "Failed to read file \"%s\"\n", ((const std::string &) octopusPath).c_str());
-        return false;
+    if (isOctopusFile) {
+        CHECK(ode_loadDesignFromFile(context.engine, &context.design.design, ode_stringRef((octopusPathStr)), &parseError));
+
+        CHECK(ode_design_listComponents(context.design.design, &componentIds));
+
+        // TODO: ImageBase
+
+        for (int i = 0; i < componentIds.n; ++i) {
+            DesignEditorComponent &newComponent = context.design.components.emplace_back();
+            newComponent.id = componentIds.entries[i];
+
+            CHECK(ode_design_getComponent(context.design.design, &newComponent.component, newComponent.id));
+        }
+
+        CHECK(loadMissingFonts(fontDir));
+
+        for (int i = 0; i < componentIds.n; ++i) {
+            DesignEditorComponent &newComponent = context.design.components[i];
+
+            CHECK(ode_component_listLayers(newComponent.component, &newComponent.layerList));
+            CHECK(ode_pr1_drawComponent(context.rc, newComponent.component, context.design.imageBase, &newComponent.bitmap, context.frameView));
+        }
+
+    } else if (isOctopusComponentFile) {
+        DesignEditorComponent &newComponent = context.design.components.emplace_back();
+
+        std::string octopusJson;
+        if (!readFile(octopusPath, octopusJson)) {
+            fprintf(stderr, "Failed to read file \"%s\"\n", ((const std::string &) octopusPath).c_str());
+            return 0;
+        }
+        context.design.imageDirectory = imageDirectory.empty() ? (std::string)octopusPath.parent()+"/images" : imageDirectory;
+        // TODO: set imageBase directory using the ODE API
+        reinterpret_cast<ImageBase *>(context.design.imageBase.ptr)->setImageDirectory(context.design.imageDirectory.parent());
+
+        CHECK(ode_design_addComponentFromOctopusString(context.design.design, &newComponent.component, newComponent.metadata, ode_stringRef(octopusJson), &parseError));
+
+        CHECK(ode_design_listComponents(context.design.design, &componentIds));
+        if (componentIds.n != 1) {
+            return 1;
+        }
+        newComponent.id = componentIds.entries[0];
+
+        CHECK(loadMissingFonts(fontDir));
+        CHECK(ode_component_listLayers(newComponent.component, &newComponent.layerList));
+        CHECK(ode_pr1_drawComponent(context.rc, newComponent.component, context.design.imageBase, &newComponent.bitmap, context.frameView));
     }
-    context.design.imageDirectory = imageDirectory.empty() ? (std::string)octopusPath.parent()+"/images" : imageDirectory;
-    // TODO: set imageBase directory using the ODE API
-    reinterpret_cast<ImageBase *>(context.design.imageBase.ptr)->setImageDirectory(context.design.imageDirectory.parent());
 
-    CHECK(ode_design_addComponentFromOctopusString(context.design.design, &newComponent.component, newComponent.metadata, ode_stringRef(newComponent.octopusJson), nullptr));
-    CHECK(loadMissingFonts(fontDir));
-    CHECK(ode_component_listLayers(newComponent.component, &newComponent.layerList));
-    CHECK(ode_pr1_drawComponent(context.rc, newComponent.component, context.design.imageBase, &newComponent.bitmap, context.frameView));
+    ui.canvases.clear();
+    if (componentIds.n > 0) {
+        ui.componentSelection.componentId = componentIds.entries[0];
+    }
+    for (int i = 0; i < componentIds.n; ++i) {
+        ui.canvases[ode_stringDeref(componentIds.entries[i])] = DesignEditorUIState::Canvas {};
+    }
 
     if (ui.fileDialog.octopusFilePath.empty()) {
         ui.fileDialog.octopusFilePath = (std::string)octopusPath.parent();
