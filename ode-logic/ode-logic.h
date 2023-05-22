@@ -14,5 +14,6 @@
 #include "ode/design-management/ChangeNotification.h"
 #include "ode/design-management/Component.h"
 #include "ode/design-management/Design.h"
+#include "ode/design-management/OctopusFile.h"
 #include "ode/animation/DocumentAnimation.h"
 #include "ode/animation/animate.h"

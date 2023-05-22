@@ -1,112 +1,21 @@
 
 #include "MemoryFileSystem.h"
 
-#include <iostream>
-#include <fstream>
-#include <sstream>
 #include <zlib.h>
 
 namespace ode {
 
-#define PK_SIGNATURE "PK\x03\x04"
+#define COMPRESSION_BUFFER_SIZE     1<<15
+#define COMPRESSION_WINDOW_SIZE     -15
+#define COMPRESSION_LEVEL           9
 
-#define CHECK_OPEN(condition, err) \
-    if (!(condition)) { \
-        if (error) { \
-            *error = Error::err; \
-        } \
-        clear(); \
-        return false; \
-    }
-
-#define CHECK_DATA(condition, err) \
+#define CHECK(condition, err) \
     if (!(condition)) { \
         if (error) { \
             *error = Error::err; \
         } \
         return std::nullopt; \
     }
-
-#define CHECK_HEADER(offset, value, length) \
-    { \
-        file.seekg(offset, std::ios::beg); \
-        std::string str(length, '\0'); \
-        file.read(&str[0], length); \
-        CHECK_OPEN(str == value, INVALID_OCTOPUS_FILE); \
-    }
-
-bool MemoryFileSystem::openOctopusFile(const FilePath &octopusFilePath, Error *error) {
-    clear();
-
-    if (error)
-        *error = Error::OK;
-
-    std::ifstream file((std::string)octopusFilePath, std::ios::binary);
-
-    CHECK_OPEN(file, ERROR_OPENING_FILE);
-
-    // Check if the file is a valid Octopus file
-    CHECK_OPEN(checkOctopusFileHeader(file), INVALID_OCTOPUS_FILE);
-
-    // Read end-of-central-directory record
-    file.seekg(-22, std::ios::end);
-    char eocd[22];
-    file.read(eocd, 22);
-
-    // Parse end-of-central-directory record
-    const uint16_t filesCount = *(uint16_t*)(eocd + 10);
-    const uint32_t centralDirOffset = *(uint32_t*)(eocd + 16);
-    const uint32_t centralDirSize = *(uint32_t*)(eocd + 12);
-
-    // Read central directory
-    file.seekg(centralDirOffset, std::ios::beg);
-    std::string centralDir(centralDirSize, '\0');
-    file.read(centralDir.data(), centralDirSize);
-
-    uint16_t centralDirFileOffset = 0;
-
-    for (int i = 0; i < filesCount; ++i) {
-        const uint32_t headerOffset = *(uint32_t*)(centralDir.data() + centralDirFileOffset + 42);
-
-        const uint16_t filenameLengthCentralDir = *(uint16_t*)(centralDir.data() + centralDirFileOffset + 28);
-        const uint16_t m = *(uint16_t*)(centralDir.data() + centralDirFileOffset + 30);
-        const uint16_t k = *(uint16_t*)(centralDir.data() + centralDirFileOffset + 32);
-
-        std::string filePath(filenameLengthCentralDir, '\0');
-        std::memcpy(filePath.data(), centralDir.data() + centralDirFileOffset + 46, filenameLengthCentralDir);
-
-        file.seekg(headerOffset, std::ios::beg);
-        std::string signature(4, '\0');
-        file.read(&signature[0], 4);
-
-        CHECK_OPEN(signature == PK_SIGNATURE, INVALID_OCTOPUS_FILE);
-
-        File &newFile = files.emplace_back();
-
-        newFile.compressionMethod = *(CompressionMethod*)(centralDir.data() + centralDirFileOffset + 10);
-        newFile.compressedSize = *(uint32_t*)(centralDir.data() + centralDirFileOffset + 20);
-        newFile.uncompressedSize = *(uint32_t*)(centralDir.data() + centralDirFileOffset + 24);
-
-        newFile.path = filePath;
-
-        file.seekg(22, std::ios::cur);
-        uint16_t filenameLength;
-        file.read(reinterpret_cast<char*>(&filenameLength), 2);
-
-        CHECK_OPEN(filenameLength == filenameLengthCentralDir, INVALID_OCTOPUS_FILE);
-
-        uint16_t extraFieldLength;
-        file.read(reinterpret_cast<char*>(&extraFieldLength), 2);
-        file.seekg(filenameLength+extraFieldLength, std::ios::cur);
-
-        newFile.data.resize(newFile.compressedSize, '\0');
-        file.read(&newFile.data[0], newFile.compressedSize);
-
-        centralDirFileOffset += 46 + filenameLengthCentralDir + m + k;
-    }
-
-    return true;
-}
 
 const std::vector<FilePath> MemoryFileSystem::filePaths() const {
     std::vector<FilePath> result;
@@ -138,37 +47,34 @@ std::optional<std::string> MemoryFileSystem::getFileData(const FilePath& filePat
             z_stream zs;
             memset(&zs, 0, sizeof(zs));
 
-            CHECK_DATA(inflateInit2(&zs, -15) == Z_OK, DECOMPRESSION_FAILED);
+            CHECK(inflateInit2(&zs, COMPRESSION_WINDOW_SIZE) == Z_OK, DECOMPRESSION_FAILED);
 
             zs.next_in = (Bytef*)fileIt->data.data();
             zs.avail_in = (uInt)fileIt->data.size();
 
-            int ret = Z_OK;
-            char outbuffer[1 << 15];
+            int result = Z_OK;
+            char outbuffer[COMPRESSION_BUFFER_SIZE];
             std::string decompressedData;
 
             do {
                 zs.next_out = reinterpret_cast<Bytef*>(outbuffer);
                 zs.avail_out = sizeof(outbuffer);
 
-                ret = inflate(&zs, 0);
+                result = inflate(&zs, 0);
 
                 if (decompressedData.size() < zs.total_out) {
                     decompressedData.append(outbuffer, zs.total_out - decompressedData.size());
                 }
-            } while (ret == Z_OK);
+            } while (result == Z_OK);
 
-            CHECK_DATA(inflateEnd(&zs) == Z_OK, DECOMPRESSION_FAILED);
-            CHECK_DATA(ret == Z_STREAM_END, DECOMPRESSION_FAILED);
+            CHECK(inflateEnd(&zs) == Z_OK, DECOMPRESSION_FAILED);
+            CHECK(result == Z_STREAM_END, DECOMPRESSION_FAILED);
 
             return decompressedData;
         }
         default:
-            if (error)
-                *error = Error::UNSUPPORTED_COMPRESSION_METHOD;
-            return std::nullopt;
+            CHECK(false, UNSUPPORTED_COMPRESSION_METHOD);
     }
-
     return std::nullopt;
 }
 
@@ -176,42 +82,60 @@ void MemoryFileSystem::clear() {
     files.clear();
 }
 
-void MemoryFileSystem::add(const FilePath &path, const std::string &data) {
-    files.emplace_back(File {
-        path,
-        CompressionMethod::NONE,
-        static_cast<uint32_t>(data.size()),
-        static_cast<uint32_t>(data.size()),
-        data
-    });
-}
+std::optional<MemoryFileSystem::FileRef> MemoryFileSystem::add(const FilePath &path, const std::string &data, CompressionMethod compressionMethod, Error *error) {
+    CHECK(std::none_of(files.begin(), files.end(), [&path](const File &file) { return file.path == path; }), DUPLICATE_FILE_PATH);
 
-bool MemoryFileSystem::checkOctopusFileHeader(std::ifstream &file, Error *error) {
-    CHECK_OPEN(file.tellg() < 134, INVALID_OCTOPUS_FILE);
+    switch (compressionMethod) {
+        case CompressionMethod::NONE:
+        {
+            return files.emplace_back(File {
+                path,
+                compressionMethod,
+                static_cast<uint32_t>(data.size()),
+                static_cast<uint32_t>(data.size()),
+                data
+            });
+        }
+        case CompressionMethod::DEFLATE:
+        {
+            z_stream zs;
+            memset(&zs, 0, sizeof(zs));
 
-    CHECK_HEADER(0, PK_SIGNATURE, 4);
-    CHECK_HEADER(8, std::string(3, 0), 3);
-    CHECK_HEADER(12, std::string(1, 33), 1);
-    CHECK_HEADER(13, std::string(1, 0), 1);
-    CHECK_HEADER(26, std::string(1, 7), 1);
-    CHECK_HEADER(27, std::string(3, 0), 3);
-    CHECK_HEADER(30, "Octopus is universal design format. opendesign.dev.", 51);
+            CHECK(deflateInit2(&zs, COMPRESSION_LEVEL, Z_DEFLATED, COMPRESSION_WINDOW_SIZE, COMPRESSION_LEVEL, Z_DEFAULT_STRATEGY) == Z_OK, COMPRESSION_FAILED);
 
-    file.seekg(18, std::ios::beg);
-    std::string s18(3, '\0');
-    file.read(&s18[0], 3);
-    const uint32_t i18 = (s18[0]<<0) | (s18[1]<<8) | (s18[2]<<16);
-    CHECK_OPEN(i18 >= 44, INVALID_OCTOPUS_FILE);
+            zs.next_in = (Bytef*)data.data();
+            zs.avail_in = (uInt)data.size();
 
-    file.seekg(22, std::ios::beg);
-    std::string s22(3, '\0');
-    file.read(&s22[0], 3);
-    const uint32_t i22 = (s22[0]<<0) | (s22[1]<<8) | (s22[2]<<16);
-    CHECK_OPEN(i22 >= 44, INVALID_OCTOPUS_FILE);
+            int result;
+            char outbuffer[COMPRESSION_BUFFER_SIZE];
+            std::string compressedData;
 
-    CHECK_OPEN(s18 == s22, INVALID_OCTOPUS_FILE);
+            do {
+                zs.next_out = reinterpret_cast<Bytef*>(outbuffer);
+                zs.avail_out = sizeof(outbuffer);
 
-    return true;
+                result = deflate(&zs, Z_FINISH);
+
+                if (compressedData.size() < zs.total_out) {
+                    compressedData.append(outbuffer, zs.total_out - compressedData.size());
+                }
+            } while (result == Z_OK);
+
+            CHECK(deflateEnd(&zs) == Z_OK, COMPRESSION_FAILED);
+            CHECK(result == Z_STREAM_END, COMPRESSION_FAILED);
+
+            return files.emplace_back(File {
+                path,
+                compressionMethod,
+                static_cast<uint32_t>(compressedData.size()),
+                static_cast<uint32_t>(data.size()),
+                compressedData
+            });
+        }
+        default:
+            CHECK(false, UNSUPPORTED_COMPRESSION_METHOD);
+    }
+    return std::nullopt;
 }
 
 } // namespace ode

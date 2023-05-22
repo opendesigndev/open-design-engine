@@ -16,8 +16,10 @@ public:
         OK = 0,
         ERROR_OPENING_FILE,
         INVALID_OCTOPUS_FILE,
+        COMPRESSION_FAILED,
         DECOMPRESSION_FAILED,
-        UNSUPPORTED_COMPRESSION_METHOD
+        UNSUPPORTED_COMPRESSION_METHOD,
+        DUPLICATE_FILE_PATH
     };
 
     enum class CompressionMethod : uint16_t {
@@ -33,28 +35,22 @@ public:
         uint32_t uncompressedSize;
         std::string data;
     };
-
-    /// Initialize by opening Octopus file from the filesystem.
-    bool openOctopusFile(const FilePath &octopusFilePath, Error *error = nullptr);
-    /// Initialize by load Octopus data from a string.
-    bool readOctopusData(const std::string &octopusFileData, Error *error = nullptr);
+    using FileRef = std::reference_wrapper<File>;
+    using Files = std::vector<File>;
 
     /// Get list of all contained files as their paths.
     const std::vector<FilePath> filePaths() const;
     /// Read a single specified file. Decompress if the loaded file data is compressed.
     std::optional<std::string> getFileData(const FilePath& filePath, Error *error = nullptr) const;
 
-    /// Adds an uncompressed data file at the specified path.
-    void add(const FilePath &path, const std::string &data);
+    /// Adds a data file at the specified path, compress by the specified compression method.
+    std::optional<FileRef> add(const FilePath &path, const std::string &data, CompressionMethod compressionMethod, Error *error = nullptr);
 
     /// Clear files data.
     void clear();
 
-private:
-    /// Check if the file from the file stream has a valid Octopus header
-    bool checkOctopusFileHeader(std::ifstream &file, Error *error = nullptr);
-
-    std::vector<File> files;
+protected:
+    Files files;
 };
 
 } // namespace ode

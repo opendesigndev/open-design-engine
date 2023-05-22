@@ -13,6 +13,7 @@
 #include "animation/DocumentAnimation.h"
 #include "animation/AnimationParser.h"
 #include "design-management/Design.h"
+#include "design-management/OctopusFile.h"
 
 using namespace ode;
 
@@ -240,20 +241,19 @@ ODE_Result ODE_API ode_createDesign(ODE_EngineHandle engine, ODE_DesignHandle *d
 ODE_Result ODE_NATIVE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_DesignHandle *design, ODE_StringRef path, ODE_ParseError *parseError) {
     ODE_ASSERT(engine.ptr && design && design->ptr);
 
-    // TODO: read Octopus design file to the MemoryFileSystem
-
-    MemoryFileSystem fileSystem;
-    if (!fileSystem.openOctopusFile(ode_stringDeref(path))) {
+    // TODO: read Octopus design file
+    OctopusFile octopusFile;
+    if (!octopusFile.load(ode_stringDeref(path))) {
         return ODE_RESULT_OCTOPUS_UNAVAILABLE;
     }
 
-    for (const FilePath &filePath : fileSystem.filePaths()) {
+    for (const FilePath &filePath : octopusFile.filePaths()) {
         const std::string filePathStr = (std::string)filePath;
         const bool isJson = (filePathStr.substr(filePathStr.find_last_of(".")+1) == "json");
         const bool isOctopusComponentFile = isJson && filePathStr != "octopus-manifest.json";
 
         if (isOctopusComponentFile) {
-            const std::optional<std::string> fileData = fileSystem.getFileData(filePath);
+            const std::optional<std::string> fileData = octopusFile.getFileData(filePath);
             if (fileData.has_value()) {
                 ODE_ComponentHandle component = {};
                 ODE_ComponentMetadata metadata = {};
