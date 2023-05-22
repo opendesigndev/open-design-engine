@@ -17,13 +17,18 @@ public:
         ERROR_OPENING_FILE,
         INVALID_OCTOPUS_FILE,
         DECOMPRESSION_FAILED,
-        UNSUPPORTED_COMPRESSION_METHOD,
+        UNSUPPORTED_COMPRESSION_METHOD
+    };
+
+    enum class CompressionMethod : uint16_t {
+        NONE = 0,
+        DEFLATE = 8
     };
 
     /// A single file in the filesystem, its contents and metadata.
     struct File {
         FilePath path;
-        uint16_t compressionMethod;
+        CompressionMethod compressionMethod;
         uint32_t compressedSize;
         uint32_t uncompressedSize;
         std::string data;
@@ -36,9 +41,11 @@ public:
 
     /// Get list of all contained files as their paths.
     const std::vector<FilePath> filePaths() const;
-
     /// Read a single specified file. Decompress if the loaded file data is compressed.
     std::optional<std::string> getFileData(const FilePath& filePath, Error *error = nullptr) const;
+
+    /// Adds an uncompressed data file at the specified path.
+    void add(const FilePath &path, const std::string &data);
 
     /// Clear files data.
     void clear();

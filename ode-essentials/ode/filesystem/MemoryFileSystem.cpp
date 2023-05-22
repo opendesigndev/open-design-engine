@@ -10,9 +10,6 @@ namespace ode {
 
 #define PK_SIGNATURE "PK\x03\x04"
 
-#define COMPRESSION_STORE       0
-#define COMPRESSION_DEFLATE     8
-
 #define CHECK_OPEN(condition, err) \
     if (!(condition)) { \
         if (error) { \
@@ -86,7 +83,7 @@ bool MemoryFileSystem::openOctopusFile(const FilePath &octopusFilePath, Error *e
 
         File &newFile = files.emplace_back();
 
-        newFile.compressionMethod = *(uint16_t*)(centralDir.data() + centralDirFileOffset + 10);
+        newFile.compressionMethod = *(CompressionMethod*)(centralDir.data() + centralDirFileOffset + 10);
         newFile.compressedSize = *(uint32_t*)(centralDir.data() + centralDirFileOffset + 20);
         newFile.uncompressedSize = *(uint32_t*)(centralDir.data() + centralDirFileOffset + 24);
 
@@ -132,11 +129,11 @@ std::optional<std::string> MemoryFileSystem::getFileData(const FilePath& filePat
     }
 
     switch (fileIt->compressionMethod) {
-        case COMPRESSION_STORE:
+        case CompressionMethod::NONE:
         {
             return fileIt->data;
         }
-        case COMPRESSION_DEFLATE:
+        case CompressionMethod::DEFLATE:
         {
             z_stream zs;
             memset(&zs, 0, sizeof(zs));
@@ -177,6 +174,16 @@ std::optional<std::string> MemoryFileSystem::getFileData(const FilePath& filePat
 
 void MemoryFileSystem::clear() {
     files.clear();
+}
+
+void MemoryFileSystem::add(const FilePath &path, const std::string &data) {
+    files.emplace_back(File {
+        path,
+        CompressionMethod::NONE,
+        static_cast<uint32_t>(data.size()),
+        static_cast<uint32_t>(data.size()),
+        data
+    });
 }
 
 bool MemoryFileSystem::checkOctopusFileHeader(std::ifstream &file, Error *error) {
