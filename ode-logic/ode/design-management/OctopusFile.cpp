@@ -7,7 +7,9 @@
 
 namespace ode {
 
-#define PK_SIGNATURE "PK\x03\x04"
+#define PK_CENTRAL_DIR_FILE_HEADER_SIGNATURE    "PK\x01\x02"
+#define PK_LOCAL_FILE_HEADER_SIGNATURE          "PK\x03\x04"
+#define PK_END_OF_CENTRAL_DIRECTORY_SIGNATURE   "PK\x05\x06"
 
 #define CHECK(condition, err) \
     if (!(condition)) { \
@@ -42,6 +44,7 @@ bool OctopusFile::load(const FilePath &octopusFilePath, Error *error) {
     file.seekg(-22, std::ios::end);
     char eocd[22];
     file.read(eocd, 22);
+    CHECK(std::memcmp(eocd, PK_END_OF_CENTRAL_DIRECTORY_SIGNATURE, 4)==0, INVALID_OCTOPUS_FILE);
 
     // Parse end-of-central-directory record
     const uint16_t filesCount = *(uint16_t*)(eocd + 10);
@@ -56,6 +59,8 @@ bool OctopusFile::load(const FilePath &octopusFilePath, Error *error) {
     uint16_t centralDirFileOffset = 0;
 
     for (int i = 0; i < filesCount; ++i) {
+        CHECK(std::memcmp(centralDir.data() + centralDirFileOffset, PK_CENTRAL_DIR_FILE_HEADER_SIGNATURE, 4)==0, INVALID_OCTOPUS_FILE);
+
         const uint32_t headerOffset = *(uint32_t*)(centralDir.data() + centralDirFileOffset + 42);
 
         const uint16_t filenameLengthCentralDir = *(uint16_t*)(centralDir.data() + centralDirFileOffset + 28);
@@ -69,7 +74,7 @@ bool OctopusFile::load(const FilePath &octopusFilePath, Error *error) {
         std::string signature(4, '\0');
         file.read(&signature[0], 4);
 
-        CHECK(signature == PK_SIGNATURE, INVALID_OCTOPUS_FILE);
+        CHECK(signature == PK_LOCAL_FILE_HEADER_SIGNATURE, INVALID_OCTOPUS_FILE);
 
         File &newFile = files.emplace_back();
 
@@ -115,7 +120,7 @@ bool OctopusFile::save(const FilePath &octopusFilePath, const std::string &octop
 bool OctopusFile::checkOctopusFileHeader(std::ifstream &file, Error *error) {
     CHECK(file.tellg() < 134, INVALID_OCTOPUS_FILE);
 
-    CHECK_HEADER(0, PK_SIGNATURE, 4);
+    CHECK_HEADER(0, PK_LOCAL_FILE_HEADER_SIGNATURE, 4);
     CHECK_HEADER(8, std::string(3, 0), 3);
     CHECK_HEADER(12, std::string(1, 33), 1);
     CHECK_HEADER(13, std::string(1, 0), 1);
