@@ -241,24 +241,55 @@ ODE_Result ODE_API ode_createDesign(ODE_EngineHandle engine, ODE_DesignHandle *d
 ODE_Result ODE_NATIVE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_DesignHandle *design, ODE_StringRef path, ODE_ParseError *parseError) {
     ODE_ASSERT(engine.ptr && design && design->ptr);
 
-    // TODO: read Octopus design file
+    // Read Octopus design file
     OctopusFile octopusFile;
     if (!octopusFile.load(ode_stringDeref(path))) {
+        // TODO: A better error type
         return ODE_RESULT_OCTOPUS_UNAVAILABLE;
     }
+    // Read the manifest
+    const std::optional<std::string> manifestFileData = octopusFile.getFileData("octopus-manifest.json");
+    if (!manifestFileData.has_value()) {
+        // TODO: A better error type
+        return ODE_RESULT_OCTOPUS_MANIFEST_PARSE_ERROR;
+    }
+    octopus::OctopusManifest manifest;
+    if (octopus::ManifestParser::Error error = octopus::ManifestParser::parse(manifest, manifestFileData->c_str())) {
+        if (parseError) {
+            parseError->type = ode_parseErrorType(error.type);
+            parseError->position = error.position;
+        }
+        return ODE_RESULT_OCTOPUS_MANIFEST_PARSE_ERROR;
+    }
 
+    // Add the actual component files
     for (const FilePath &filePath : octopusFile.filePaths()) {
         const std::string filePathStr = (std::string)filePath;
         const bool isJson = (filePathStr.substr(filePathStr.find_last_of(".")+1) == "json");
+        const bool isOctopus = (filePathStr.substr() == "json");;
         const bool isOctopusComponentFile = isJson && filePathStr != "octopus-manifest.json";
 
         if (isOctopusComponentFile) {
             const std::optional<std::string> fileData = octopusFile.getFileData(filePath);
-            if (fileData.has_value()) {
-                ODE_ComponentHandle component = {};
-                ODE_ComponentMetadata metadata = {};
-                ode_design_addComponentFromOctopusString(*design, &component, metadata, ode_stringRef(*fileData), parseError);
+            if (!fileData.has_value()) {
+                continue;
             }
+            const size_t prefixLength = strlen("octopus-");
+            const size_t extensionLength = strlen(".json");
+            const std::string componentId = filePathStr.substr(prefixLength, filePathStr.size()-prefixLength-extensionLength);
+            const std::vector<octopus::Component>::const_iterator manifestComponent = std::find_if(manifest.components.begin(), manifest.components.end(), [&componentId](const octopus::Component &c) {
+                return c.id == componentId;
+            });
+            if (manifestComponent == manifest.components.end()) {
+                continue;
+            }
+            // Add the component
+            ODE_ComponentHandle component = {};
+            ODE_ComponentMetadata metadata = {};
+            metadata.id = ode_stringRef(componentId);
+            metadata.page = {}; // TODO: Metadata page?
+            metadata.position = ODE_Vector2 { manifestComponent->bounds.x, manifestComponent->bounds.y };
+            ode_design_addComponentFromOctopusString(*design, &component, metadata, ode_stringRef(*fileData), parseError);
         }
     }
 
