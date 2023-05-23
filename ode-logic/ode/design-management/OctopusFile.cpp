@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <map>
 
 namespace ode {
 
@@ -27,6 +28,9 @@ namespace ode {
         file.read(&str[0], length); \
         CHECK(str == value, INVALID_OCTOPUS_FILE); \
     }
+
+#define CENTRAL_DIR_FILE_DATA(type, offset) \
+    *(type*)(centralDir.data() + centralDirFileOffset + offset);
 
 bool OctopusFile::load(const FilePath &octopusFilePath, Error *error) {
     clear();
@@ -61,11 +65,11 @@ bool OctopusFile::load(const FilePath &octopusFilePath, Error *error) {
     for (int i = 0; i < filesCount; ++i) {
         CHECK(std::memcmp(centralDir.data() + centralDirFileOffset, PK_CENTRAL_DIR_FILE_HEADER_SIGNATURE, 4)==0, INVALID_OCTOPUS_FILE);
 
-        const uint32_t headerOffset = *(uint32_t*)(centralDir.data() + centralDirFileOffset + 42);
+        const uint32_t headerOffset = CENTRAL_DIR_FILE_DATA(uint32_t, 42);
 
-        const uint16_t filenameLengthCentralDir = *(uint16_t*)(centralDir.data() + centralDirFileOffset + 28);
-        const uint16_t m = *(uint16_t*)(centralDir.data() + centralDirFileOffset + 30);
-        const uint16_t k = *(uint16_t*)(centralDir.data() + centralDirFileOffset + 32);
+        const uint16_t filenameLengthCentralDir = CENTRAL_DIR_FILE_DATA(uint16_t, 28);
+        const uint16_t m = CENTRAL_DIR_FILE_DATA(uint16_t, 30);
+        const uint16_t k = CENTRAL_DIR_FILE_DATA(uint16_t, 32);
 
         std::string filePath(filenameLengthCentralDir, '\0');
         std::memcpy(filePath.data(), centralDir.data() + centralDirFileOffset + 46, filenameLengthCentralDir);
@@ -78,10 +82,10 @@ bool OctopusFile::load(const FilePath &octopusFilePath, Error *error) {
 
         File &newFile = files.emplace_back();
 
-        newFile.crc32 = *(uint32_t*)(centralDir.data() + centralDirFileOffset + 16);
-        newFile.compressionMethod = *(CompressionMethod*)(centralDir.data() + centralDirFileOffset + 10);
-        newFile.compressedSize = *(uint32_t*)(centralDir.data() + centralDirFileOffset + 20);
-        newFile.uncompressedSize = *(uint32_t*)(centralDir.data() + centralDirFileOffset + 24);
+        newFile.crc32 = CENTRAL_DIR_FILE_DATA(uint32_t, 16);
+        newFile.compressionMethod = CENTRAL_DIR_FILE_DATA(CompressionMethod, 10);
+        newFile.compressedSize = CENTRAL_DIR_FILE_DATA(uint32_t, 20);
+        newFile.uncompressedSize = CENTRAL_DIR_FILE_DATA(uint32_t, 24);
 
         newFile.path = filePath;
 
@@ -109,10 +113,126 @@ bool OctopusFile::parseFromString(const std::string &octopusFileData, Error *err
     return false;
 }
 
-bool OctopusFile::save(const FilePath &octopusFilePath, const std::string &octopusManifest, CompressionMethod compressionMethod, Error *error) {
-    // TODO: Create manifest file
-    // TODO: Compress all octopus component files with the specified compression method
-    // TODO: Write binary data to Octopus file
+bool OctopusFile::save(const FilePath &octopusFilePath, Error *error) {
+    std::ofstream outputFile((std::string)octopusFilePath, std::ios::binary);
+    CHECK(outputFile, ERROR_OPENING_FILE);
+
+    const uint16_t filesCount = files.size();
+    std::map<std::string, uint32_t> fileHeadersOffsets;
+
+    // Individual file data
+    for (const File &file : files) {
+        fileHeadersOffsets[(std::string)file.path] = static_cast<uint32_t>(outputFile.tellp());
+        const size_t fileNameLength = strlen(file.path.filename());
+
+        // Local file header signature
+        outputFile.write(PK_LOCAL_FILE_HEADER_SIGNATURE, strlen(PK_LOCAL_FILE_HEADER_SIGNATURE));
+        // Zip version
+        outputFile.write("\x14\0", 2);
+        // General purpose bit flag
+        outputFile.write("\0\0", 2);
+        // Compression method
+        switch (file.compressionMethod) {
+            case CompressionMethod::NONE:
+                outputFile.write("\0\0", 2);
+                break;
+            case CompressionMethod::DEFLATE:
+                outputFile.write("\x08\0", 2);
+                break;
+            default:
+                CHECK(false, UNSUPPORTED_COMPRESSION_METHOD);
+        }
+        // Modification time and date
+        outputFile.write("\0\0\x21\0", 4);
+        // CRC-32 of uncompressed data
+        outputFile.write(reinterpret_cast<const char*>(&file.crc32), 4);
+        // Compressed size
+        outputFile.write(reinterpret_cast<const char*>(&file.compressedSize), 4);
+        // Uncompressed size
+        outputFile.write(reinterpret_cast<const char*>(&file.uncompressedSize), 4);
+        // File name length
+        outputFile.write(reinterpret_cast<const char*>(&fileNameLength), 2);
+        // Extra field length
+        outputFile.write("\0\0", 2);
+        // File name
+        outputFile.write(file.path.filename(), fileNameLength);
+        // Extra field - No data
+        // File contents
+        outputFile.write(file.data.data(), file.data.size());
+    }
+
+    // Zip central directory
+    const uint32_t centralDirectoryOffset = static_cast<uint32_t>(outputFile.tellp());
+    for (const File &file : files) {
+        const uint32_t fileHeaderOffset = fileHeadersOffsets[(std::string)file.path];
+        const size_t fileNameLength = strlen(file.path.filename());
+
+        // Central directory file header signature = 0x02014b50
+        outputFile.write(PK_CENTRAL_DIR_FILE_HEADER_SIGNATURE, 4);
+        // Version made by
+        outputFile.write("\x14\0", 2);
+        // Version needed to extract (minimum)
+        outputFile.write("\x14\0", 2);
+        // General purpose bit flag
+        outputFile.write("\0\0", 2);
+        // Compression method
+        switch (file.compressionMethod) {
+            case CompressionMethod::NONE:
+                outputFile.write("\0\0", 2);
+                break;
+            case CompressionMethod::DEFLATE:
+                outputFile.write("\x08\0", 2);
+                break;
+            default:
+                CHECK(false, UNSUPPORTED_COMPRESSION_METHOD);
+        }
+        // File last modification time and date
+        outputFile.write("\0\0\x21\0", 4);
+        // CRC-32 of uncompressed data
+        outputFile.write(reinterpret_cast<const char*>(&file.crc32), 4);
+        // Compressed size
+        outputFile.write(reinterpret_cast<const char*>(&file.compressedSize), 4);
+        // Uncompressed size
+        outputFile.write(reinterpret_cast<const char*>(&file.uncompressedSize), 4);
+        // File name length
+        outputFile.write(reinterpret_cast<const char*>(&fileNameLength), 2);
+        // Extra field length
+        outputFile.write("\0\0", 2);
+        // File comment length
+        outputFile.write("\0\0", 2);
+        // Disk number where file starts
+        outputFile.write("\0\0", 2);
+        // TODO: Internal file attributes
+        outputFile.write("\0\0", 2);
+        // TODO: External file attributes
+        outputFile.write("\0\0\0\0", 4);
+        // Relative offset of local file header
+        outputFile.write(reinterpret_cast<const char*>(&fileHeaderOffset), 4);
+        // File name
+        outputFile.write(file.path.filename(), fileNameLength);
+    }
+
+    // End of central directory record
+    const uint32_t eocdOffset = static_cast<uint32_t>(outputFile.tellp());
+    const uint32_t centralDirectorySize = eocdOffset - centralDirectoryOffset;
+    // End of central directory signature
+    outputFile.write(PK_END_OF_CENTRAL_DIRECTORY_SIGNATURE, 4);
+    // Number of this disk
+    outputFile.write("\0\0", 2);
+    // Disk where central directory starts
+    outputFile.write("\0\0", 2);
+    // Number of central directory records on this disk
+    outputFile.write(reinterpret_cast<const char*>(&filesCount), 2);
+    // Total number of central directory records
+    outputFile.write(reinterpret_cast<const char*>(&filesCount), 2);
+    // Size of central directory (bytes)
+    outputFile.write(reinterpret_cast<const char*>(&centralDirectorySize), 4);
+    // Offset of start of central directory, relative to start of archive
+    outputFile.write(reinterpret_cast<const char*>(&centralDirectoryOffset), 4);
+    // Comment length
+    outputFile.write("\0\0", 2);
+
+    outputFile.close();
 
     return true;
 }
