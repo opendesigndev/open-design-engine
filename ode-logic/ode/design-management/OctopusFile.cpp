@@ -65,11 +65,12 @@ bool OctopusFile::load(const FilePath &octopusFilePath, Error *error) {
     for (int i = 0; i < filesCount; ++i) {
         CHECK(std::memcmp(centralDir.data() + centralDirFileOffset, PK_CENTRAL_DIR_FILE_HEADER_SIGNATURE, 4)==0, INVALID_OCTOPUS_FILE);
 
+        // File offset from central directory
         const uint32_t headerOffset = CENTRAL_DIR_FILE_DATA(uint32_t, 42);
 
         const uint16_t filenameLengthCentralDir = CENTRAL_DIR_FILE_DATA(uint16_t, 28);
-        const uint16_t m = CENTRAL_DIR_FILE_DATA(uint16_t, 30);
-        const uint16_t k = CENTRAL_DIR_FILE_DATA(uint16_t, 32);
+        const uint16_t extraFieldLengthCentralDir = CENTRAL_DIR_FILE_DATA(uint16_t, 30);
+        const uint16_t fileCommentLengthCentralDir = CENTRAL_DIR_FILE_DATA(uint16_t, 32);
 
         std::string filePath(filenameLengthCentralDir, '\0');
         std::memcpy(filePath.data(), centralDir.data() + centralDirFileOffset + 46, filenameLengthCentralDir);
@@ -80,6 +81,7 @@ bool OctopusFile::load(const FilePath &octopusFilePath, Error *error) {
 
         CHECK(signature == PK_LOCAL_FILE_HEADER_SIGNATURE, INVALID_OCTOPUS_FILE);
 
+        // Create a new file entry after central dir file header verified
         File &newFile = files.emplace_back();
 
         newFile.crc32 = CENTRAL_DIR_FILE_DATA(uint32_t, 16);
@@ -89,6 +91,7 @@ bool OctopusFile::load(const FilePath &octopusFilePath, Error *error) {
 
         newFile.path = filePath;
 
+        // Filename length
         file.seekg(22, std::ios::cur);
         uint16_t filenameLength;
         file.read(reinterpret_cast<char*>(&filenameLength), 2);
@@ -102,7 +105,8 @@ bool OctopusFile::load(const FilePath &octopusFilePath, Error *error) {
         newFile.data.resize(newFile.compressedSize, '\0');
         file.read(&newFile.data[0], newFile.compressedSize);
 
-        centralDirFileOffset += 46 + filenameLengthCentralDir + m + k;
+        // Move central dir offset to the next file record
+        centralDirFileOffset += 46 + filenameLengthCentralDir + extraFieldLengthCentralDir + fileCommentLengthCentralDir;
     }
 
     return true;
@@ -241,30 +245,36 @@ bool OctopusFile::checkOctopusFileHeader(std::ifstream &file, Error *error) {
     CHECK(file.tellg() < 134, INVALID_OCTOPUS_FILE);
 
     CHECK_HEADER(0, PK_LOCAL_FILE_HEADER_SIGNATURE, 4);
-    CHECK_HEADER(8, std::string(3, 0), 3);
+    // Compression method NONE and last modification time 0
+    CHECK_HEADER(8, std::string(4, 0), 4);
+    // Last modification date
     CHECK_HEADER(12, std::string(1, 33), 1);
     CHECK_HEADER(13, std::string(1, 0), 1);
+    // File name length and extra field length
     CHECK_HEADER(26, std::string(1, 7), 1);
     CHECK_HEADER(27, std::string(3, 0), 3);
+    // File name and file data
     CHECK_HEADER(30, "Octopus is universal design format. opendesign.dev.", 51);
 
+    // General purpose bit flag
     file.seekg(6, std::ios::beg);
     char c6;
     file.read(&c6, 1);
     CHECK(c6==0 || c6==8, INVALID_OCTOPUS_FILE);
 
+    // Compressed size
     file.seekg(18, std::ios::beg);
     std::string s18(3, '\0');
     file.read(&s18[0], 3);
     const uint32_t i18 = (s18[0]<<0) | (s18[1]<<8) | (s18[2]<<16);
     CHECK(i18 >= 44, INVALID_OCTOPUS_FILE);
-
+    // Uncompressed size
     file.seekg(22, std::ios::beg);
     std::string s22(3, '\0');
     file.read(&s22[0], 3);
     const uint32_t i22 = (s22[0]<<0) | (s22[1]<<8) | (s22[2]<<16);
     CHECK(i22 >= 44, INVALID_OCTOPUS_FILE);
-
+    // Sizes are equal, the compression method is NONE
     CHECK(s18 == s22, INVALID_OCTOPUS_FILE);
 
     return true;
