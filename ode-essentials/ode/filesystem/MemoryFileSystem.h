@@ -31,6 +31,7 @@ public:
     struct File {
         FilePath path;
         CompressionMethod compressionMethod;
+        uint32_t crc32;
         uint32_t compressedSize;
         uint32_t uncompressedSize;
         std::string data;

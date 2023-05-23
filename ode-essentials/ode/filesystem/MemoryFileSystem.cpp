@@ -85,12 +85,16 @@ void MemoryFileSystem::clear() {
 std::optional<MemoryFileSystem::FileRef> MemoryFileSystem::add(const FilePath &path, const std::string &data, CompressionMethod compressionMethod, Error *error) {
     CHECK(std::none_of(files.begin(), files.end(), [&path](const File &file) { return file.path == path; }), DUPLICATE_FILE_PATH);
 
+    // CRC-32 of the uncompressed data
+    const uLong crc32Checksum = crc32(0L, (Bytef*)data.data(), (uInt)data.size());
+
     switch (compressionMethod) {
         case CompressionMethod::NONE:
         {
             return files.emplace_back(File {
                 path,
                 compressionMethod,
+                static_cast<uint32_t>(crc32Checksum),
                 static_cast<uint32_t>(data.size()),
                 static_cast<uint32_t>(data.size()),
                 data
@@ -127,6 +131,7 @@ std::optional<MemoryFileSystem::FileRef> MemoryFileSystem::add(const FilePath &p
             return files.emplace_back(File {
                 path,
                 compressionMethod,
+                static_cast<uint32_t>(crc32Checksum),
                 static_cast<uint32_t>(compressedData.size()),
                 static_cast<uint32_t>(data.size()),
                 compressedData

@@ -73,6 +73,7 @@ bool OctopusFile::load(const FilePath &octopusFilePath, Error *error) {
 
         File &newFile = files.emplace_back();
 
+        newFile.crc32 = *(uint32_t*)(centralDir.data() + centralDirFileOffset + 16);
         newFile.compressionMethod = *(CompressionMethod*)(centralDir.data() + centralDirFileOffset + 10);
         newFile.compressedSize = *(uint32_t*)(centralDir.data() + centralDirFileOffset + 20);
         newFile.uncompressedSize = *(uint32_t*)(centralDir.data() + centralDirFileOffset + 24);
