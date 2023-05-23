@@ -202,9 +202,9 @@ bool OctopusFile::save(const FilePath &octopusFilePath, Error *error) {
         outputFile.write("\0\0", 2);
         // Disk number where file starts
         outputFile.write("\0\0", 2);
-        // TODO: Internal file attributes
+        // Internal file attributes
         outputFile.write("\0\0", 2);
-        // TODO: External file attributes
+        // External file attributes
         outputFile.write("\0\0\0\0", 4);
         // Relative offset of local file header
         outputFile.write(reinterpret_cast<const char*>(&fileHeaderOffset), 4);
