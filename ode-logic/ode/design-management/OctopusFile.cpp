@@ -33,7 +33,6 @@ bool OctopusFile::load(const FilePath &octopusFilePath, Error *error) {
         *error = Error::OK;
 
     std::ifstream file((std::string)octopusFilePath, std::ios::binary);
-
     CHECK(file, ERROR_OPENING_FILE);
 
     // Check if the file is a valid Octopus file
@@ -122,6 +121,11 @@ bool OctopusFile::checkOctopusFileHeader(std::ifstream &file, Error *error) {
     CHECK_HEADER(26, std::string(1, 7), 1);
     CHECK_HEADER(27, std::string(3, 0), 3);
     CHECK_HEADER(30, "Octopus is universal design format. opendesign.dev.", 51);
+
+    file.seekg(6, std::ios::beg);
+    char c6;
+    file.read(&c6, 1);
+    CHECK(c6==0 || c6==8, INVALID_OCTOPUS_FILE);
 
     file.seekg(18, std::ios::beg);
     std::string s18(3, '\0');
