@@ -1688,6 +1688,9 @@ void drawLayerPropertiesWidget(DesignEditorContext &context,
                                DesignEditorComponent &component,
                                DesignEditorUIState::LayerSelection &layerSelection,
                                DesignEditorUIState::FileDialog &fileDialogContext) {
+    ImGui::SetNextWindowSize(ImVec2(450, 870), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(1120, 0), ImGuiCond_FirstUseEver);
+
     ImGui::Begin("Selected Layer Properties");
 
     if (component.component.ptr == nullptr) {

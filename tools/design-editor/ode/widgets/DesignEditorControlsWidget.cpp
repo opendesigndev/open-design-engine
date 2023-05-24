@@ -8,6 +8,9 @@
 
 void drawControlsWidget(DesignEditorDesign &design,
                         DesignEditorUIState &ui) {
+    ImGui::SetNextWindowSize(ImVec2(420, 170), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver);
+
     ImGui::Begin("Controls");
 
     ImGui::Columns(3);

@@ -73,6 +73,9 @@ void drawDesignViewWidget(const ODE_ComponentHandle &component,
                           DesignEditorUIState::ComponentSelection &componentSelection,
                           const DesignEditorUIState::LayerSelection &layerSelection,
                           int selectedDisplayMode) {
+    ImGui::SetNextWindowSize(ImVec2(700, 870), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(420, 0), ImGuiCond_FirstUseEver);
+
     ImGui::Begin(componentId.data);
 
     const bool isWidgetFocused = ImGui::IsWindowFocused();

@@ -123,6 +123,9 @@ void drawToolbarWidget(DesignEditorContext &context,
                        DesignEditorComponent &component,
                        const DesignEditorUIState::LayerSelection &layersSelection,
                        DesignEditorUIState::Mode &mode) {
+    ImGui::SetNextWindowSize(ImVec2(420, 100), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(0, 170), ImGuiCond_FirstUseEver);
+
     ImGui::Begin("Toolbar");
 
     ImGui::PushStyleColor(ImGuiCol_Button, mode == DesignEditorUIState::Mode::SELECT ? IM_COLOR_DARK_RED : IM_COLOR_LIGHT_BLUE);
