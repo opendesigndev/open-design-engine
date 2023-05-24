@@ -26,6 +26,19 @@
 #include "widgets/DesignEditorLayerPropertiesWidget.h"
 #include "widgets/DesignEditorUIHelpers.h"
 
+#ifdef _WIN32
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#include <ShlObj.h>
+static std::string windowsFontPath() {
+    char buffer[MAX_PATH+1];
+    *buffer = '\0';
+    SHGetFolderPathA(NULL, CSIDL_FONTS, NULL, 0, buffer);
+    return std::string(buffer);
+}
+#endif
+
 namespace {
 
 #define CHECK(x) do { if ((x)) return -1; } while (false)
@@ -40,6 +53,20 @@ struct {
 
 const Vector2f DEFAULT_NEW_SHAPE_SIZE { 100, 50 };
 const Color DEFAULT_NEW_SHAPE_COLOR(0.5, 0.5, 0.5, 1.0);
+
+const std::vector<std::string> SYSTEM_FONT_DIRECTORIES {
+#ifdef _WIN32
+    windowsFontPath()
+#endif
+#ifdef __APPLE__
+    std::string(getenv("HOME"))+"/Library/Fonts/",
+    "/Library/Fonts/",
+    "/Network/Library/Fonts/",
+    "/System/Library/Fonts/",
+    "/System/Library/Fonts/Supplemental/",
+    "/System\\ Folder/Fonts/",
+#endif
+};
 
 void fileDropCallback(GLFWwindow* window, int count, const char** paths) {
     glfwFocusWindow(window);
@@ -403,10 +430,14 @@ int DesignEditorWindow::loadMissingFonts(const FilePath &fontDir) {
 
     for (int i = 0; i < missingFonts.n; ++i) {
         if (missingFonts.entries[i].length > 0) {
-            const std::string pathStr = (std::string)fontDir+std::string("/")+ode_stringDeref(missingFonts.entries[i])+std::string(".ttf");
-            const ODE_Result result = ode_design_loadFontFile(context.design.design, missingFonts.entries[i], ode_stringRef(pathStr), ODE_StringRef());
-            if (result != ODE_RESULT_OK && result != ODE_RESULT_FONT_ERROR) {
-                return result;
+            ODE_Result result = ODE_RESULT_FONT_ERROR;
+            for (size_t j = 0; j < SYSTEM_FONT_DIRECTORIES.size()+1 && result == ODE_RESULT_FONT_ERROR; ++j) {
+                const std::string &fd = (j==0) ? (std::string)fontDir : SYSTEM_FONT_DIRECTORIES[j-1];
+                const std::string pathStr = fd+std::string("/")+ode_stringDeref(missingFonts.entries[i])+std::string(".ttf");
+                result = ode_design_loadFontFile(context.design.design, missingFonts.entries[i], ode_stringRef(pathStr), ODE_StringRef());
+                if (result != ODE_RESULT_OK && result != ODE_RESULT_FONT_ERROR) {
+                    return result;
+                }
             }
         }
     }
