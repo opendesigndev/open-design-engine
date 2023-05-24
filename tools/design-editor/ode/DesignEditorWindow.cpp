@@ -53,7 +53,6 @@ struct {
 const Vector2f DEFAULT_NEW_SHAPE_SIZE { 100, 50 };
 const Color DEFAULT_NEW_SHAPE_COLOR(0.5, 0.5, 0.5, 1.0);
 
-// TODO: Add system font directories for Windows
 const std::vector<std::string> SYSTEM_FONT_DIRECTORIES {
 #ifdef _WIN32
     windowsFontPath()
