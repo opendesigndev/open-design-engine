@@ -22,6 +22,9 @@ void drawControlsWidget(DesignEditorDesign &design,
 
     // Open "Open Octopus File" file dialog on button press
     if (ImGui::Button("Open")) {
+        ImGui::SetNextWindowSize(ImVec2(1000, 500), ImGuiCond_Once);
+        ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_Once);
+
         const char* filters = "Octopus files (*.octopus){.octopus},Octopus component files (*.json){.json}";
         ImGuiFileDialog::Instance()->OpenDialog("ChooseOctopusFileDlgKey", "Open a file", filters, ui.fileDialog.octopusFilePath, ui.fileDialog.octopusFileName);
     }
@@ -29,6 +32,9 @@ void drawControlsWidget(DesignEditorDesign &design,
     if (!design.empty()) {
         // Open "Save Octopus File" file dialog on button press
         if (ImGui::Button("Save")) {
+            ImGui::SetNextWindowSize(ImVec2(1000, 500), ImGuiCond_Once);
+            ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_Once);
+
             const char* filters = ".octopus";
             ImGuiFileDialog::Instance()->OpenDialog("SaveOctopusFileDlgKey", "Save as *.octopus file", filters, ui.fileDialog.octopusFilePath, ui.fileDialog.octopusFileName);
         }
