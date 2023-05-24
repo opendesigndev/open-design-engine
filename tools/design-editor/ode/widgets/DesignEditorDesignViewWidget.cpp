@@ -33,7 +33,9 @@ void drawImGuiWidgetTexture(GLuint textureHandle,
 
     const ImVec2 newImageSize(float(std::max(scaling * width, 0.0) * zoom), float(std::max(scaling * height, 0.0) * zoom));
 
+#ifdef ODE_DEBUG
     ImGui::Text("GL Handle:        %d", textureHandle);
+#endif
     ImGui::Text("Texture size:     %d x %d", width, height);
     ImGui::Text("Display size:     %d x %d", static_cast<int>(std::round(newImageSize.x)), static_cast<int>(std::round(newImageSize.y)));
     ImGui::SliderFloat("Zoom [-S][+W]", &zoom, 1.0f, 10.0f);
