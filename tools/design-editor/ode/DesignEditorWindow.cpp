@@ -319,8 +319,8 @@ int DesignEditorWindow::display() {
                     const ODE_Scalar trY = posInImageSpace.y - prevPosInImageSpace.y;
 
                     const ODE_Vector2 translationInImageSpace = ImGui::IsKeyDown(ImGuiKey_LeftShift)
-                    ? ODE_Vector2 { std::round(trX), std::round(trY) }
-                    : ODE_Vector2 { trX, trY };;
+                        ? ODE_Vector2 { std::round(trX), std::round(trY) }
+                        : ODE_Vector2 { trX, trY };;
 
                     for (const ODE_StringRef &layerId : ui.layerSelection.layerIDs) {
                         const ODE_Transformation newTransformation { 1,0,0,1,translationInImageSpace.x,translationInImageSpace.y };
@@ -458,6 +458,8 @@ int DesignEditorWindow::createEmptyDesign(const FilePath &fontDir) {
     context.design.components.clear();
     DesignEditorComponent &newComponent = context.design.components.emplace_back();
     newComponent.id = ode_stringRef(DEFAULT_NEW_COMPONENT.id);
+    newComponent.metadata.id = newComponent.id;
+    newComponent.metadata.position = { 0, 0 };
 
     ode::octopus_builder::ShapeLayer backgroundShape(0, 0, DEFAULT_NEW_COMPONENT.size.x, DEFAULT_NEW_COMPONENT.size.y);
     backgroundShape.setColor(DEFAULT_NEW_COMPONENT.color);
