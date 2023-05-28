@@ -468,7 +468,7 @@ int DesignEditorWindow::createEmptyDesign(const FilePath &fontDir) {
     ode::octopus_builder::MaskGroupLayer maskGroup(octopus::MaskBasis::BODY, backgroundShape);
     maskGroup.id = DEFAULT_NEW_COMPONENT.rootId;
     maskGroup.name = DEFAULT_NEW_COMPONENT.rootId;
-    octopus::Octopus oc = ode::octopus_builder::buildOctopus("Mask Group", maskGroup);
+    octopus::Octopus oc = ode::octopus_builder::buildOctopus(DEFAULT_NEW_COMPONENT.id, maskGroup);
     oc.dimensions = { DEFAULT_NEW_COMPONENT.size.x, DEFAULT_NEW_COMPONENT.size.y };
 
     std::string octopusJson;
