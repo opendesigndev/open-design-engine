@@ -18,4 +18,6 @@ void drawDesignViewWidget(const ODE_ComponentHandle &component,
                           DesignEditorUIState::Canvas &canvas,
                           DesignEditorUIState::ComponentSelection &componentSelection,
                           const DesignEditorUIState::LayerSelection &layerSelection,
-                          int selectedDisplayMode);
+                          int selectedDisplayMode,
+                          const ImVec2 &designViewPosition,
+                          const ImVec2 &designViewSize);

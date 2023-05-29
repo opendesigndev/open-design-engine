@@ -342,10 +342,15 @@ int DesignEditorWindow::display() {
                     drawLayerListWidget(selectedComponentIt->layerList, ui.layerSelection);
                 }
                 if (ui.widgets.showDesignView) {
-                    for (const DesignEditorComponent &component : context.design.components) {
+                    const size_t componentsCount = context.design.components.size();
+                    for (size_t i = 0; i < componentsCount; i++) {
+                        const DesignEditorComponent &component = context.design.components[i];
                         const std::string componentId = ode_stringDeref(component.id);
 
                         DesignEditorUIState::Canvas &canvas = ui.canvases[componentId];
+
+                        const ImVec2 designViewPosition(420, i * 870/componentsCount);
+                        const ImVec2 designViewSize(700, 870/componentsCount);
 
                         drawDesignViewWidget(component.component,
                                              component.id,
@@ -356,7 +361,9 @@ int DesignEditorWindow::display() {
                                              canvas,
                                              ui.componentSelection,
                                              component.component.ptr==selectedComponentIt->component.ptr ? ui.layerSelection : DesignEditorUIState::LayerSelection(),
-                                             ui.imageVisualizationParams.selectedDisplayMode);
+                                             ui.imageVisualizationParams.selectedDisplayMode,
+                                             designViewPosition,
+                                             designViewSize);
                     }
                 }
                 if (ui.widgets.showLayerProperties) {
