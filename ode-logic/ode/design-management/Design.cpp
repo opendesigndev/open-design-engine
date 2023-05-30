@@ -54,6 +54,10 @@ const octopus::Octopus &Design::ComponentAccessor::getOctopus() const {
     return component->getOctopus();
 }
 
+const Vector2d &Design::ComponentAccessor::getPositon() const {
+    return component->getPosition();
+}
+
 Result<const octopus::Layer *, DesignError> Design::ComponentAccessor::getLayerOctopus(const std::string &id) {
     return component->getLayerOctopus(id);
 }

@@ -436,6 +436,21 @@ ODE_Result ODE_API ode_design_getComponent(ODE_DesignHandle design, ODE_Componen
     return ODE_RESULT_COMPONENT_NOT_FOUND;
 }
 
+ODE_Result ODE_API ode_design_getComponentMetadata(ODE_DesignHandle design, ODE_ComponentMetadata *metadata, ODE_StringRef componentId) {
+    ODE_ASSERT(metadata && componentId.data);
+    if (!design.ptr)
+        return ODE_RESULT_INVALID_DESIGN;
+    if (Design::ComponentAccessor accessor = design.ptr->design.getComponent(ode_stringDeref(componentId))) {
+        const ode::Vector2d &position = accessor.getPositon();
+        metadata->id = componentId;
+        metadata->position = ODE_Vector2 { position.x, position.y };
+        // TODO: pages
+//        metadata->page = ...;
+        return ODE_RESULT_OK;
+    }
+    return ODE_RESULT_COMPONENT_NOT_FOUND;
+}
+
 // Component
 
 // TODO

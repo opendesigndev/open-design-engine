@@ -302,6 +302,10 @@ const octopus::Octopus &Component::getOctopus() const {
     return octopus;
 }
 
+const Vector2d &Component::getPosition() const {
+    return position;
+}
+
 Result<octopus::Octopus, DesignError> Component::buildOctopus() {
     return DesignError::NOT_IMPLEMENTED;
 }

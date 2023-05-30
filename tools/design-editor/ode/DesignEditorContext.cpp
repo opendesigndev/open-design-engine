@@ -20,15 +20,13 @@ int DesignEditorContext::initialize() {
     glfwGetFramebufferSize(window, &frameView.width, &frameView.height);
     frameView.scale = 1;
 
-    CHECK(ode_createDesign(engine, &design.design));
-    CHECK(ode_createDesignImageBase(rc, design.design, &design.imageBase));
+    CHECK(design.create(engine, rc));
 
     return 0;
 }
 
 int DesignEditorContext::destroy() {
-    CHECK(ode_destroyDesignImageBase(design.imageBase));
-    CHECK(ode_destroyDesign(design.design));
+    CHECK(design.destroy());
     CHECK(ode_destroyRendererContext(rc));
     CHECK(ode_destroyEngine(engine));
 

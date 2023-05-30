@@ -264,6 +264,13 @@ ODE_Result ODE_API ode_design_loadFontBytes(ODE_DesignHandle design, ODE_StringR
  */
 ODE_Result ODE_API ode_design_getComponent(ODE_DesignHandle design, ODE_OUT_RETURN ODE_ComponentHandle *component, ODE_StringRef componentId);
 
+/**
+ * Finds component within a design by ID and fills its metadata
+ * @param metadata - output argument for the component metadata
+ * @param componentId - component ID string reference
+ */
+ODE_Result ODE_API ode_design_getComponentMetadata(ODE_DesignHandle design, ODE_ComponentMetadata *metadata, ODE_StringRef componentId);
+
 // Component
 
 ODE_Result ODE_FUTURE_API ode_component_loadOctopusFile(ODE_ComponentHandle component, ODE_StringRef path, ODE_StringRef assetBasePath, ODE_OUT ODE_ParseError *parseError);

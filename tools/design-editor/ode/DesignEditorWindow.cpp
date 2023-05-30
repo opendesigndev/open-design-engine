@@ -454,15 +454,12 @@ int DesignEditorWindow::loadMissingFonts(const FilePath &fontDir) {
 int DesignEditorWindow::createEmptyDesign(const FilePath &fontDir) {
     ui.layerSelection.clear();
 
-    if (context.design.design.ptr) {
-        CHECK(ode_destroyDesign(context.design.design));
-        CHECK(ode_createDesign(context.engine, &context.design.design));
-    }
+    CHECK(context.design.destroy());
+    CHECK(context.design.create(context.engine, context.rc));
     context.design.imageDirectory = imageDirectory.empty() ? std::filesystem::temp_directory_path().string()+"/ode-design-editor-images" : imageDirectory;
     // TODO: set imageBase directory using the ODE API
     reinterpret_cast<ImageBase *>(context.design.imageBase.ptr)->setImageDirectory(context.design.imageDirectory.parent());
 
-    context.design.components.clear();
     DesignEditorComponent &newComponent = context.design.components.emplace_back();
     newComponent.id = ode_stringRef(DEFAULT_NEW_COMPONENT.id);
     newComponent.metadata.id = newComponent.id;
@@ -503,19 +500,15 @@ int DesignEditorWindow::reloadOctopus(const FilePath &octopusPath, const FilePat
     ui.layerSelection.clear();
     ui.textures.clear();
 
-    if (context.design.design.ptr) {
-        CHECK(ode_destroyDesign(context.design.design));
-        CHECK(ode_createDesign(context.engine, &context.design.design));
-    }
+    CHECK(context.design.destroy());
+    CHECK(context.design.create(context.engine, context.rc));
 
     ODE_ParseError parseError;
-
-    context.design.components.clear();
     ODE_StringList componentIds;
 
     if (isOctopusFile) {
         // Load design to context (incl. components+metadata)
-        CHECK(ode_loadDesignFromFile(context.engine, &context.design.design, ode_stringRef((octopusPathStr)), &parseError));
+        CHECK(ode_loadDesignFromFile(context.engine, &context.design.design, ode_stringRef(octopusPathStr), &parseError));
 
         // TODO: Image directory in the memory filesystem
         context.design.imageDirectory = imageDirectory;
@@ -530,10 +523,10 @@ int DesignEditorWindow::reloadOctopus(const FilePath &octopusPath, const FilePat
             DesignEditorComponent &newComponent = context.design.components[i];
             newComponent.id = componentIds.entries[i];
             CHECK(ode_design_getComponent(context.design.design, &newComponent.component, newComponent.id));
+            CHECK(ode_design_getComponentMetadata(context.design.design, &newComponent.metadata, newComponent.id));
             CHECK(ode_component_listLayers(newComponent.component, &newComponent.layerList));
             CHECK(loadMissingFonts(fontDir));
             CHECK(ode_pr1_drawComponent(context.rc, newComponent.component, context.design.imageBase, &newComponent.bitmap, context.frameView));
-            // TODO: Fill context component metadata
         }
 
     } else if (isOctopusComponentFile) {
