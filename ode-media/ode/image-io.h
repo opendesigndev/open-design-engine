@@ -12,5 +12,7 @@ namespace ode {
 
 /// Loads an image file at path into a bitmap object (supports PNG, JPEG, GIF, WEBP, TIFF)
 Bitmap loadImage(const FilePath &path);
+/// Loads an image stored in memory into a bitmap object (supports JPEG)
+Bitmap loadImage(const byte *data, size_t length);
 
 }
