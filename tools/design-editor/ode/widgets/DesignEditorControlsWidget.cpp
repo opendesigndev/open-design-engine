@@ -143,7 +143,7 @@ void drawControlsWidget(DesignEditorDesign &design,
                 const std::string fileName = (FilePath(filePathName)).filename();
 
                 const size_t extPos = fileName.rfind('.', fileName.length());
-                const std::string cleanFileName = extPos == std::string::npos ? fileName : fileName.substr(0, extPos);
+                const std::string cleanFileName = (extPos == std::string::npos) ? fileName : fileName.substr(0, extPos);
 
                 OctopusFile octopusFile;
                 octopusFile.add("Octopus", " is universal design format. opendesign.dev.", MemoryFileSystem::CompressionMethod::NONE);
@@ -163,8 +163,6 @@ void drawControlsWidget(DesignEditorDesign &design,
                         if (!octopusFile.add(componentFileName, std::string(octopusString.data, octopusString.length), MemoryFileSystem::CompressionMethod::DEFLATE).has_value()) {
                             continue;
                         }
-
-                        const std::string ocStr(octopusString.data, octopusString.length);
 
                         octopus::Octopus octopus;
                         octopus::Parser::parse(octopus, octopusString.data);
