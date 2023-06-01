@@ -1,4 +1,4 @@
-FROM emscripten/emsdk:3.1.12@sha256:9c83e2dbe9b9a76fc7bb9f892df0ca67757c7b04527e8f722eea46c85f6df603 as builder
+FROM emscripten/emsdk:3.1.40@sha256:c1e807a6e03ac5bd5b37bae2ace3c46c08579e2ddeb951037a3b8dac7067f2cc as builder
 RUN apt-get update && apt-get install -y \
     pkg-config \
     autoconf autoconf-archive \
