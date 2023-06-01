@@ -38,9 +38,8 @@ Bitmap loadImage(const byte *data, size_t length) {
     // TODO: Support tiff
 //    if (detectTiffFormat(data, length))
 //        return loadTiff(nullptr);
-    // TODO: Support RGBA
-//    if (detectRgbaFormat(data, length))
-//        return loadRgba(nullptr);
+    if (detectRgbaFormat(data, length))
+        return loadRgba(nullptr);
     return Bitmap();
 }
 
