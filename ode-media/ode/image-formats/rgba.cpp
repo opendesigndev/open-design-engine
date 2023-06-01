@@ -11,7 +11,7 @@ constexpr size_t HEADER_SIGNATURE_SIZE = 4;
 constexpr byte HEADER_SIGNATURE[] = "RGBA";
 
 bool detectRgbaFormat(const byte *data, size_t length) {
-    return length >= HEADER_SIZE && memcmp(data, HEADER_SIGNATURE, HEADER_SIGNATURE_SIZE);
+    return length >= HEADER_SIZE && memcmp(data, HEADER_SIGNATURE, HEADER_SIGNATURE_SIZE) == 0;
 }
 
 Bitmap loadRgba(const FilePath &path) {

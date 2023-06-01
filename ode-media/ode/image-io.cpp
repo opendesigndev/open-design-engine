@@ -39,7 +39,7 @@ Bitmap loadImage(const byte *data, size_t length) {
 //    if (detectTiffFormat(data, length))
 //        return loadTiff(nullptr);
     if (detectRgbaFormat(data, length))
-        return loadRgba(nullptr);
+        return loadRgba(data, length);
     return Bitmap();
 }
 
