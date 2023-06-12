@@ -25,19 +25,18 @@ Bitmap loadImage(const FilePath &path) {
 }
 
 Bitmap loadImage(const byte *data, size_t length) {
-    // TODO: Support png
-//    if (detectPngFormat(data, length))
-//        return loadPng(nullptr);
+    if (detectPngFormat(data, length))
+        return loadPng(data, length);
     if (detectWebpFormat(data, length))
         return loadWebp(data, length);
     if (detectJpegFormat(data, length))
         return loadJpeg(data, length);
     // TODO: Support gif
 //    if (detectGifFormat(data, length))
-//        return loadGif(nullptr);
+//        return loadGif(data, length);
     // TODO: Support tiff
 //    if (detectTiffFormat(data, length))
-//        return loadTiff(nullptr);
+//        return loadTiff(data, length);
     if (detectRgbaFormat(data, length))
         return loadRgba(data, length);
     return Bitmap();
