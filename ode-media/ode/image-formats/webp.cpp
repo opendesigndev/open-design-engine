@@ -38,6 +38,8 @@ Bitmap loadWebp(FILE *file) {
 }
 
 Bitmap loadWebp(const byte *data, size_t length) {
+    ODE_ASSERT(data);
+    ODE_ASSERT(length > 0);
     Vector2i dimensions;
     if (WebPGetInfo(data, length, &dimensions.x, &dimensions.y)) {
         Bitmap bitmap(PixelFormat::RGBA, dimensions);

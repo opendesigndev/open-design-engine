@@ -29,6 +29,12 @@ public:
     }
 };
 
+struct ReadDataHandle {
+    const png_byte* data;
+    const png_size_t size;
+    png_size_t offset;
+};
+
 
 static void pngError(png_structp png, png_const_charp message) {
     //Log::instance.log(Log::CORE_UTILS, Log::ERROR, std::string("Libpng error: ")+message);
@@ -117,18 +123,8 @@ Bitmap loadPng(const byte *data, size_t length) {
         return Bitmap();
 
     png_set_read_fn(png, &data, [](png_structp png_ptr, png_bytep data, png_size_t length) {
-        typedef struct {
-            const png_byte* data;
-            const png_size_t size;
-        } DataHandle;
-
-        typedef struct {
-            const DataHandle data;
-            png_size_t offset;
-        } ReadDataHandle;
-
         ReadDataHandle* handle = (ReadDataHandle*)png_get_io_ptr(png_ptr);
-        const png_byte* png_src = handle->data.data + handle->offset;
+        const png_byte* png_src = handle->data + handle->offset;
 
         memcpy(data, png_src, length);
         handle->offset += length;

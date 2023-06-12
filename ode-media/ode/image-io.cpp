@@ -31,9 +31,8 @@ Bitmap loadImage(const byte *data, size_t length) {
         return loadWebp(data, length);
     if (detectJpegFormat(data, length))
         return loadJpeg(data, length);
-    // TODO: Support gif
-//    if (detectGifFormat(data, length))
-//        return loadGif(data, length);
+    if (detectGifFormat(data, length))
+        return loadGif(data, length);
     // TODO: Support tiff
 //    if (detectTiffFormat(data, length))
 //        return loadTiff(data, length);

@@ -146,6 +146,7 @@ Bitmap loadJpeg(FILE *file) {
 
 Bitmap loadJpeg(const byte *data, size_t length) {
     ODE_ASSERT(data);
+    ODE_ASSERT(length > 0);
     jpeg_decompress_struct cinfo;
     JpegErrorHandlerData jerr;
     jerr.error_exit = &jpegErrorExit;

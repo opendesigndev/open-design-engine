@@ -38,6 +38,7 @@ Bitmap loadRgba(FILE *file) {
 
 Bitmap loadRgba(const byte *data, size_t length) {
     ODE_ASSERT(data);
+    ODE_ASSERT(length > 0);
     if (detectRgbaFormat(data, length)) {
         Vector2i dimensions;
         dimensions.x = unsigned(data[4])<<24|unsigned(data[5])<<16|unsigned(data[6])<<8|unsigned(data[7]);
