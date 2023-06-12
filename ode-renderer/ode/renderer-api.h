@@ -11,6 +11,8 @@
 extern "C" {
 #endif
 
+/// Pixel format of 3 channels - red, green, blue, each channel represented by 8-bit unsigned integer (0 to 255 range)
+extern ODE_API const int ODE_PIXEL_FORMAT_RGB;
 /// Pixel format of 4 channels - red, green, blue, alpha, each channel represented by 8-bit unsigned integer (0 to 255 range)
 extern ODE_API const int ODE_PIXEL_FORMAT_RGBA;
 /// Pixel format of 4 channels - red, green, blue, alpha, color channels are alpha-premultiplied, each channel represented by 8-bit unsigned integer (0 to 255 range)

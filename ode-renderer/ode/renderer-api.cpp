@@ -11,6 +11,7 @@
 
 using namespace ode;
 
+const int ODE_PIXEL_FORMAT_RGB = int(PixelFormat::RGB);
 const int ODE_PIXEL_FORMAT_RGBA = int(PixelFormat::RGBA);
 const int ODE_PIXEL_FORMAT_PREMULTIPLIED_RGBA = int(PixelFormat::PREMULTIPLIED_RGBA);
 
@@ -92,6 +93,7 @@ ODE_Result ODE_API ode_design_loadImagePixels(ODE_DesignImageBaseHandle designIm
     if (!(bitmap.width > 0 && bitmap.height > 0))
         return ODE_RESULT_INVALID_BITMAP_DIMENSIONS;
     switch (bitmap.format) {
+        case ODE_PIXEL_FORMAT_RGB:
         case ODE_PIXEL_FORMAT_RGBA:
         case ODE_PIXEL_FORMAT_PREMULTIPLIED_RGBA:
             break;

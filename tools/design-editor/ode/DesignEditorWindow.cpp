@@ -507,6 +507,13 @@ int DesignEditorWindow::reloadOctopus(const FilePath &octopusPath, const FilePat
     ODE_StringList componentIds;
 
     if (isOctopusFile) {
+        // TODO: Read Octopus design file - duplicated in ode_loadDesignFromFile
+        OctopusFile octopusFile;
+        if (!octopusFile.load(octopusPath)) {
+            // TODO: A better error type
+            return -1;
+        }
+
         // Load design to context (incl. components+metadata)
         CHECK(ode_loadDesignFromFile(context.engine, &context.design.design, ode_stringRef(octopusPathStr), &parseError));
 
@@ -514,6 +521,18 @@ int DesignEditorWindow::reloadOctopus(const FilePath &octopusPath, const FilePat
         context.design.imageDirectory = imageDirectory;
         // TODO: set imageBase directory using the ODE API
         reinterpret_cast<ImageBase *>(context.design.imageBase.ptr)->setImageDirectory(context.design.imageDirectory.parent());
+
+        // Load images
+        for (const ode::FilePath &filePath : octopusFile.filePaths()) {
+            const std::optional<std::string> fileData = octopusFile.getFileData(filePath);
+            if (fileData.has_value()) {
+                ode::Bitmap bitmap = loadImage(reinterpret_cast<const unsigned char*>(fileData->c_str()), fileData->size());
+                if (!bitmap.empty()) {
+                    ODE_BitmapRef bitmapRef { static_cast<int>(bitmap.format()), bitmap.pixels(), bitmap.width(), bitmap.height() };
+                    ode_design_loadImagePixels(context.design.imageBase, ode_stringRef((std::string)filePath), bitmapRef);
+                }
+            }
+        }
 
         // Get loaded components list
         CHECK(ode_design_listComponents(context.design.design, &componentIds));
