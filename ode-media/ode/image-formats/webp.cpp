@@ -44,7 +44,7 @@ Bitmap loadWebp(const byte *data, size_t length) {
     if (WebPGetInfo(data, length, &dimensions.x, &dimensions.y)) {
         Bitmap bitmap(PixelFormat::RGBA, dimensions);
         if (bitmap) {
-            if (WebPDecodeRGBAInto(data, length, (byte *) bitmap, bitmap.size(), pixelSize(bitmap.format())*bitmap.width()))
+            if (WebPDecodeRGBAInto(data, length, (byte *) bitmap, bitmap.size(), static_cast<int>(pixelSize(bitmap.format())) * bitmap.width()))
                 return bitmap;
         }
     }
