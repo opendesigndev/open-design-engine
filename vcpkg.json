@@ -58,9 +58,12 @@
             "dependencies": [
                 "libpng",
                 "libjpeg-turbo",
-                "tiff",
                 "giflib",
-                "libwebp"
+                "libwebp",
+                {
+                    "name" : "tiff",
+                    "features": [ "cxx" ]
+                }
             ]
         },
         "node-api": {

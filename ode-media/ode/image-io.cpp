@@ -33,9 +33,8 @@ Bitmap loadImage(const byte *data, size_t length) {
         return loadJpeg(data, length);
     if (detectGifFormat(data, length))
         return loadGif(data, length);
-    // TODO: Support tiff
-//    if (detectTiffFormat(data, length))
-//        return loadTiff(data, length);
+    if (detectTiffFormat(data, length))
+        return loadTiff(data, length);
     if (detectRgbaFormat(data, length))
         return loadRgba(data, length);
     return Bitmap();

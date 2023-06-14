@@ -3,7 +3,10 @@
 
 #ifdef ODE_MEDIA_TIFF_SUPPORT
 
+#include <sstream>
+
 #include <tiffio.h>
+#include <tiffio.hxx>
 
 namespace ode {
 
@@ -16,6 +19,21 @@ public:
         TIFFCleanup(tiff);
     }
 };
+
+static Bitmap loadTiff(TIFF *tiff) {
+    TiffFileGuard tiffGuard(tiff);
+    TIFF_UINT32_T width = 0, height = 0;
+    TIFFGetField(tiff, TIFFTAG_IMAGEWIDTH, &width);
+    TIFFGetField(tiff, TIFFTAG_IMAGELENGTH, &height);
+    if (width && height) {
+        Bitmap bitmap(PixelFormat::RGBA, width, height);
+        if (bitmap) {
+            if (TIFFReadRGBAImageOriented(tiff, width, height, reinterpret_cast<uint32_t *>(bitmap.pixels()), ORIENTATION_TOPLEFT) == 1)
+                return bitmap;
+        }
+    }
+    return Bitmap();
+}
 
 bool detectTiffFormat(const byte *data, size_t length) {
     return length >= 2 && (data[0] == 'I' || data[0] == 'M') && data[1] == data[0];
@@ -30,17 +48,19 @@ Bitmap loadTiff(const FilePath &path) {
 Bitmap loadTiff(FILE *file) {
     ODE_ASSERT(file);
     if (TIFF *tiff = TIFFFdOpen(fileno(file), "", "r")) {
-        TiffFileGuard tiffGuard(tiff);
-        TIFF_UINT32_T width = 0, height = 0;
-        TIFFGetField(tiff, TIFFTAG_IMAGEWIDTH, &width);
-        TIFFGetField(tiff, TIFFTAG_IMAGELENGTH, &height);
-        if (width && height) {
-            Bitmap bitmap(PixelFormat::RGBA, width, height);
-            if (bitmap) {
-                if (TIFFReadRGBAImageOriented(tiff, width, height, reinterpret_cast<uint32_t *>(bitmap.pixels()), ORIENTATION_TOPLEFT) == 1)
-                    return bitmap;
-            }
-        }
+        return loadTiff(tiff);
+    }
+    return Bitmap();
+}
+
+Bitmap loadTiff(const byte *data, size_t length) {
+    ODE_ASSERT(data);
+    ODE_ASSERT(length > 0);
+    // TODO: Prevent data copy
+    std::string str(reinterpret_cast<const char*>(data), length);
+    std::istringstream buffer(str);
+    if (TIFF *tiff = TIFFStreamOpen("memoryFile", &buffer)) {
+        return loadTiff(tiff);
     }
     return Bitmap();
 }
