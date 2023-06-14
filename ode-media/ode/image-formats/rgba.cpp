@@ -45,6 +45,7 @@ Bitmap loadRgba(const byte *data, size_t length) {
         dimensions.y = unsigned(data[8])<<24|unsigned(data[9])<<16|unsigned(data[10])<<8|unsigned(data[11]);
         Bitmap bitmap(PixelFormat::RGBA, dimensions);
         memcpy(bitmap.pixels(), data+HEADER_SIZE, length-HEADER_SIZE);
+        return bitmap;
     }
     return Bitmap();
 }
