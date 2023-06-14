@@ -31,8 +31,8 @@ public:
 
 struct ReadDataHandle {
     const png_byte* data;
-    const png_size_t size;
-    png_size_t offset;
+    const png_size_t size = 0;
+    png_size_t offset = 0;
 };
 
 
@@ -122,10 +122,10 @@ Bitmap loadPng(const byte *data, size_t length) {
     if (setjmp(png_jmpbuf(png)))
         return Bitmap();
 
-    png_set_read_fn(png, &data, [](png_structp png_ptr, png_bytep data, png_size_t length) {
+    ReadDataHandle dataHandle { data, length, 0 };
+    png_set_read_fn(png, &dataHandle, [](png_structp png_ptr, png_bytep data, png_size_t length) {
         ReadDataHandle* handle = (ReadDataHandle*)png_get_io_ptr(png_ptr);
         const png_byte* png_src = handle->data + handle->offset;
-
         memcpy(data, png_src, length);
         handle->offset += length;
     });
