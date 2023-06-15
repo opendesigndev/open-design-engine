@@ -6,7 +6,6 @@
 #include <sstream>
 
 #include <tiffio.h>
-#include <tiffio.hxx>
 
 namespace ode {
 
@@ -35,6 +34,59 @@ static Bitmap loadTiff(TIFF *tiff) {
     return Bitmap();
 }
 
+struct ReadDataHandle {
+    const void* data;
+    const size_t size;
+    size_t offset;
+};
+
+static tmsize_t tiffReadProc(thandle_t fd, void *buf, tmsize_t size) {
+    ReadDataHandle *dataHandle = reinterpret_cast<ReadDataHandle *>(fd);
+    memcpy(buf, reinterpret_cast<const byte*>(dataHandle->data) + dataHandle->offset, size);
+    dataHandle->offset += size;
+    return size;
+}
+
+static tmsize_t tiffWriteProc(thandle_t, void *, tmsize_t) {
+    return 0;
+}
+
+static uint64_t tiffSeekProc(thandle_t fd, uint64_t off, int whence) {
+    ReadDataHandle *data = reinterpret_cast<ReadDataHandle *>(fd);
+    switch (whence) {
+        case SEEK_SET: {
+            data->offset = off;
+            break;
+        }
+        case SEEK_CUR: {
+            data->offset += off;
+            break;
+        }
+        case SEEK_END: {
+            data->offset = data->size + off;
+            break;
+        }
+    }
+    return data->offset;
+}
+
+static uint64_t tiffSizeProc(thandle_t fd) {
+    ReadDataHandle *data = reinterpret_cast<ReadDataHandle *>(fd);
+    return data->size;
+}
+
+static int tiffCloseProc(thandle_t) {
+    return 0;
+}
+
+static int tiffMapProc(thandle_t, tdata_t*, toff_t*) {
+    return 0;
+}
+
+static void tiffUnmapProc(thandle_t, tdata_t, toff_t) {
+    return;
+}
+
 bool detectTiffFormat(const byte *data, size_t length) {
     return length >= 2 && (data[0] == 'I' || data[0] == 'M') && data[1] == data[0];
 }
@@ -56,10 +108,10 @@ Bitmap loadTiff(FILE *file) {
 Bitmap loadTiff(const byte *data, size_t length) {
     ODE_ASSERT(data);
     ODE_ASSERT(length > 0);
-    // TODO: Prevent data copy
-    std::string str(reinterpret_cast<const char*>(data), length);
-    std::istringstream buffer(str);
-    if (TIFF *tiff = TIFFStreamOpen("memoryFile", &buffer)) {
+    ReadDataHandle dataHandle { data, length, 0 };
+    if (TIFF *tiff = TIFFClientOpen("memoryFile", "rm", reinterpret_cast<thandle_t>(&dataHandle), tiffReadProc,
+                                    tiffWriteProc, tiffSeekProc, tiffCloseProc,
+                                    tiffSizeProc, tiffMapProc, tiffUnmapProc)) {
         return loadTiff(tiff);
     }
     return Bitmap();
