@@ -18,6 +18,7 @@
 #include <ode-renderer.h>
 #include <ode-diagnostics.h>
 #include <ode-media.h>
+#include <ode/logic-api.h>
 #include <ode/renderer-api.h>
 #include "widgets/DesignEditorControlsWidget.h"
 #include "widgets/DesignEditorToolbarWidget.h"

@@ -3,6 +3,7 @@
 
 #include <ode-essentials.h>
 #include <ode/api-base.h>
+#include <ode/logic-api.h>
 #include <ode/renderer-api.h>
 
 /// Component data
