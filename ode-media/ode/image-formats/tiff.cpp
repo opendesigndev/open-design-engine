@@ -92,8 +92,9 @@ bool detectTiffFormat(const byte *data, size_t length) {
 }
 
 Bitmap loadTiff(const FilePath &path) {
-    if (FilePtr file = openFile(path, false))
-        return loadTiff(file);
+    if (TIFF *tiff = TIFFOpen(((std::string)path).c_str(), "r")) {
+        return loadTiff(tiff);
+    }
     return Bitmap();
 }
 
