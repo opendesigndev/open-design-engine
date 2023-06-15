@@ -540,6 +540,22 @@ int DesignEditorWindow::reloadOctopus(const FilePath &octopusPath, const FilePat
                 }
             }
         }
+        // Load fonts
+        ODE_StringList missingFonts;
+        CHECK(ode_design_listMissingFonts(context.design.design, &missingFonts));
+        for (int i = 0; i < missingFonts.n; ++i) {
+            const ODE_StringRef &missingFontName = missingFonts.entries[i];
+            for (const ode::FilePath &filePath : octopusFile.filePaths()) {
+                const char *fileName = filePath.filename();
+                if (std::strncmp(fileName, missingFontName.data, std::strlen(missingFontName.data)) == 0) {
+                    const std::optional<std::string> fileData = octopusFile.getFileData(filePath);
+                    if (fileData.has_value()) {
+                        ODE_MemoryBuffer fileBuffer = ode_makeMemoryBuffer(fileData->data(), fileData->size());
+                        ode_design_loadFontBytes(context.design.design, missingFontName, &fileBuffer, ODE_StringRef());
+                    }
+                }
+            }
+        }
 
         // Get loaded components list
         CHECK(ode_design_listComponents(context.design.design, &componentIds));
@@ -551,7 +567,6 @@ int DesignEditorWindow::reloadOctopus(const FilePath &octopusPath, const FilePat
             CHECK(ode_design_getComponent(context.design.design, &newComponent.component, newComponent.id));
             CHECK(ode_design_getComponentMetadata(context.design.design, &newComponent.metadata, newComponent.id));
             CHECK(ode_component_listLayers(newComponent.component, &newComponent.layerList));
-            CHECK(loadMissingFonts(fontDir.empty() ? (std::string)octopusPath.parent()+"/fonts" : fontDir));
             CHECK(ode_pr1_drawComponent(context.rc, newComponent.component, context.design.imageBase, &newComponent.bitmap, context.frameView));
         }
 
