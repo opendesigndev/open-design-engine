@@ -83,6 +83,14 @@ ODE_Result ODE_API ode_createDesignImageBase(ODE_RendererContextHandle rendererC
 ODE_Result ODE_API ode_destroyDesignImageBase(ODE_DesignImageBaseHandle designImageBase);
 
 /**
+ * Loads a design's image asset as file bytes in physical memory
+ * @param designImageBase - target design image base
+ * @param key - identifying key of the image asset
+ * @param data - memory buffer holding the raw image file data
+ */
+ODE_Result ODE_API ode_design_loadImageBytes(ODE_DesignImageBaseHandle designImageBase, ODE_StringRef key, ODE_MemoryBuffer data);
+
+/**
  * Loads a design's image asset as pixels in physical memory
  * @param designImageBase - target design image base
  * @param key - identifying key of the image asset

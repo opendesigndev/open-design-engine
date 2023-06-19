@@ -4,6 +4,7 @@
 #include <memory>
 #include <octopus/octopus.h>
 #include <ode-logic.h>
+#include <ode-media.h>
 #include "image/Image.h"
 #include "image/ImageBase.h"
 #include "optimized-renderer/Renderer.h"
@@ -84,6 +85,17 @@ ODE_Result ODE_API ode_createDesignImageBase(ODE_RendererContextHandle rendererC
 ODE_Result ODE_API ode_destroyDesignImageBase(ODE_DesignImageBaseHandle designImageBase) {
     delete designImageBase.ptr;
     return ODE_RESULT_OK;
+}
+
+ODE_Result ODE_API ode_design_loadImageBytes(ODE_DesignImageBaseHandle designImageBase, ODE_StringRef key, ODE_MemoryBuffer data) {
+    const ode::Bitmap bitmap = loadImage(reinterpret_cast<const unsigned char*>(data.data), data.length);
+    if (!bitmap.empty()) {
+        ODE_BitmapRef bitmapRef { static_cast<int>(bitmap.format()), bitmap.pixels(), bitmap.width(), bitmap.height() };
+        return ode_design_loadImagePixels(designImageBase, key, bitmapRef);
+    } else {
+        // TODO: ODE_RESULT_IMAGE_ERROR ?
+        return ODE_RESULT_UNKNOWN_ERROR;
+    }
 }
 
 ODE_Result ODE_API ode_design_loadImagePixels(ODE_DesignImageBaseHandle designImageBase, ODE_StringRef key, ODE_BitmapRef bitmap) {

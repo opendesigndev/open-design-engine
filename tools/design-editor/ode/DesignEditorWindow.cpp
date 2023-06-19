@@ -534,12 +534,8 @@ int DesignEditorWindow::reloadOctopus(const FilePath &octopusPath, const FilePat
         for (const ode::FilePath &filePath : octopusFile.filePaths()) {
             const std::optional<MemoryFileSystem::ConstStringRef> fileData = octopusFile.getFileData(filePath);
             if (fileData.has_value()) {
-                // TODO: Should not be using this direct ode-media function. Should use an API call.
-                ode::Bitmap bitmap = loadImage(reinterpret_cast<const unsigned char*>(fileData->get().c_str()), fileData->get().size());
-                if (!bitmap.empty()) {
-                    ODE_BitmapRef bitmapRef { static_cast<int>(bitmap.format()), bitmap.pixels(), bitmap.width(), bitmap.height() };
-                    ode_design_loadImagePixels(context.design.imageBase, ode_stringRef((std::string)filePath), bitmapRef);
-                }
+                ODE_MemoryBuffer imageData = ode_makeMemoryBuffer(fileData->get().c_str(), fileData->get().size());
+                ode_design_loadImageBytes(context.design.imageBase, ode_stringRef((std::string)filePath), imageData);
             }
         }
         // Load fonts
