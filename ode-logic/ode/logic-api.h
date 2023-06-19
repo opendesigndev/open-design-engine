@@ -269,7 +269,7 @@ ODE_Result ODE_API ode_design_getComponent(ODE_DesignHandle design, ODE_OUT_RETU
  * @param metadata - output argument for the component metadata
  * @param componentId - component ID string reference
  */
-ODE_Result ODE_API ode_design_getComponentMetadata(ODE_DesignHandle design, ODE_ComponentMetadata *metadata, ODE_StringRef componentId);
+ODE_Result ODE_API ode_design_getComponentMetadata(ODE_DesignHandle design, ODE_OUT_RETURN ODE_ComponentMetadata *metadata, ODE_StringRef componentId);
 
 // Component
 
