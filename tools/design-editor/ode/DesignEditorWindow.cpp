@@ -532,9 +532,10 @@ int DesignEditorWindow::reloadOctopus(const FilePath &octopusPath, const FilePat
 
         // Load images
         for (const ode::FilePath &filePath : octopusFile.filePaths()) {
-            const std::optional<std::string> fileData = octopusFile.getFileData(filePath);
+            const std::optional<MemoryFileSystem::ConstStringRef> fileData = octopusFile.getFileData(filePath);
             if (fileData.has_value()) {
-                ode::Bitmap bitmap = loadImage(reinterpret_cast<const unsigned char*>(fileData->c_str()), fileData->size());
+                // TODO: Should not be using this direct ode-media function. Should use an API call.
+                ode::Bitmap bitmap = loadImage(reinterpret_cast<const unsigned char*>(fileData->get().c_str()), fileData->get().size());
                 if (!bitmap.empty()) {
                     ODE_BitmapRef bitmapRef { static_cast<int>(bitmap.format()), bitmap.pixels(), bitmap.width(), bitmap.height() };
                     ode_design_loadImagePixels(context.design.imageBase, ode_stringRef((std::string)filePath), bitmapRef);

@@ -27,7 +27,7 @@ const std::vector<FilePath> MemoryFileSystem::filePaths() const {
     return result;
 }
 
-std::optional<std::string> MemoryFileSystem::getFileData(const FilePath& filePath, Error *error) const {
+std::optional<MemoryFileSystem::ConstStringRef> MemoryFileSystem::getFileData(const FilePath& filePath, Error *error) const {
     if (error)
         *error = Error::OK;
 
