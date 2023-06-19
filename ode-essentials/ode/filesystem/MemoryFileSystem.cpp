@@ -1,6 +1,7 @@
 
 #include "MemoryFileSystem.h"
 
+#include <cstring>
 #include <zlib.h>
 
 namespace ode {
