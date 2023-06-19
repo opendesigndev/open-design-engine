@@ -2,6 +2,7 @@
 #include "MemoryFileSystem.h"
 
 #include <cstring>
+#include <algorithm>
 #include <zlib.h>
 
 namespace ode {
