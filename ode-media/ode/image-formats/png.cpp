@@ -211,6 +211,45 @@ bool savePng(const FilePath &path, SparseBitmapConstRef bitmap) {
 }
 #endif
 
+bool writePng(SparseBitmapConstRef bitmap, std::vector<byte> &pngData) {
+    if (!(bitmap.width() > 0 && bitmap.height() > 0))
+        return false;
+    ODE_ASSERT(bitmap.format == PixelFormat::R || bitmap.format == PixelFormat::RGB || bitmap.format == PixelFormat::RGBA);
+    if (!(bitmap.format == PixelFormat::R || bitmap.format == PixelFormat::RGB || bitmap.format == PixelFormat::RGBA))
+        return false;
+    png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, pngError, pngWarning);
+    if (!png)
+        return false;
+    png_infop info = png_create_info_struct(png);
+    PngWriteStructGuard pngGuard(png, info);
+    if (!info)
+        return false;
+    // Error handling (archaic longjump model)
+    if (setjmp(png_jmpbuf(png)))
+        return false;
+
+    png_set_write_fn(png, &pngData, [] (png_structp png_ptr, png_bytep data, png_size_t length) {
+        std::vector<byte> *handle = (std::vector<byte>*)png_get_io_ptr(png_ptr);
+        const size_t oldSize = handle->size();
+        handle->resize(handle->size() + length);
+        memcpy(handle->data() + oldSize, data, length);
+    }, nullptr);
+
+    std::vector<png_bytep> rows;
+    rows.resize(bitmap.height());
+    png_bytep cur = const_cast<png_bytep>((const byte *) bitmap);
+    size_t stride = pixelSize(bitmap.format)*bitmap.width();
+    for (png_bytep &rowPtr : rows) {
+        rowPtr = cur;
+        cur += stride;
+    }
+    int colorType = bitmap.format == PixelFormat::RGBA ? PNG_COLOR_TYPE_RGB_ALPHA : bitmap.format == PixelFormat::RGB ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_GRAY;
+    png_set_IHDR(png, info, bitmap.width(), bitmap.height(), 8, colorType, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+    png_set_rows(png, info, rows.data());
+    png_write_png(png, info, PNG_TRANSFORM_IDENTITY, NULL);
+    return true;
+}
+
 }
 
 #endif

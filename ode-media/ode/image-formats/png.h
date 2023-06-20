@@ -21,6 +21,9 @@ Bitmap loadPng(const byte *data, size_t length);
 bool savePng(const FilePath &path, SparseBitmapConstRef bitmap);
 #endif
 
+/// Encode bitmap data as PNG and write into memory buffer
+bool writePng(SparseBitmapConstRef bitmap, std::vector<byte> &pngData);
+
 }
 
 #endif
