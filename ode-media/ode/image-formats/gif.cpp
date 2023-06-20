@@ -56,10 +56,12 @@ static Bitmap loadGif(GifFileType *gif) {
 }
 
 
+#ifndef __EMSCRIPTEN__
 static int gifFileRead(GifFileType *context, GifByteType *data, int length) {
     FILE *file = reinterpret_cast<FILE *>(context->UserData);
     return (int) fread(data, 1, length, file);
 }
+#endif
 
 static int gifMemoryRead(GifFileType* context, GifByteType* data, int length) {
     ReadDataHandle *dataHandle = reinterpret_cast<ReadDataHandle *>(context->UserData);
@@ -72,12 +74,15 @@ bool detectGifFormat(const byte *data, size_t length) {
     return length >= 3 && data[0] == 'G' && data[1] == 'I' && data[2] == 'F';
 }
 
+#ifndef __EMSCRIPTEN__
 Bitmap loadGif(const FilePath &path) {
     if (FilePtr file = openFile(path, false))
         return loadGif(file);
     return Bitmap();
 }
+#endif
 
+#ifndef __EMSCRIPTEN__
 Bitmap loadGif(FILE *file) {
     ODE_ASSERT(file);
     if (GifFileType *gif = DGifOpen(file, gifFileRead, NULL)) {
@@ -85,6 +90,7 @@ Bitmap loadGif(FILE *file) {
     }
     return Bitmap();
 }
+#endif
 
 Bitmap loadGif(const byte *data, size_t length) {
     ODE_ASSERT(data);

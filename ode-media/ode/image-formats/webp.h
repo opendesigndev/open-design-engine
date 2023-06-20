@@ -10,8 +10,10 @@ namespace ode {
 
 bool detectWebpFormat(const byte *data, size_t length);
 
+#ifndef __EMSCRIPTEN__
 Bitmap loadWebp(const FilePath &path);
 Bitmap loadWebp(FILE *file);
+#endif
 Bitmap loadWebp(const byte *data, size_t length);
 
 }

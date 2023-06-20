@@ -3,6 +3,7 @@
 
 namespace ode {
 
+#ifndef __EMSCRIPTEN__
 Bitmap loadImage(const FilePath &path) {
     if (FilePtr file = openFile(path, false)) {
         byte buffer[16] = { };
@@ -23,6 +24,7 @@ Bitmap loadImage(const FilePath &path) {
     }
     return Bitmap();
 }
+#endif
 
 Bitmap loadImage(const byte *data, size_t length) {
     if (detectPngFormat(data, length))

@@ -10,8 +10,11 @@
 
 namespace ode {
 
+#ifndef __EMSCRIPTEN__
 /// Loads an image file at path into a bitmap object (supports PNG, JPEG, GIF, WEBP, TIFF)
 Bitmap loadImage(const FilePath &path);
+#endif
+
 /// Loads an image stored in memory into a bitmap object (supports JPEG)
 Bitmap loadImage(const byte *data, size_t length);
 

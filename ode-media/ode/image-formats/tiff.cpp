@@ -91,13 +91,16 @@ bool detectTiffFormat(const byte *data, size_t length) {
     return length >= 2 && (data[0] == 'I' || data[0] == 'M') && data[1] == data[0];
 }
 
+#ifndef __EMSCRIPTEN__
 Bitmap loadTiff(const FilePath &path) {
     if (TIFF *tiff = TIFFOpen(((std::string)path).c_str(), "r")) {
         return loadTiff(tiff);
     }
     return Bitmap();
 }
+#endif
 
+#ifndef __EMSCRIPTEN__
 Bitmap loadTiff(FILE *file) {
     ODE_ASSERT(file);
     if (TIFF *tiff = TIFFFdOpen(fileno(file), "", "r")) {
@@ -105,6 +108,7 @@ Bitmap loadTiff(FILE *file) {
     }
     return Bitmap();
 }
+#endif
 
 Bitmap loadTiff(const byte *data, size_t length) {
     ODE_ASSERT(data);
@@ -118,6 +122,7 @@ Bitmap loadTiff(const byte *data, size_t length) {
     return Bitmap();
 }
 
+#ifndef __EMSCRIPTEN__
 bool saveTiff(const FilePath &path, SparseBitmapConstRef bitmap) {
     int channels = pixelChannels(bitmap.format);
     if (!(channels > 0 && channels <= 4 && bitmap.width() > 0 && bitmap.height() > 0 && bitmap.pixels))
@@ -152,6 +157,7 @@ bool saveTiff(const FilePath &path, SparseBitmapConstRef bitmap) {
     }
     return false;
 }
+#endif
 
 }
 

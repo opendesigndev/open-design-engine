@@ -48,12 +48,15 @@ bool detectPngFormat(const byte *data, size_t length) {
     return length >= 4 && data[0] == 0x89 && data[1] == 'P' && data[2] == 'N' && data[3] == 'G';
 }
 
+#ifndef __EMSCRIPTEN__
 Bitmap loadPng(const FilePath &path) {
     if (FilePtr file = openFile(path, false))
         return loadPng(file);
     return Bitmap();
 }
+#endif
 
+#ifndef __EMSCRIPTEN__
 Bitmap loadPng(FILE *file) {
     ODE_ASSERT(file);
     png_structp png = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, pngError, pngWarning);
@@ -107,6 +110,7 @@ Bitmap loadPng(FILE *file) {
     }
     return bitmap;
 }
+#endif
 
 Bitmap loadPng(const byte *data, size_t length) {
     ODE_ASSERT(data);
@@ -169,6 +173,7 @@ Bitmap loadPng(const byte *data, size_t length) {
     return bitmap;
 }
 
+#ifndef __EMSCRIPTEN__
 bool savePng(const FilePath &path, SparseBitmapConstRef bitmap) {
     if (!(bitmap.width() > 0 && bitmap.height() > 0))
         return false;
@@ -204,6 +209,7 @@ bool savePng(const FilePath &path, SparseBitmapConstRef bitmap) {
     png_write_png(png, info, PNG_TRANSFORM_IDENTITY, NULL);
     return true;
 }
+#endif
 
 }
 

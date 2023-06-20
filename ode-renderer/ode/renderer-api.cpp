@@ -88,6 +88,7 @@ ODE_Result ODE_API ode_destroyDesignImageBase(ODE_DesignImageBaseHandle designIm
 }
 
 ODE_Result ODE_API ode_design_loadImageBytes(ODE_DesignImageBaseHandle designImageBase, ODE_StringRef key, ODE_MemoryBuffer data) {
+    ODE_ASSERT(key.data && data.data);
     const ode::Bitmap bitmap = loadImage(reinterpret_cast<const unsigned char*>(data.data), data.length);
     if (!bitmap.empty()) {
         ODE_BitmapRef bitmapRef { static_cast<int>(bitmap.format()), bitmap.pixels(), bitmap.width(), bitmap.height() };

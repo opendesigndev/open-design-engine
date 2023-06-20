@@ -123,12 +123,15 @@ bool detectJpegFormat(const byte *data, size_t length) {
     return length >= 2 && data[0] == 0xff && data[1] == 0xd8;
 }
 
+#ifndef __EMSCRIPTEN__
 Bitmap loadJpeg(const FilePath &path) {
     if (FilePtr file = openFile(path, false))
         return loadJpeg(file);
     return Bitmap();
 }
+#endif
 
+#ifndef __EMSCRIPTEN__
 Bitmap loadJpeg(FILE *file) {
     ODE_ASSERT(file);
     jpeg_decompress_struct cinfo;
@@ -143,6 +146,7 @@ Bitmap loadJpeg(FILE *file) {
     jpeg_stdio_src(&cinfo, file);
     return loadJpeg(cinfo);
 }
+#endif
 
 Bitmap loadJpeg(const byte *data, size_t length) {
     ODE_ASSERT(data);
