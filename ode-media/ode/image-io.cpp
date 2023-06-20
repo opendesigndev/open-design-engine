@@ -29,16 +29,16 @@ Bitmap loadImage(const FilePath &path) {
 Bitmap loadImage(const byte *data, size_t length) {
     if (detectPngFormat(data, length))
         return loadPng(data, length);
+    if (detectJpegFormat(data, length))
+        return loadJpeg(data, length);
 #ifndef __EMSCRIPTEN__
     if (detectWebpFormat(data, length))
         return loadWebp(data, length);
-#endif
-    if (detectJpegFormat(data, length))
-        return loadJpeg(data, length);
     if (detectGifFormat(data, length))
         return loadGif(data, length);
     if (detectTiffFormat(data, length))
         return loadTiff(data, length);
+#endif
     if (detectRgbaFormat(data, length))
         return loadRgba(data, length);
     return Bitmap();

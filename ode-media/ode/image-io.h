@@ -2,11 +2,13 @@
 #pragma once
 
 #include "image-formats/png.h"
-#include "image-formats/webp.h"
 #include "image-formats/jpeg.h"
+#include "image-formats/rgba.h"
+#ifndef __EMSCRIPTEN__
 #include "image-formats/gif.h"
 #include "image-formats/tiff.h"
-#include "image-formats/rgba.h"
+#include "image-formats/webp.h"
+#endif
 
 namespace ode {
 
