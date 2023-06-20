@@ -29,9 +29,9 @@ Bitmap loadImage(const FilePath &path) {
 Bitmap loadImage(const byte *data, size_t length) {
     if (detectPngFormat(data, length))
         return loadPng(data, length);
+#ifndef __EMSCRIPTEN__
     if (detectJpegFormat(data, length))
         return loadJpeg(data, length);
-#ifndef __EMSCRIPTEN__
     if (detectWebpFormat(data, length))
         return loadWebp(data, length);
     if (detectGifFormat(data, length))

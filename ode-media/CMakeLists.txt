@@ -19,8 +19,8 @@ target_include_directories(ode-media INTERFACE
 
 # External dependencies
 find_package(PNG REQUIRED)
-find_package(JPEG REQUIRED)
 if(NOT EMSCRIPTEN)
+    find_package(JPEG REQUIRED)
     find_package(GIF REQUIRED)
     find_package(TIFF REQUIRED)
     find_package(WebP REQUIRED)
@@ -28,8 +28,8 @@ endif()
 
 # Macro configuration
 target_compile_definitions(ode-media PUBLIC ODE_MEDIA_PNG_SUPPORT)
-target_compile_definitions(ode-media PUBLIC ODE_MEDIA_JPEG_SUPPORT)
 if(NOT EMSCRIPTEN)
+    target_compile_definitions(ode-media PUBLIC ODE_MEDIA_JPEG_SUPPORT)
     target_compile_definitions(ode-media PUBLIC ODE_MEDIA_GIF_SUPPORT)
     target_compile_definitions(ode-media PUBLIC ODE_MEDIA_TIFF_SUPPORT)
     target_compile_definitions(ode-media PUBLIC ODE_MEDIA_WEBP_SUPPORT)
@@ -37,8 +37,8 @@ endif()
 
 # Module dependencies
 target_link_libraries(ode-media PUBLIC ode-essentials)
-target_link_libraries(ode-media PRIVATE PNG::PNG JPEG::JPEG)
+target_link_libraries(ode-media PRIVATE PNG::PNG)
 if(NOT EMSCRIPTEN)
-    target_link_libraries(ode-media PRIVATE TIFF::TIFF GIF::GIF WebP::webp WebP::webpdemux WebP::libwebpmux)
+    target_link_libraries(ode-media PRIVATE JPEG::JPEG TIFF::TIFF GIF::GIF WebP::webp WebP::webpdemux WebP::libwebpmux)
 endif()
     # Note: Linking WebP::webpdemux & WebP::libwebpmux are only required by Skia - !!! TODO move to Rasterizer module
