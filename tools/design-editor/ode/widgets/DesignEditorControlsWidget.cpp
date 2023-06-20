@@ -185,6 +185,17 @@ void drawControlsWidget(DesignEditorDesign &design,
                             nonstd::nullopt,
                             nonstd::nullopt };
                         octopusComponent.assets = octopus.content.has_value() ? listAllAssets(*octopus.content) : octopus::Assets{};
+
+                        for (const octopus::AssetImage &assetImage : octopusComponent.assets->images) {
+                            if (assetImage.location.path.has_value()) {
+                                ODE_MemoryBuffer imageData;
+                                ode_pr1_design_exportPngImage(design.imageBase, ode_stringRef(assetImage.location.path.value()), &imageData);
+                                if (!octopusFile.add(assetImage.location.path.value(), std::string(static_cast<const char *>(imageData.data), imageData.length), MemoryFileSystem::CompressionMethod::NONE)) {
+                                    // TODO: Error saving PNG to octopus file
+                                    continue;
+                                }
+                            }
+                        }
                     }
                 }
 

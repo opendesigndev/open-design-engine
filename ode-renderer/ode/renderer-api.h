@@ -99,6 +99,14 @@ ODE_Result ODE_API ode_design_loadImageBytes(ODE_DesignImageBaseHandle designIma
 ODE_Result ODE_API ode_design_loadImagePixels(ODE_DesignImageBaseHandle designImageBase, ODE_StringRef key, ODE_BitmapRef bitmap);
 
 /**
+ * PROTOTYPE - exports a stored image as PNG into the specified buffer
+ * @param designImageBase - target design image base
+ * @param key - identifying key of the image asset
+ * @param data - memory buffer that will be filled with the PNG binary data
+ */
+ODE_Result ODE_API ode_pr1_design_exportPngImage(ODE_DesignImageBaseHandle designImageBase, ODE_StringRef key, ODE_INOUT ODE_MemoryBuffer *data);
+
+/**
  * PROTOTYPE - draws a component into a bitmap in physical memory
  * @param rendererContext - target renderer context
  * @param component - component to be rendered

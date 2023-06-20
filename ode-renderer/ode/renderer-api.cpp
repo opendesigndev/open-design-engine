@@ -121,6 +121,32 @@ ODE_Result ODE_API ode_design_loadImagePixels(ODE_DesignImageBaseHandle designIm
     return ODE_RESULT_OK;
 }
 
+ODE_Result ODE_API ode_pr1_design_exportPngImage(ODE_DesignImageBaseHandle designImageBase, ODE_StringRef key, ODE_INOUT ODE_MemoryBuffer *data) {
+    ODE_ASSERT(key.data && data);
+    if (!designImageBase.ptr)
+        return ODE_RESULT_INVALID_IMAGE_BASE;
+    octopus::Image imageRef = { };
+    imageRef.ref.type = octopus::ImageRef::Type::PATH;
+    imageRef.ref.value = ode_stringDeref(key);
+    const ImagePtr image = designImageBase.ptr->imageBase.get(imageRef);
+    if (image == nullptr) {
+        // TODO: Some other error.
+        return ODE_RESULT_UNKNOWN_ERROR;
+    }
+    BitmapPtr bitmap = image->asBitmap();
+    bitmapUnpremultiply(*bitmap);
+    const SparseBitmapConstRef sparseBitmapConstRef (bitmap->format(), bitmap->pixels(), bitmap->dimensions(), 0);
+    std::vector<byte> pngData;
+    if (writePng(sparseBitmapConstRef, pngData)) {
+        data->data = std::move(pngData.data());
+        data->length = pngData.size();
+        return ODE_RESULT_OK;
+    } else {
+        // TODO: Some other error.
+        return ODE_RESULT_UNKNOWN_ERROR;
+    }
+}
+
 ODE_Result ODE_API ode_pr1_drawComponent(ODE_RendererContextHandle rendererContext, ODE_ComponentHandle component, ODE_DesignImageBaseHandle designImageBase, ODE_Bitmap *outputBitmap, ODE_PR1_FrameView frameView) {
     ODE_ASSERT(rendererContext.ptr && component.ptr && designImageBase.ptr && outputBitmap);
     if (Result<Rendexptr, DesignError> renderTree = component.ptr->accessor.assemble()) {
