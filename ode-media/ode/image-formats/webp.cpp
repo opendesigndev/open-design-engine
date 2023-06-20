@@ -2,12 +2,12 @@
 #include "webp.h"
 
 #ifdef ODE_MEDIA_WEBP_SUPPORT
+#ifndef __EMSCRIPTEN__
 
 #include <webp/decode.h>
 
 namespace ode {
 
-#ifndef __EMSCRIPTEN__
 static std::vector<byte> readWholeFile(FILE *file) {
     ODE_ASSERT(file);
     fseek(file, 0, SEEK_END);
@@ -22,26 +22,21 @@ static std::vector<byte> readWholeFile(FILE *file) {
     fileBytes.resize(dst-fileBytes.data());
     return fileBytes;
 }
-#endif
 
 bool detectWebpFormat(const byte *data, size_t length) {
     return length >= 4 && data[0] == 'R' && data[1] == 'I' && data[2] == 'F' && data[3] == 'F';
 }
 
-#ifndef __EMSCRIPTEN__
 Bitmap loadWebp(const FilePath &path) {
     if (FilePtr file = openFile(path, false))
         return loadWebp(file);
     return Bitmap();
 }
-#endif
 
-#ifndef __EMSCRIPTEN__
 Bitmap loadWebp(FILE *file) {
     const std::vector<byte> fileBytes = readWholeFile(file);
     return loadWebp(fileBytes.data(), fileBytes.size());
 }
-#endif
 
 Bitmap loadWebp(const byte *data, size_t length) {
     ODE_ASSERT(data);
@@ -59,4 +54,5 @@ Bitmap loadWebp(const byte *data, size_t length) {
 
 }
 
+#endif
 #endif
