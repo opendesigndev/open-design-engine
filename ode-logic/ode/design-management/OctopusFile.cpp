@@ -127,7 +127,7 @@ bool OctopusFile::save(const FilePath &octopusFilePath, Error *error) {
     // Individual file data
     for (const File &file : files) {
         fileHeadersOffsets[(std::string)file.path] = static_cast<uint32_t>(outputFile.tellp());
-        const size_t fileNameLength = strlen(file.path.filename());
+        const size_t fileNameLength = ((std::string)file.path).size();
 
         // Local file header signature
         outputFile.write(PK_LOCAL_FILE_HEADER_SIGNATURE, strlen(PK_LOCAL_FILE_HEADER_SIGNATURE));
@@ -159,7 +159,7 @@ bool OctopusFile::save(const FilePath &octopusFilePath, Error *error) {
         // Extra field length
         outputFile.write("\0\0", 2);
         // File name
-        outputFile.write(file.path.filename(), fileNameLength);
+        outputFile.write(((std::string)file.path).data(), fileNameLength);
         // Extra field - No data
         // File contents
         outputFile.write(file.data.data(), file.data.size());
