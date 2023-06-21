@@ -18,7 +18,7 @@
 using namespace ode;
 
 struct ODE_internal_Engine {
-    std::vector<void *> fontDataBuffers;
+    std::vector<std::pair<ODE_String, ODE_MemoryBuffer>> fontDataBuffers;
 };
 
 struct ODE_internal_Design {
@@ -222,8 +222,10 @@ ODE_Result ODE_API ode_createEngine(ODE_EngineHandle *engine, const ODE_EngineAt
 
 ODE_Result ODE_API ode_destroyEngine(ODE_EngineHandle engine) {
     if (engine.ptr) {
-        for (void *dataPtr : engine.ptr->fontDataBuffers)
-            free(dataPtr);
+        for (auto &fontRecord : engine.ptr->fontDataBuffers) {
+            ode_destroyString(fontRecord.first);
+            ode_destroyMemoryBuffer(&fontRecord.second);
+        }
         // TODO check that all designs destroyed
         delete engine.ptr;
     }
@@ -289,7 +291,9 @@ ODE_Result ODE_NATIVE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_De
             metadata.id = ode_stringRef(componentId);
             metadata.page = {}; // TODO: Metadata page?
             metadata.position = ODE_Vector2 { manifestComponent->bounds.x, manifestComponent->bounds.y };
-            ode_design_addComponentFromOctopusString(*design, &component, metadata, ode_stringRef(*fileData), parseError);
+            if (const ODE_Result result = ode_design_addComponentFromOctopusString(*design, &component, metadata, ode_stringRef(*fileData), parseError)) {
+                return result;
+            }
         }
     }
 
@@ -304,7 +308,9 @@ ODE_Result ODE_NATIVE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_De
                 const std::optional<std::string> fileData = octopusFile.getFileData(filePath);
                 if (fileData.has_value()) {
                     ODE_MemoryBuffer fileBuffer = ode_makeMemoryBuffer(fileData->data(), fileData->size());
-                    ode_design_loadFontBytes(*design, missingFontName, &fileBuffer, ODE_StringRef());
+                    if (const ODE_Result result = ode_design_loadFontBytes(*design, missingFontName, &fileBuffer, ODE_StringRef())) {
+                        return result;
+                    }
                 }
             }
         }
@@ -436,9 +442,20 @@ ODE_Result ODE_API ode_design_loadFontBytes(ODE_DesignHandle design, ODE_StringR
     if (!odtr::addFontBytes(TEXT_RENDERER_CONTEXT, ode_stringDeref(name), ode_stringDeref(faceName), reinterpret_cast<const uint8_t *>(data->data), data->length, false))
         return ODE_RESULT_FONT_ERROR;
     // Transfer data pointer from memory buffer to engine
-    design.ptr->engine->fontDataBuffers.push_back(reinterpret_cast<void *>(data->data));
+    design.ptr->engine->fontDataBuffers.push_back(std::make_pair(ode_makeString(name), *data));
     data->data = ODE_VarDataPtr();
     data->length = 0;
+    return ODE_RESULT_OK;
+}
+
+ODE_Result ODE_API ode_pr1_design_exportFontBytes(ODE_DesignHandle design, ODE_StringRef name, ODE_MemoryBuffer *data) {
+    ODE_ASSERT(data);
+    const auto it = std::find_if(design.ptr->engine->fontDataBuffers.begin(), design.ptr->engine->fontDataBuffers.end(), [&name](const std::pair<ODE_String, ODE_MemoryBuffer> &fontRecord) {
+        return strcmp(fontRecord.first.data, name.data) == 0;
+    });
+    if (it != design.ptr->engine->fontDataBuffers.end()) {
+        *data = it->second;
+    }
     return ODE_RESULT_OK;
 }
 

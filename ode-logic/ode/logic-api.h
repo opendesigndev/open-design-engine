@@ -258,6 +258,14 @@ ODE_Result ODE_NATIVE_API ode_design_loadFontFile(ODE_DesignHandle design, ODE_S
 ODE_Result ODE_API ode_design_loadFontBytes(ODE_DesignHandle design, ODE_StringRef name, ODE_INOUT ODE_MemoryBuffer *data, ODE_StringRef faceName);
 
 /**
+ * PROTOTYPE - exports a stored font data into the specified buffer
+ * @param design - target design
+ * @param name - font name identifier (post-script name)
+ * @param data - memory buffer that will be filled with the font binary data
+ */
+ODE_Result ODE_API ode_pr1_design_exportFontBytes(ODE_DesignHandle design, ODE_StringRef name, ODE_INOUT ODE_MemoryBuffer *data);
+
+/**
  * Finds component within a design by ID and outputs its handle
  * @param component - output argument for the component handle
  * @param componentId - component ID string reference
