@@ -533,9 +533,9 @@ int DesignEditorWindow::reloadOctopus(const FilePath &octopusPath, const FilePat
         // TODO: Move octopus file image loading inside the ode_loadDesignFromFile function?
         // Load images - must be outside of ode_loadDesignFromFile because it uses renderer-api instead of logic-api
         for (const ode::FilePath &filePath : octopusFile.filePaths()) {
-            const std::optional<MemoryFileSystem::ConstStringRef> fileData = octopusFile.getFileData(filePath);
+            const std::optional<std::string> fileData = octopusFile.getFileData(filePath);
             if (fileData.has_value()) {
-                ODE_MemoryBuffer imageData = ode_makeMemoryBuffer(fileData->get().c_str(), fileData->get().size());
+                ODE_MemoryBuffer imageData = ode_makeMemoryBuffer(fileData->c_str(), fileData->size());
                 ode_design_loadImageBytes(context.design.imageBase, ode_stringRef((std::string)filePath), imageData);
             }
         }
