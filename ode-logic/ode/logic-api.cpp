@@ -293,6 +293,23 @@ ODE_Result ODE_NATIVE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_De
         }
     }
 
+    // Load fonts
+    ODE_StringList missingFonts;
+    ode_design_listMissingFonts(*design, &missingFonts);
+    for (int i = 0; i < missingFonts.n; ++i) {
+        const ODE_StringRef &missingFontName = missingFonts.entries[i];
+        for (const ode::FilePath &filePath : octopusFile.filePaths()) {
+            const char *fileName = filePath.filename();
+            if (std::strncmp(fileName, missingFontName.data, std::strlen(missingFontName.data)) == 0) {
+                const std::optional<std::string> fileData = octopusFile.getFileData(filePath);
+                if (fileData.has_value()) {
+                    ODE_MemoryBuffer fileBuffer = ode_makeMemoryBuffer(fileData->data(), fileData->size());
+                    ode_design_loadFontBytes(*design, missingFontName, &fileBuffer, ODE_StringRef());
+                }
+            }
+        }
+    }
+
     return ODE_RESULT_OK;
 }
 
