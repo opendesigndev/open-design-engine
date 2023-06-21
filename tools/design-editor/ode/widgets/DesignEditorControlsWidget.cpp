@@ -45,7 +45,6 @@ octopus::Assets listAllAssets(const octopus::Layer &layer) {
     if (layer.type == octopus::Layer::Type::TEXT && layer.text.has_value()) {
         if (layer.text->defaultStyle.font.has_value()) {
             const octopus::Font &font = *layer.text->defaultStyle.font;
-            // TODO: AssetFont path
             insertUnique(assets.fonts, octopus::AssetFont {
                 nonstd::nullopt,
                 nonstd::nullopt,
@@ -57,7 +56,6 @@ octopus::Assets listAllAssets(const octopus::Layer &layer) {
             for (const octopus::StyleRange &styleRange : *layer.text->styles) {
                 if (styleRange.style.font.has_value()) {
                     const octopus::Font &font = *styleRange.style.font;
-                    // TODO: AssetFont path
                     insertUnique(assets.fonts, octopus::AssetFont {
                         nonstd::nullopt,
                         nonstd::nullopt,
@@ -76,6 +74,15 @@ octopus::Assets listAllAssets(const octopus::Layer &layer) {
         }
     }
     return assets;
+}
+
+std::string fontFileExtension(const ODE_MemoryBuffer &fontBuffer) {
+    if (strncmp(reinterpret_cast<const char *>(fontBuffer.data), "ttcf", 4) == 0) {
+        return "ttc";
+    } else if (strncmp(reinterpret_cast<const char *>(fontBuffer.data), "\x00\x01\x00\x00", 4) == 0) {
+        return "ttf";
+    }
+    return "";
 }
 
 }
@@ -189,10 +196,32 @@ void drawControlsWidget(DesignEditorDesign &design,
                         for (const octopus::AssetImage &assetImage : octopusComponent.assets->images) {
                             if (assetImage.location.path.has_value()) {
                                 ODE_MemoryBuffer imageData;
-                                ode_pr1_design_exportPngImage(design.imageBase, ode_stringRef(assetImage.location.path.value()), &imageData);
-                                if (!octopusFile.add(assetImage.location.path.value(), std::string(static_cast<const char *>(imageData.data), imageData.length), MemoryFileSystem::CompressionMethod::NONE)) {
-                                    // TODO: Error saving PNG to octopus file
-                                    continue;
+                                if (ode_pr1_design_exportPngImage(design.imageBase, ode_stringRef(assetImage.location.path.value()), &imageData) == ODE_RESULT_OK) {
+                                    if (!octopusFile.add(assetImage.location.path.value(), std::string(static_cast<const char *>(imageData.data), imageData.length), MemoryFileSystem::CompressionMethod::NONE)) {
+                                        // TODO: Error saving PNG to octopus file
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+                        for (octopus::AssetFont &assetFont : octopusComponent.assets->fonts) {
+                            ODE_MemoryBuffer fontData;
+                            if (ode_pr1_design_exportFontBytes(design.design, ODE_StringRef {assetFont.name.data(), (int)assetFont.name.size()}, &fontData) == ODE_RESULT_OK) {
+                                if (fontData.data) {
+                                    const std::string fileExtension = fontFileExtension(fontData);
+                                    if (!fileExtension.empty()) {
+                                        assetFont.location = octopus::ResourceLocation {
+                                            octopus::ResourceLocation::Type::RELATIVE,
+                                            "fonts/"+assetFont.name+"."+fileExtension,
+                                            nonstd::nullopt,
+                                            nonstd::nullopt };
+                                        if (!octopusFile.exists(assetFont.location->path.value())) {
+                                            if (!octopusFile.add(assetFont.location->path.value(), std::string(static_cast<const char *>(fontData.data), fontData.length), MemoryFileSystem::CompressionMethod::NONE)) {
+                                                // TODO: Error saving Font to octopus file
+                                                continue;
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
