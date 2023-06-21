@@ -169,7 +169,7 @@ bool OctopusFile::save(const FilePath &octopusFilePath, Error *error) {
     const uint32_t centralDirectoryOffset = static_cast<uint32_t>(outputFile.tellp());
     for (const File &file : files) {
         const uint32_t fileHeaderOffset = fileHeadersOffsets[(std::string)file.path];
-        const size_t fileNameLength = strlen(file.path.filename());
+        const size_t fileNameLength = ((std::string)file.path).size();
 
         // Central directory file header signature = 0x02014b50
         outputFile.write(PK_CENTRAL_DIR_FILE_HEADER_SIGNATURE, 4);
@@ -213,7 +213,7 @@ bool OctopusFile::save(const FilePath &octopusFilePath, Error *error) {
         // Relative offset of local file header
         outputFile.write(reinterpret_cast<const char*>(&fileHeaderOffset), 4);
         // File name
-        outputFile.write(file.path.filename(), fileNameLength);
+        outputFile.write(((std::string)file.path).data(), fileNameLength);
     }
 
     // End of central directory record

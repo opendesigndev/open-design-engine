@@ -27,7 +27,13 @@ const std::vector<FilePath> MemoryFileSystem::filePaths() const {
     return result;
 }
 
-std::optional<MemoryFileSystem::ConstStringRef> MemoryFileSystem::getFileData(const FilePath& filePath, Error *error) const {
+bool MemoryFileSystem::exists(const FilePath& filePath) const {
+    return std::any_of(files.begin(), files.end(), [&filePath](const File &file) {
+        return file.path == filePath;
+    });
+}
+
+std::optional<std::string> MemoryFileSystem::getFileData(const FilePath& filePath, Error *error) const {
     if (error)
         *error = Error::OK;
 

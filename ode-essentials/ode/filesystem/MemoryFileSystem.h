@@ -38,12 +38,13 @@ public:
     };
     using FileRef = std::reference_wrapper<File>;
     using Files = std::vector<File>;
-    using ConstStringRef = std::reference_wrapper<const std::string>;
 
     /// Get list of all contained files as their paths.
     const std::vector<FilePath> filePaths() const;
+    /// Detects if the specified file exists
+    bool exists(const FilePath& filePath) const;
     /// Read a single specified file. Decompress if the loaded file data is compressed.
-    std::optional<ConstStringRef> getFileData(const FilePath& filePath, Error *error = nullptr) const;
+    std::optional<std::string> getFileData(const FilePath& filePath, Error *error = nullptr) const;
 
     /// Adds a data file at the specified path, compress by the specified compression method.
     std::optional<FileRef> add(const FilePath &path, const std::string &data, CompressionMethod compressionMethod, Error *error = nullptr);
