@@ -53,6 +53,9 @@ public:
     void clear();
 
 protected:
+    std::optional<std::string> compress(const std::string &data, CompressionMethod compressionMethod, Error *error = nullptr) const;
+    std::optional<std::string> decompress(const std::string &data, CompressionMethod compressionMethod, Error *error = nullptr) const;
+
     Files files;
 };
 

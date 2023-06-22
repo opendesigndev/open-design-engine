@@ -40,25 +40,84 @@ std::optional<std::string> MemoryFileSystem::getFileData(const FilePath& filePat
     const std::vector<File>::const_iterator fileIt = std::find_if(files.begin(), files.end(), [&filePath](const File &file) {
         return file.path == filePath;
     });
-
     if (fileIt == files.end()) {
         return std::nullopt;
     }
 
-    switch (fileIt->compressionMethod) {
-        case CompressionMethod::NONE:
-        {
-            return fileIt->data;
+    return decompress(fileIt->data, fileIt->compressionMethod, error);
+}
+
+std::optional<MemoryFileSystem::FileRef> MemoryFileSystem::add(const FilePath &filePath, const std::string &data, CompressionMethod compressionMethod, Error *error) {
+    CHECK(exists(filePath)==false, DUPLICATE_FILE_PATH);
+
+    const std::optional<std::string> compressedData = compress(data, compressionMethod, error);
+    if (compressedData.has_value()) {
+        // CRC-32 of the uncompressed data
+        const uLong crc32Checksum = crc32(0L, (Bytef*)data.data(), (uInt)data.size());
+
+        return files.emplace_back(File {
+            filePath,
+            compressionMethod,
+            static_cast<uint32_t>(crc32Checksum),
+            static_cast<uint32_t>(compressedData->size()),
+            static_cast<uint32_t>(data.size()),
+            *compressedData
+        });
+    }
+    return std::nullopt;
+}
+
+std::optional<std::string> MemoryFileSystem::compress(const std::string &data, CompressionMethod compressionMethod, Error *error) const {
+    switch (compressionMethod) {
+        case CompressionMethod::NONE: {
+            return data;
         }
-        case CompressionMethod::DEFLATE:
-        {
+        case CompressionMethod::DEFLATE: {
+            z_stream zs;
+            memset(&zs, 0, sizeof(zs));
+
+            CHECK(deflateInit2(&zs, COMPRESSION_LEVEL, Z_DEFLATED, COMPRESSION_WINDOW_SIZE, COMPRESSION_LEVEL, Z_DEFAULT_STRATEGY) == Z_OK, COMPRESSION_FAILED);
+
+            zs.next_in = (Bytef*)data.data();
+            zs.avail_in = (uInt)data.size();
+
+            int result;
+            char outbuffer[COMPRESSION_BUFFER_SIZE];
+            std::string compressedData;
+
+            do {
+                zs.next_out = reinterpret_cast<Bytef*>(outbuffer);
+                zs.avail_out = sizeof(outbuffer);
+                result = deflate(&zs, Z_FINISH);
+                if (compressedData.size() < zs.total_out) {
+                    compressedData.append(outbuffer, zs.total_out - compressedData.size());
+                }
+            } while (result == Z_OK);
+
+            CHECK(deflateEnd(&zs) == Z_OK, COMPRESSION_FAILED);
+            CHECK(result == Z_STREAM_END, COMPRESSION_FAILED);
+
+            return compressedData;
+        }
+        default:
+            CHECK(false, UNSUPPORTED_COMPRESSION_METHOD);
+    }
+    return std::nullopt;
+}
+
+std::optional<std::string> MemoryFileSystem::decompress(const std::string &data, CompressionMethod compressionMethod, Error *error) const {
+    switch (compressionMethod) {
+        case CompressionMethod::NONE: {
+            return data;
+        }
+        case CompressionMethod::DEFLATE: {
             z_stream zs;
             memset(&zs, 0, sizeof(zs));
 
             CHECK(inflateInit2(&zs, COMPRESSION_WINDOW_SIZE) == Z_OK, DECOMPRESSION_FAILED);
 
-            zs.next_in = (Bytef*)fileIt->data.data();
-            zs.avail_in = (uInt)fileIt->data.size();
+            zs.next_in = (Bytef*)data.data();
+            zs.avail_in = (uInt)data.size();
 
             int result = Z_OK;
             char outbuffer[COMPRESSION_BUFFER_SIZE];
@@ -86,65 +145,6 @@ std::optional<std::string> MemoryFileSystem::getFileData(const FilePath& filePat
 
 void MemoryFileSystem::clear() {
     files.clear();
-}
-
-std::optional<MemoryFileSystem::FileRef> MemoryFileSystem::add(const FilePath &filePath, const std::string &data, CompressionMethod compressionMethod, Error *error) {
-    CHECK(exists(filePath)==false, DUPLICATE_FILE_PATH);
-
-    // CRC-32 of the uncompressed data
-    const uLong crc32Checksum = crc32(0L, (Bytef*)data.data(), (uInt)data.size());
-
-    switch (compressionMethod) {
-        case CompressionMethod::NONE:
-        {
-            return files.emplace_back(File {
-                filePath,
-                compressionMethod,
-                static_cast<uint32_t>(crc32Checksum),
-                static_cast<uint32_t>(data.size()),
-                static_cast<uint32_t>(data.size()),
-                data
-            });
-        }
-        case CompressionMethod::DEFLATE:
-        {
-            z_stream zs;
-            memset(&zs, 0, sizeof(zs));
-
-            CHECK(deflateInit2(&zs, COMPRESSION_LEVEL, Z_DEFLATED, COMPRESSION_WINDOW_SIZE, COMPRESSION_LEVEL, Z_DEFAULT_STRATEGY) == Z_OK, COMPRESSION_FAILED);
-
-            zs.next_in = (Bytef*)data.data();
-            zs.avail_in = (uInt)data.size();
-
-            int result;
-            char outbuffer[COMPRESSION_BUFFER_SIZE];
-            std::string compressedData;
-
-            do {
-                zs.next_out = reinterpret_cast<Bytef*>(outbuffer);
-                zs.avail_out = sizeof(outbuffer);
-                result = deflate(&zs, Z_FINISH);
-                if (compressedData.size() < zs.total_out) {
-                    compressedData.append(outbuffer, zs.total_out - compressedData.size());
-                }
-            } while (result == Z_OK);
-
-            CHECK(deflateEnd(&zs) == Z_OK, COMPRESSION_FAILED);
-            CHECK(result == Z_STREAM_END, COMPRESSION_FAILED);
-
-            return files.emplace_back(File {
-                filePath,
-                compressionMethod,
-                static_cast<uint32_t>(crc32Checksum),
-                static_cast<uint32_t>(compressedData.size()),
-                static_cast<uint32_t>(data.size()),
-                compressedData
-            });
-        }
-        default:
-            CHECK(false, UNSUPPORTED_COMPRESSION_METHOD);
-    }
-    return std::nullopt;
 }
 
 } // namespace ode
