@@ -380,6 +380,15 @@ ODE_Result ODE_NATIVE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_De
         }
     }
 
+    // TODO: Load images using renderer-api?
+//    for (const ode::FilePath &filePath : octopusFile.filePaths()) {
+//        const std::optional<std::string> fileData = octopusFile.getFileData(filePath);
+//        if (fileData.has_value()) {
+//            ODE_MemoryBuffer imageData = ode_makeMemoryBuffer(fileData->c_str(), fileData->size());
+//            ode_design_loadImageBytes(imageBase, ode_stringRef((std::string)filePath), imageData);
+//        }
+//    }
+
     // Load fonts
     ODE_StringList missingFonts;
     ode_design_listMissingFonts(*design, &missingFonts);
@@ -463,7 +472,7 @@ ODE_Result ODE_NATIVE_API ode_pr1_saveDesignToFile(ODE_DesignHandle design, ODE_
 //            for (const octopus::AssetImage &assetImage : octopusComponent.assets->images) {
 //                if (assetImage.location.path.has_value()) {
 //                    ODE_MemoryBuffer imageData;
-//                    if (ode_pr1_design_exportPngImage(design.imageBase, ode_stringRef(assetImage.location.path.value()), &imageData) == ODE_RESULT_OK) {
+//                    if (ode_pr1_design_exportPngImage(imageBase, ode_stringRef(assetImage.location.path.value()), &imageData) == ODE_RESULT_OK) {
 //                        if (!octopusFile.add(assetImage.location.path.value(), std::string(static_cast<const char *>(imageData.data), imageData.length), MemoryFileSystem::CompressionMethod::NONE)) {
 //                            // TODO: Error saving PNG to octopus file
 //                            continue;
