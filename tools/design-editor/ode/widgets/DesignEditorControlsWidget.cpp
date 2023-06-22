@@ -77,10 +77,12 @@ octopus::Assets listAllAssets(const octopus::Layer &layer) {
 }
 
 std::string fontFileExtension(const ODE_MemoryBuffer &fontBuffer) {
-    if (strncmp(reinterpret_cast<const char *>(fontBuffer.data), "ttcf", 4) == 0) {
+    if (strncmp(static_cast<const char *>(fontBuffer.data), "ttcf", 4) == 0) {
         return "ttc";
-    } else if (strncmp(reinterpret_cast<const char *>(fontBuffer.data), "\x00\x01\x00\x00", 4) == 0) {
+    } else if (strncmp(static_cast<const char *>(fontBuffer.data), "\x00\x01\x00\x00", 4) == 0) {
         return "ttf";
+    } else if (strncmp(static_cast<const char *>(fontBuffer.data), "OTTO", 4) == 0) {
+        return "otf";
     }
     return "";
 }

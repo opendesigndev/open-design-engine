@@ -67,9 +67,7 @@ std::optional<std::string> MemoryFileSystem::getFileData(const FilePath& filePat
             do {
                 zs.next_out = reinterpret_cast<Bytef*>(outbuffer);
                 zs.avail_out = sizeof(outbuffer);
-
                 result = inflate(&zs, 0);
-
                 if (decompressedData.size() < zs.total_out) {
                     decompressedData.append(outbuffer, zs.total_out - decompressedData.size());
                 }
@@ -90,8 +88,8 @@ void MemoryFileSystem::clear() {
     files.clear();
 }
 
-std::optional<MemoryFileSystem::FileRef> MemoryFileSystem::add(const FilePath &path, const std::string &data, CompressionMethod compressionMethod, Error *error) {
-    CHECK(std::none_of(files.begin(), files.end(), [&path](const File &file) { return file.path == path; }), DUPLICATE_FILE_PATH);
+std::optional<MemoryFileSystem::FileRef> MemoryFileSystem::add(const FilePath &filePath, const std::string &data, CompressionMethod compressionMethod, Error *error) {
+    CHECK(exists(filePath)==false, DUPLICATE_FILE_PATH);
 
     // CRC-32 of the uncompressed data
     const uLong crc32Checksum = crc32(0L, (Bytef*)data.data(), (uInt)data.size());
@@ -100,7 +98,7 @@ std::optional<MemoryFileSystem::FileRef> MemoryFileSystem::add(const FilePath &p
         case CompressionMethod::NONE:
         {
             return files.emplace_back(File {
-                path,
+                filePath,
                 compressionMethod,
                 static_cast<uint32_t>(crc32Checksum),
                 static_cast<uint32_t>(data.size()),
@@ -125,9 +123,7 @@ std::optional<MemoryFileSystem::FileRef> MemoryFileSystem::add(const FilePath &p
             do {
                 zs.next_out = reinterpret_cast<Bytef*>(outbuffer);
                 zs.avail_out = sizeof(outbuffer);
-
                 result = deflate(&zs, Z_FINISH);
-
                 if (compressedData.size() < zs.total_out) {
                     compressedData.append(outbuffer, zs.total_out - compressedData.size());
                 }
@@ -137,7 +133,7 @@ std::optional<MemoryFileSystem::FileRef> MemoryFileSystem::add(const FilePath &p
             CHECK(result == Z_STREAM_END, COMPRESSION_FAILED);
 
             return files.emplace_back(File {
-                path,
+                filePath,
                 compressionMethod,
                 static_cast<uint32_t>(crc32Checksum),
                 static_cast<uint32_t>(compressedData.size()),

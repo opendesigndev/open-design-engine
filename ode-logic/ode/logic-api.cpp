@@ -222,7 +222,7 @@ ODE_Result ODE_API ode_createEngine(ODE_EngineHandle *engine, const ODE_EngineAt
 
 ODE_Result ODE_API ode_destroyEngine(ODE_EngineHandle engine) {
     if (engine.ptr) {
-        for (auto &fontRecord : engine.ptr->fontDataBuffers) {
+        for (std::pair<ODE_String, ODE_MemoryBuffer> &fontRecord : engine.ptr->fontDataBuffers) {
             ode_destroyString(fontRecord.first);
             ode_destroyMemoryBuffer(&fontRecord.second);
         }
@@ -253,7 +253,7 @@ ODE_Result ODE_NATIVE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_De
     const std::optional<std::string> manifestFileData = octopusFile.getFileData("octopus-manifest.json");
     if (!manifestFileData.has_value()) {
         // TODO: A better error type
-        return ODE_RESULT_OCTOPUS_MANIFEST_PARSE_ERROR;
+        return ODE_RESULT_OCTOPUS_UNAVAILABLE;
     }
     octopus::OctopusManifest manifest;
     if (octopus::ManifestParser::Error error = octopus::ManifestParser::parse(manifest, manifestFileData->c_str())) {
@@ -450,7 +450,7 @@ ODE_Result ODE_API ode_design_loadFontBytes(ODE_DesignHandle design, ODE_StringR
 
 ODE_Result ODE_API ode_pr1_design_exportFontBytes(ODE_DesignHandle design, ODE_StringRef name, ODE_MemoryBuffer *data) {
     ODE_ASSERT(data);
-    const auto it = std::find_if(design.ptr->engine->fontDataBuffers.begin(), design.ptr->engine->fontDataBuffers.end(), [&name](const std::pair<ODE_String, ODE_MemoryBuffer> &fontRecord) {
+    const std::vector<std::pair<ODE_String, ODE_MemoryBuffer>>::const_iterator it = std::find_if(design.ptr->engine->fontDataBuffers.begin(), design.ptr->engine->fontDataBuffers.end(), [&name](const std::pair<ODE_String, ODE_MemoryBuffer> &fontRecord) {
         return strcmp(fontRecord.first.data, name.data) == 0;
     });
     if (it != design.ptr->engine->fontDataBuffers.end()) {
@@ -478,8 +478,8 @@ ODE_Result ODE_API ode_design_getComponentMetadata(ODE_DesignHandle design, ODE_
         const ode::Vector2d &position = accessor.getPositon();
         metadata->id = componentId;
         metadata->position = ODE_Vector2 { position.x, position.y };
-        // TODO: pages
-//        metadata->page = ...;
+        // TODO: metadata page
+        // metadata->page = ...;
         return ODE_RESULT_OK;
     }
     return ODE_RESULT_COMPONENT_NOT_FOUND;

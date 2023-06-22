@@ -3,7 +3,7 @@
 
 
 void DesignEditorUIState::Textures::clear() {
-    for (auto &texture : textures) {
+    for (std::pair<const std::string, ode::TextureFrameBufferPtr> &texture : textures) {
         texture.second.reset();
     }
     textures.clear();

@@ -22,12 +22,12 @@ public:
         DUPLICATE_FILE_PATH
     };
 
-    enum class CompressionMethod : uint16_t {
+    enum class CompressionMethod : uint8_t {
         NONE = 0,
         DEFLATE = 8
     };
 
-    /// A single file in the filesystem, its contents and metadata.
+    /// A single compressed file in the filesystem, its contents and metadata.
     struct File {
         FilePath path;
         CompressionMethod compressionMethod;
@@ -47,7 +47,7 @@ public:
     std::optional<std::string> getFileData(const FilePath& filePath, Error *error = nullptr) const;
 
     /// Adds a data file at the specified path, compress by the specified compression method.
-    std::optional<FileRef> add(const FilePath &path, const std::string &data, CompressionMethod compressionMethod, Error *error = nullptr);
+    std::optional<FileRef> add(const FilePath &filePath, const std::string &data, CompressionMethod compressionMethod, Error *error = nullptr);
 
     /// Clear files data.
     void clear();

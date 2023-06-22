@@ -112,11 +112,6 @@ bool OctopusFile::load(const FilePath &octopusFilePath, Error *error) {
     return true;
 }
 
-bool OctopusFile::parseFromString(const std::string &octopusFileData, Error *error) {
-    // TODO: Implement Octopus data loading
-    return false;
-}
-
 bool OctopusFile::save(const FilePath &octopusFilePath, Error *error) {
     std::ofstream outputFile((std::string)octopusFilePath, std::ios::binary);
     CHECK(outputFile, ERROR_OPENING_FILE);
