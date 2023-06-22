@@ -168,6 +168,13 @@ ODE_Result ODE_API ode_createDesign(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_
 ODE_Result ODE_FUTURE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_DesignHandle *design, ODE_StringRef path, ODE_OUT ODE_ParseError *parseError);
 
 /**
+ * Saves a design to binary octopus file
+ * @param design - the design handle
+ * @param path - path to the new octopus file
+ */
+ODE_Result ODE_NATIVE_API ode_pr1_saveDesignToFile(ODE_DesignHandle design, ODE_StringRef path);
+
+/**
  * Loads a design from an Octopus Manifest file - deallocate with ode_destroyDesign
  * @param engine - instance of engine
  * @param design - output argument for the new design handle

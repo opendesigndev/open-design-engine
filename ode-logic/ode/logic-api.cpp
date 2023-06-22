@@ -17,6 +17,89 @@
 
 using namespace ode;
 
+namespace {
+
+template <typename T>
+void insertUnique(std::vector<T> &containingVector, const T &insertVal) {
+    if (std::find_if(containingVector.begin(), containingVector.end(), [&insertVal](const auto &v)->bool { return insertVal.refId == v.refId; }) == containingVector.end()) {
+        containingVector.emplace_back(insertVal);
+    }
+}
+
+template <typename T>
+void insertUnique(std::vector<T> &containingVector, const std::vector<T> &insertVector) {
+    for (const auto &insertVal : insertVector) {
+        insertUnique(containingVector, insertVal);
+    }
+}
+
+octopus::Assets listAllAssets(const octopus::Layer &layer) {
+    octopus::Assets assets = {};
+    if (layer.type == octopus::Layer::Type::SHAPE && layer.shape.has_value()) {
+        for (const octopus::Fill &fill : layer.shape->fills) {
+            if (fill.type == octopus::Fill::Type::IMAGE && fill.image.has_value()) {
+                const octopus::Image &image = *fill.image;
+                const std::string imageRef = ((FilePath)image.ref.value).filename();
+                insertUnique(assets.images, octopus::AssetImage {
+                    octopus::ResourceLocation {
+                        image.ref.type == octopus::ImageRef::Type::PATH ? octopus::ResourceLocation::Type::RELATIVE : octopus::ResourceLocation::Type::EXTERNAL,
+                        image.ref.value,
+                        nonstd::nullopt,
+                        nonstd::nullopt
+                    },
+                    imageRef, // asset ref Id
+                    imageRef  // asset name
+                });
+            }
+        }
+    }
+    if (layer.type == octopus::Layer::Type::TEXT && layer.text.has_value()) {
+        if (layer.text->defaultStyle.font.has_value()) {
+            const octopus::Font &font = *layer.text->defaultStyle.font;
+            insertUnique(assets.fonts, octopus::AssetFont {
+                nonstd::nullopt,
+                nonstd::nullopt,
+                font.postScriptName,
+                font.postScriptName
+            });
+        }
+        if (layer.text->styles.has_value()) {
+            for (const octopus::StyleRange &styleRange : *layer.text->styles) {
+                if (styleRange.style.font.has_value()) {
+                    const octopus::Font &font = *styleRange.style.font;
+                    insertUnique(assets.fonts, octopus::AssetFont {
+                        nonstd::nullopt,
+                        nonstd::nullopt,
+                        font.postScriptName,
+                        font.postScriptName
+                    });
+                }
+            }
+        }
+    }
+    if (layer.layers.has_value()) {
+        for (const octopus::Layer &subLayer : *layer.layers) {
+            const octopus::Assets sublayerAssets = listAllAssets(subLayer);
+            insertUnique(assets.images, sublayerAssets.images);
+            insertUnique(assets.fonts, sublayerAssets.fonts);
+        }
+    }
+    return assets;
+}
+
+std::string fontFileExtension(const ODE_MemoryBuffer &fontBuffer) {
+    if (strncmp(static_cast<const char *>(fontBuffer.data), "ttcf", 4) == 0) {
+        return "ttc";
+    } else if (strncmp(static_cast<const char *>(fontBuffer.data), "\x00\x01\x00\x00", 4) == 0) {
+        return "ttf";
+    } else if (strncmp(static_cast<const char *>(fontBuffer.data), "OTTO", 4) == 0) {
+        return "otf";
+    }
+    return "";
+}
+
+}
+
 struct ODE_internal_Engine {
     std::vector<std::pair<ODE_String, ODE_MemoryBuffer>> fontDataBuffers;
 };
@@ -312,6 +395,113 @@ ODE_Result ODE_NATIVE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_De
                         return result;
                     }
                 }
+            }
+        }
+    }
+
+    return ODE_RESULT_OK;
+}
+
+ODE_Result ODE_NATIVE_API ode_pr1_saveDesignToFile(ODE_DesignHandle design, ODE_StringRef path) {
+    const std::string fileName = (FilePath(path.data)).filename();
+    const size_t extPos = fileName.rfind('.', fileName.length());
+    const std::string cleanFileName = (extPos == std::string::npos) ? fileName : fileName.substr(0, extPos);
+
+    OctopusFile octopusFile;
+    octopusFile.add("Octopus", " is universal design format. opendesign.dev.", MemoryFileSystem::CompressionMethod::NONE);
+
+    octopus::OctopusManifest manifest;
+    manifest.version = OCTOPUS_MANIFEST_VERSION;
+    manifest.origin.name = "OD Internal Design Editor";
+    manifest.origin.version = "1.0.0.";
+    manifest.name = cleanFileName;
+
+    ODE_StringList componentList;
+    ode_design_listComponents(design, &componentList);
+
+    for (int i = 0; i < componentList.n; ++i) {
+        const ODE_StringRef &componentId = componentList.entries[i];
+        ODE_ComponentHandle component;
+        ODE_ComponentMetadata componentMetadata;
+        if (ode_design_getComponent(design, &component, componentId) != ODE_RESULT_OK) {
+            continue;
+        }
+        if (ode_design_getComponentMetadata(design, &componentMetadata, componentId)) {
+            continue;
+        }
+
+        ODE_String octopusString;
+        if (ode_component_getOctopus(component, &octopusString) == ODE_RESULT_OK) {
+            const std::string componentFileName = std::string("octopus-") + ode_stringDeref(componentId) + ".json";
+            if (!octopusFile.add(componentFileName, std::string(octopusString.data, octopusString.length), MemoryFileSystem::CompressionMethod::DEFLATE).has_value()) {
+                continue;
+            }
+
+            octopus::Octopus octopus;
+            octopus::Parser::parse(octopus, octopusString.data);
+
+            octopus::Component &octopusComponent = manifest.components.emplace_back();
+            octopusComponent.id = octopus.id;
+            octopusComponent.name = octopus.content->name;
+            octopusComponent.status = octopus::Status {
+                octopus::Status::Value::READY,
+                nonstd::nullopt,
+                0.0 };
+            octopusComponent.bounds = octopus::Bounds {
+                componentMetadata.position.x,
+                componentMetadata.position.y,
+                octopus.dimensions->width,
+                octopus.dimensions->height };
+            octopusComponent.location = octopus::ResourceLocation {
+                octopus::ResourceLocation::Type::RELATIVE,
+                componentFileName,
+                nonstd::nullopt,
+                nonstd::nullopt };
+            octopusComponent.assets = octopus.content.has_value() ? listAllAssets(*octopus.content) : octopus::Assets{};
+
+            // TODO: export images using renderer-api?
+//            for (const octopus::AssetImage &assetImage : octopusComponent.assets->images) {
+//                if (assetImage.location.path.has_value()) {
+//                    ODE_MemoryBuffer imageData;
+//                    if (ode_pr1_design_exportPngImage(design.imageBase, ode_stringRef(assetImage.location.path.value()), &imageData) == ODE_RESULT_OK) {
+//                        if (!octopusFile.add(assetImage.location.path.value(), std::string(static_cast<const char *>(imageData.data), imageData.length), MemoryFileSystem::CompressionMethod::NONE)) {
+//                            // TODO: Error saving PNG to octopus file
+//                            continue;
+//                        }
+//                    }
+//                }
+//            }
+
+            for (octopus::AssetFont &assetFont : octopusComponent.assets->fonts) {
+                ODE_MemoryBuffer fontData;
+                if (ode_pr1_design_exportFontBytes(design, ODE_StringRef {assetFont.name.data(), (int)assetFont.name.size()}, &fontData) == ODE_RESULT_OK) {
+                    if (fontData.data) {
+                        const std::string fileExtension = fontFileExtension(fontData);
+                        if (!fileExtension.empty()) {
+                            assetFont.location = octopus::ResourceLocation {
+                                octopus::ResourceLocation::Type::RELATIVE,
+                                "fonts/"+assetFont.name+"."+fileExtension,
+                                nonstd::nullopt,
+                                nonstd::nullopt };
+                            if (!octopusFile.exists(assetFont.location->path.value())) {
+                                if (!octopusFile.add(assetFont.location->path.value(), std::string(static_cast<const char *>(fontData.data), fontData.length), MemoryFileSystem::CompressionMethod::NONE)) {
+                                    // TODO: Error saving Font to octopus file
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    std::string manifestJson;
+    if (octopus::ManifestSerializer::serialize(manifestJson, manifest) == octopus::ManifestSerializer::Error::OK) {
+        if (octopusFile.add("octopus-manifest.json", manifestJson, MemoryFileSystem::CompressionMethod::DEFLATE).has_value()) {
+            const bool isSaved = octopusFile.save(path.data);
+            if (!isSaved) {
+                fprintf(stderr, "Internal error (saving Octopus json to filesystem)\n");
             }
         }
     }
