@@ -136,12 +136,12 @@ ODE_Result ode::loadDesignFromOctopusFile(ODE_DesignHandle *design, const FilePa
         return ODE_RESULT_FILE_READ_ERROR;
     }
     // Read the manifest
-    const std::optional<std::string> manifestFileData = octopusFile.getFileData(OCTOPUS_MANIFEST_FILENAME);
+    const std::optional<std::vector<byte>> manifestFileData = octopusFile.getFileData(OCTOPUS_MANIFEST_FILENAME);
     if (!manifestFileData.has_value()) {
         return ODE_RESULT_OCTOPUS_UNAVAILABLE;
     }
     octopus::OctopusManifest manifest;
-    if (octopus::ManifestParser::Error error = octopus::ManifestParser::parse(manifest, manifestFileData->c_str())) {
+    if (octopus::ManifestParser::Error error = octopus::ManifestParser::parse(manifest, reinterpret_cast<const char *>(manifestFileData->data()))) {
         if (parseError) {
             parseError->type = ode_parseErrorType(error.type);
             parseError->position = error.position;
@@ -157,7 +157,7 @@ ODE_Result ode::loadDesignFromOctopusFile(ODE_DesignHandle *design, const FilePa
         const bool isOctopusComponentFile = isJson && filePathStr != OCTOPUS_MANIFEST_FILENAME;
 
         if (isOctopusComponentFile) {
-            const std::optional<std::string> fileData = octopusFile.getFileData(filePath);
+            const std::optional<std::vector<byte>> fileData = octopusFile.getFileData(filePath);
             if (!fileData.has_value()) {
                 continue;
             }
@@ -176,7 +176,7 @@ ODE_Result ode::loadDesignFromOctopusFile(ODE_DesignHandle *design, const FilePa
             metadata.id = ode_stringRef(componentId);
             metadata.page = {}; // TODO: Metadata page?
             metadata.position = ODE_Vector2 { manifestComponent->bounds.x, manifestComponent->bounds.y };
-            if (const ODE_Result result = ode_design_addComponentFromOctopusString(*design, &component, metadata, ode_stringRef(*fileData), parseError)) {
+            if (const ODE_Result result = ode_design_addComponentFromOctopusString(*design, &component, metadata, ode_stringRef(reinterpret_cast<const char *>(fileData->data())), parseError)) {
                 return result;
             }
         }
@@ -185,9 +185,9 @@ ODE_Result ode::loadDesignFromOctopusFile(ODE_DesignHandle *design, const FilePa
     // Load images if image loader function is supplied
     if (imageLoader) {
         for (const ode::FilePath &filePath : octopusFile.filePaths()) {
-            const std::optional<std::string> fileData = octopusFile.getFileData(filePath);
+            const std::optional<std::vector<byte>> fileData = octopusFile.getFileData(filePath);
             if (fileData.has_value()) {
-                ODE_MemoryBuffer imageData = ode_makeMemoryBuffer(fileData->c_str(), fileData->size());
+                ODE_MemoryBuffer imageData = ode_makeMemoryBuffer(fileData->data(), fileData->size());
                 imageLoader(ode_stringRef((std::string)filePath), imageData);
             }
         }
@@ -201,7 +201,7 @@ ODE_Result ode::loadDesignFromOctopusFile(ODE_DesignHandle *design, const FilePa
         for (const ode::FilePath &filePath : octopusFile.filePaths()) {
             const char *fileName = filePath.filename();
             if (std::strncmp(fileName, missingFontName.data, std::strlen(missingFontName.data)) == 0) {
-                const std::optional<std::string> fileData = octopusFile.getFileData(filePath);
+                const std::optional<std::vector<byte>> fileData = octopusFile.getFileData(filePath);
                 if (fileData.has_value()) {
                     ODE_MemoryBuffer fileBuffer = ode_makeMemoryBuffer(fileData->data(), fileData->size());
                     if (const ODE_Result result = ode_design_loadFontBytes(*design, missingFontName, &fileBuffer, ODE_StringRef())) {

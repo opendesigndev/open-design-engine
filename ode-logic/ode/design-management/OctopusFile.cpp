@@ -106,7 +106,7 @@ bool OctopusFile::load(const FilePath &octopusFilePath, Error *error) {
         file.seekg(filenameLength+extraFieldLength, std::ios::cur);
 
         newFile.data.resize(newFile.compressedSize, '\0');
-        file.read(&newFile.data[0], newFile.compressedSize);
+        file.read(reinterpret_cast<char *>(newFile.data.data()), newFile.compressedSize);
 
         // Move central dir offset to the next file record
         centralDirFileOffset += 46 + filenameLengthCentralDir + extraFieldLengthCentralDir + fileCommentLengthCentralDir;
@@ -160,7 +160,7 @@ bool OctopusFile::save(const FilePath &octopusFilePath, Error *error) {
         outputFile.write(((std::string)file.path).data(), fileNameLength);
         // Extra field - No data
         // File contents
-        outputFile.write(file.data.data(), file.data.size());
+        outputFile.write(reinterpret_cast<const char *>(file.data.data()), file.data.size());
     }
 
     // Zip central directory

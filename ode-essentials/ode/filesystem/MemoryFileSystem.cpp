@@ -33,7 +33,7 @@ bool MemoryFileSystem::exists(const FilePath& filePath) const {
     });
 }
 
-std::optional<std::string> MemoryFileSystem::getFileData(const FilePath& filePath, Error *error) const {
+std::optional<std::vector<byte>> MemoryFileSystem::getFileData(const FilePath& filePath, Error *error) const {
     if (error)
         *error = Error::OK;
 
@@ -47,10 +47,10 @@ std::optional<std::string> MemoryFileSystem::getFileData(const FilePath& filePat
     return decompress(fileIt->data, fileIt->compressionMethod, error);
 }
 
-std::optional<MemoryFileSystem::FileRef> MemoryFileSystem::add(const FilePath &filePath, const std::string &data, CompressionMethod compressionMethod, Error *error) {
+std::optional<MemoryFileSystem::FileRef> MemoryFileSystem::add(const FilePath &filePath, const std::vector<byte> &data, CompressionMethod compressionMethod, Error *error) {
     CHECK(exists(filePath)==false, DUPLICATE_FILE_PATH);
 
-    const std::optional<std::string> compressedData = compress(data, compressionMethod, error);
+    const std::optional<std::vector<byte>> compressedData = compress(data, compressionMethod, error);
     if (compressedData.has_value()) {
         // CRC-32 of the uncompressed data
         const uLong crc32Checksum = crc32(0L, (Bytef*)data.data(), (uInt)data.size());
@@ -67,7 +67,11 @@ std::optional<MemoryFileSystem::FileRef> MemoryFileSystem::add(const FilePath &f
     return std::nullopt;
 }
 
-std::optional<std::string> MemoryFileSystem::compress(const std::string &data, CompressionMethod compressionMethod, Error *error) const {
+std::optional<MemoryFileSystem::FileRef> MemoryFileSystem::add(const FilePath &filePath, const std::string &data, CompressionMethod compressionMethod, Error *error) {
+    return add(filePath, std::vector<byte>(data.data(), data.data() + data.size()), compressionMethod);
+}
+
+std::optional<std::vector<byte>> MemoryFileSystem::compress(const std::vector<byte> &data, CompressionMethod compressionMethod, Error *error) const {
     switch (compressionMethod) {
         case CompressionMethod::NONE: {
             return data;
@@ -83,14 +87,14 @@ std::optional<std::string> MemoryFileSystem::compress(const std::string &data, C
 
             int result;
             char outbuffer[COMPRESSION_BUFFER_SIZE];
-            std::string compressedData;
+            std::vector<byte> compressedData;
 
             do {
                 zs.next_out = reinterpret_cast<Bytef*>(outbuffer);
                 zs.avail_out = sizeof(outbuffer);
                 result = deflate(&zs, Z_FINISH);
                 if (compressedData.size() < zs.total_out) {
-                    compressedData.append(outbuffer, zs.total_out - compressedData.size());
+                    compressedData.insert(compressedData.end(), outbuffer, outbuffer + (zs.total_out - compressedData.size()));
                 }
             } while (result == Z_OK);
 
@@ -105,7 +109,7 @@ std::optional<std::string> MemoryFileSystem::compress(const std::string &data, C
     return std::nullopt;
 }
 
-std::optional<std::string> MemoryFileSystem::decompress(const std::string &data, CompressionMethod compressionMethod, Error *error) const {
+std::optional<std::vector<byte>> MemoryFileSystem::decompress(const std::vector<byte> &data, CompressionMethod compressionMethod, Error *error) const {
     switch (compressionMethod) {
         case CompressionMethod::NONE: {
             return data;
@@ -121,14 +125,14 @@ std::optional<std::string> MemoryFileSystem::decompress(const std::string &data,
 
             int result = Z_OK;
             char outbuffer[COMPRESSION_BUFFER_SIZE];
-            std::string decompressedData;
+            std::vector<byte> decompressedData;
 
             do {
                 zs.next_out = reinterpret_cast<Bytef*>(outbuffer);
                 zs.avail_out = sizeof(outbuffer);
                 result = inflate(&zs, 0);
                 if (decompressedData.size() < zs.total_out) {
-                    decompressedData.append(outbuffer, zs.total_out - decompressedData.size());
+                    decompressedData.insert(decompressedData.end(), outbuffer, outbuffer + (zs.total_out - decompressedData.size()));
                 }
             } while (result == Z_OK);
 

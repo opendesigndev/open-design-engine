@@ -6,13 +6,14 @@
 #include <optional>
 
 #include "FilePath.h"
+#include "../utils.h"
 
 namespace ode {
 
 /// Representation of a filesystem loaded to memory.
 class MemoryFileSystem {
 public:
-    enum class Error {
+    enum class Error : uint8_t {
         OK = 0,
         ERROR_OPENING_FILE,
         INVALID_OCTOPUS_FILE,
@@ -34,7 +35,7 @@ public:
         uint32_t crc32;
         uint32_t compressedSize;
         uint32_t uncompressedSize;
-        std::string data;
+        std::vector<byte> data;
     };
     using FileRef = std::reference_wrapper<File>;
     using Files = std::vector<File>;
@@ -44,16 +45,18 @@ public:
     /// Detects if the specified file exists.
     bool exists(const FilePath& filePath) const;
     /// Read a single specified file. Decompress if the loaded file data is compressed.
-    std::optional<std::string> getFileData(const FilePath& filePath, Error *error = nullptr) const;
+    std::optional<std::vector<byte>> getFileData(const FilePath& filePath, Error *error = nullptr) const;
     /// Adds a data file at the specified path, compress by the specified compression method.
+    std::optional<FileRef> add(const FilePath &filePath, const std::vector<byte> &data, CompressionMethod compressionMethod, Error *error = nullptr);
+    /// Adds a text file at the specified path, compress by the specified compression method.
     std::optional<FileRef> add(const FilePath &filePath, const std::string &data, CompressionMethod compressionMethod, Error *error = nullptr);
 
     /// Clear files data.
     void clear();
 
 protected:
-    std::optional<std::string> compress(const std::string &data, CompressionMethod compressionMethod, Error *error = nullptr) const;
-    std::optional<std::string> decompress(const std::string &data, CompressionMethod compressionMethod, Error *error = nullptr) const;
+    std::optional<std::vector<byte>> compress(const std::vector<byte> &data, CompressionMethod compressionMethod, Error *error = nullptr) const;
+    std::optional<std::vector<byte>> decompress(const std::vector<byte> &data, CompressionMethod compressionMethod, Error *error = nullptr) const;
 
     Files files;
 };
