@@ -516,7 +516,7 @@ int DesignEditorWindow::reloadOctopus(const FilePath &octopusPath, const FilePat
 
     if (isOctopusFile) {
         // Load design to context (incl. components+metadata)
-        CHECK(ode_loadDesignFromFile_Media(context.engine, &context.design.design, ode_stringRef(octopusPathStr), context.design.imageBase, &parseError));
+        CHECK(ode_loadDesignFromFileWithImages(context.engine, &context.design.design, ode_stringRef(octopusPathStr), context.design.imageBase, &parseError));
         // Get loaded components list
         CHECK(ode_design_listComponents(context.design.design, &componentIds));
         context.design.components.resize(componentIds.n, {});

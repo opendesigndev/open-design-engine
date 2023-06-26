@@ -242,11 +242,11 @@ ODE_Result ODE_API ode_createDesign(ODE_EngineHandle engine, ODE_DesignHandle *d
 }
 
 ODE_Result ODE_NATIVE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_DesignHandle *design, ODE_StringRef path, ODE_ParseError *parseError) {
-    return loadOctopusDesignFromFile(design, ode_stringDeref(path), nullptr, parseError);
+    return loadDesignFromOctopusFile(design, ode_stringDeref(path), nullptr, parseError);
 }
 
 ODE_Result ODE_NATIVE_API ode_pr1_saveDesignToFile(ODE_DesignHandle design, ODE_StringRef path) {
-    return saveOctopusDesignToFile(design, path, nullptr);
+    return saveDesignToOctopusFile(design, ode_stringDeref(path), nullptr);
 }
 
 ODE_Result ODE_NATIVE_API ode_loadDesignFromManifestFile(ODE_EngineHandle engine, ODE_DesignHandle *design, ODE_StringRef path, ODE_ParseError *parseError) {

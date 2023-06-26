@@ -6,88 +6,6 @@
 
 #include "../DesignEditorWindow.h"
 
-namespace {
-
-template <typename T>
-void insertUnique(std::vector<T> &containingVector, const T &insertVal) {
-    if (std::find_if(containingVector.begin(), containingVector.end(), [&insertVal](const auto &v)->bool { return insertVal.refId == v.refId; }) == containingVector.end()) {
-        containingVector.emplace_back(insertVal);
-    }
-}
-
-template <typename T>
-void insertUnique(std::vector<T> &containingVector, const std::vector<T> &insertVector) {
-    for (const auto &insertVal : insertVector) {
-        insertUnique(containingVector, insertVal);
-    }
-}
-
-octopus::Assets listAllAssets(const octopus::Layer &layer) {
-    octopus::Assets assets = {};
-    if (layer.type == octopus::Layer::Type::SHAPE && layer.shape.has_value()) {
-        for (const octopus::Fill &fill : layer.shape->fills) {
-            if (fill.type == octopus::Fill::Type::IMAGE && fill.image.has_value()) {
-                const octopus::Image &image = *fill.image;
-                const std::string imageRef = ((FilePath)image.ref.value).filename();
-                insertUnique(assets.images, octopus::AssetImage {
-                    octopus::ResourceLocation {
-                        image.ref.type == octopus::ImageRef::Type::PATH ? octopus::ResourceLocation::Type::RELATIVE : octopus::ResourceLocation::Type::EXTERNAL,
-                        image.ref.value,
-                        nonstd::nullopt,
-                        nonstd::nullopt
-                    },
-                    imageRef, // asset ref Id
-                    imageRef  // asset name
-                });
-            }
-        }
-    }
-    if (layer.type == octopus::Layer::Type::TEXT && layer.text.has_value()) {
-        if (layer.text->defaultStyle.font.has_value()) {
-            const octopus::Font &font = *layer.text->defaultStyle.font;
-            insertUnique(assets.fonts, octopus::AssetFont {
-                nonstd::nullopt,
-                nonstd::nullopt,
-                font.postScriptName,
-                font.postScriptName
-            });
-        }
-        if (layer.text->styles.has_value()) {
-            for (const octopus::StyleRange &styleRange : *layer.text->styles) {
-                if (styleRange.style.font.has_value()) {
-                    const octopus::Font &font = *styleRange.style.font;
-                    insertUnique(assets.fonts, octopus::AssetFont {
-                        nonstd::nullopt,
-                        nonstd::nullopt,
-                        font.postScriptName,
-                        font.postScriptName
-                    });
-                }
-            }
-        }
-    }
-    if (layer.layers.has_value()) {
-        for (const octopus::Layer &subLayer : *layer.layers) {
-            const octopus::Assets sublayerAssets = listAllAssets(subLayer);
-            insertUnique(assets.images, sublayerAssets.images);
-            insertUnique(assets.fonts, sublayerAssets.fonts);
-        }
-    }
-    return assets;
-}
-
-std::string fontFileExtension(const ODE_MemoryBuffer &fontBuffer) {
-    if (strncmp(static_cast<const char *>(fontBuffer.data), "ttcf", 4) == 0) {
-        return "ttc";
-    } else if (strncmp(static_cast<const char *>(fontBuffer.data), "\x00\x01\x00\x00", 4) == 0) {
-        return "ttf";
-    } else if (strncmp(static_cast<const char *>(fontBuffer.data), "OTTO", 4) == 0) {
-        return "otf";
-    }
-    return "";
-}
-
-}
 
 void drawControlsWidget(DesignEditorDesign &design,
                         DesignEditorUIState &ui) {
@@ -149,7 +67,7 @@ void drawControlsWidget(DesignEditorDesign &design,
 
             if (ImGuiFileDialog::Instance()->IsOk()) {
                 const std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
-                ode_pr1_saveDesignToFile_Media(design.design, ode_stringRef(filePathName), design.imageBase);
+                ode_pr1_saveDesignToFileWithImages(design.design, ode_stringRef(filePathName), design.imageBase);
             }
 
             ImGuiFileDialog::Instance()->Close();

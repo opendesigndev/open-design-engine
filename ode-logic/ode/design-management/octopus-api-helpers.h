@@ -7,10 +7,12 @@
 
 namespace ode {
 
+/// A function type for operating over images, specified by their path and byte buffer.
 using ImageFunction = std::function<ODE_Result(ODE_StringRef, ODE_MemoryBuffer &)>;
 
-ODE_Result loadOctopusDesignFromFile(ODE_DesignHandle *design, const FilePath &path, const ImageFunction &imageLoader, ODE_ParseError *parseError);
-
-ODE_Result saveOctopusDesignToFile(ODE_DesignHandle design, ODE_StringRef path, const ImageFunction &imageExporter);
+/// Load a design from the specified octopus file.
+ODE_Result loadDesignFromOctopusFile(ODE_DesignHandle *design, const FilePath &path, const ImageFunction &imageLoader, ODE_ParseError *parseError);
+/// Save the specified design to an octopus file.
+ODE_Result saveDesignToOctopusFile(ODE_DesignHandle design, const FilePath &path, const ImageFunction &imageExporter);
 
 }

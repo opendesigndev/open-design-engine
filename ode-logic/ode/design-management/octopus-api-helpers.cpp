@@ -13,6 +13,7 @@ using namespace ode;
 
 namespace {
 
+// TODO: Unify with logic-api.cpp?
 template <typename ErrorType>
 static ODE_ParseError::Type ode_parseErrorType(ErrorType type) {
     switch (type) {
@@ -122,7 +123,7 @@ std::string fontFileExtension(const ODE_MemoryBuffer &fontBuffer) {
 
 }
 
-ODE_Result ode::loadOctopusDesignFromFile(ODE_DesignHandle *design, const FilePath &path, const ImageFunction &imageLoader, ODE_ParseError *parseError) {
+ODE_Result ode::loadDesignFromOctopusFile(ODE_DesignHandle *design, const FilePath &path, const ImageFunction &imageLoader, ODE_ParseError *parseError) {
     ODE_ASSERT(design && design->ptr);
 
     // Read Octopus design file
@@ -212,8 +213,8 @@ ODE_Result ode::loadOctopusDesignFromFile(ODE_DesignHandle *design, const FilePa
     return ODE_RESULT_OK;
 }
 
-ODE_Result ode::saveOctopusDesignToFile(ODE_DesignHandle design, ODE_StringRef path, const ImageFunction &imageExporter) {
-    const std::string fileName = (FilePath(path.data)).filename();
+ODE_Result ode::saveDesignToOctopusFile(ODE_DesignHandle design, const FilePath &path, const ImageFunction &imageExporter) {
+    const std::string fileName = path.filename();
     const size_t extPos = fileName.rfind('.', fileName.length());
     const std::string cleanFileName = (extPos == std::string::npos) ? fileName : fileName.substr(0, extPos);
 
@@ -311,7 +312,7 @@ ODE_Result ode::saveOctopusDesignToFile(ODE_DesignHandle design, ODE_StringRef p
     std::string manifestJson;
     if (octopus::ManifestSerializer::serialize(manifestJson, manifest) == octopus::ManifestSerializer::Error::OK) {
         if (octopusFile.add("octopus-manifest.json", manifestJson, MemoryFileSystem::CompressionMethod::DEFLATE).has_value()) {
-            const bool isSaved = octopusFile.save(path.data);
+            const bool isSaved = octopusFile.save(path);
             if (!isSaved) {
                 fprintf(stderr, "Internal error (saving Octopus json to filesystem)\n");
             }

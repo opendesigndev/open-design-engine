@@ -125,16 +125,18 @@ ODE_Result ODE_API ode_pr1_animation_drawFrame(ODE_PR1_AnimationRendererHandle r
  * @param engine - instance of engine
  * @param design - output argument for the new design handle
  * @param path - path to design file
+ * @param designImageBase - the image database of the design
  * @param parseError - output argument to store details of parse error if ODE_RESULT_OCTOPUS_PARSE_ERROR or ODE_RESULT_OCTOPUS_MANIFEST_PARSE_ERROR is returned. Can be null if this information is not needed.
  */
-ODE_Result ODE_NATIVE_API ode_loadDesignFromFile_Media(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_DesignHandle *design, ODE_StringRef path, ODE_DesignImageBaseHandle designImageBase, ODE_OUT ODE_ParseError *parseError);
+ODE_Result ODE_NATIVE_API ode_loadDesignFromFileWithImages(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_DesignHandle *design, ODE_StringRef path, ODE_DesignImageBaseHandle designImageBase, ODE_OUT ODE_ParseError *parseError);
 
 /**
  * Saves a design to binary octopus file
  * @param design - the design handle
  * @param path - path to the new octopus file
+ * @param designImageBase - the image database of the design
  */
-ODE_Result ODE_NATIVE_API ode_pr1_saveDesignToFile_Media(ODE_DesignHandle design, ODE_StringRef path, ODE_DesignImageBaseHandle designImageBase);
+ODE_Result ODE_NATIVE_API ode_pr1_saveDesignToFileWithImages(ODE_DesignHandle design, ODE_StringRef path, ODE_DesignImageBaseHandle designImageBase);
 
 #ifdef __cplusplus
 }

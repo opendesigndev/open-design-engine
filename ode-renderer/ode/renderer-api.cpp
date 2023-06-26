@@ -178,8 +178,8 @@ ODE_Result ODE_API ode_pr1_animation_drawFrame(ODE_PR1_AnimationRendererHandle r
     return ODE_RESULT_OK;
 }
 
-ODE_Result ODE_NATIVE_API ode_loadDesignFromFile_Media(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_DesignHandle *design, ODE_StringRef path, ODE_DesignImageBaseHandle designImageBase, ODE_OUT ODE_ParseError *parseError) {
-    return loadOctopusDesignFromFile(design, ode_stringDeref(path), [&designImageBase](ODE_StringRef filePath, ODE_MemoryBuffer &imageData) {
+ODE_Result ODE_NATIVE_API ode_loadDesignFromFileWithImages(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_DesignHandle *design, ODE_StringRef path, ODE_DesignImageBaseHandle designImageBase, ODE_OUT ODE_ParseError *parseError) {
+    return loadDesignFromOctopusFile(design, ode_stringDeref(path), [&designImageBase](ODE_StringRef filePath, ODE_MemoryBuffer &imageData) {
         ODE_ASSERT(filePath.data && imageData.data);
         const ode::Bitmap bitmap = loadImage(reinterpret_cast<const unsigned char*>(imageData.data), imageData.length);
         if (!bitmap.empty()) {
@@ -192,8 +192,8 @@ ODE_Result ODE_NATIVE_API ode_loadDesignFromFile_Media(ODE_EngineHandle engine, 
     }, parseError);
 }
 
-ODE_Result ODE_NATIVE_API ode_pr1_saveDesignToFile_Media(ODE_DesignHandle design, ODE_StringRef path, ODE_DesignImageBaseHandle designImageBase) {
-    return saveOctopusDesignToFile(design, path, [&designImageBase](ODE_StringRef filePath, ODE_MemoryBuffer &imageData) {
+ODE_Result ODE_NATIVE_API ode_pr1_saveDesignToFileWithImages(ODE_DesignHandle design, ODE_StringRef path, ODE_DesignImageBaseHandle designImageBase) {
+    return saveDesignToOctopusFile(design, ode_stringDeref(path), [&designImageBase](ODE_StringRef filePath, ODE_MemoryBuffer &imageData) {
         ODE_ASSERT(filePath.data && imageData.data);
         if (!designImageBase.ptr)
             return ODE_RESULT_INVALID_IMAGE_BASE;
