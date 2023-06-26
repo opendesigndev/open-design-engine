@@ -83,28 +83,12 @@ ODE_Result ODE_API ode_createDesignImageBase(ODE_RendererContextHandle rendererC
 ODE_Result ODE_API ode_destroyDesignImageBase(ODE_DesignImageBaseHandle designImageBase);
 
 /**
- * Loads a design's image asset as file bytes in physical memory
- * @param designImageBase - target design image base
- * @param key - identifying key of the image asset
- * @param data - memory buffer holding the raw image file data
- */
-ODE_Result ODE_API ode_design_loadImageBytes(ODE_DesignImageBaseHandle designImageBase, ODE_StringRef key, ODE_MemoryBuffer data);
-
-/**
  * Loads a design's image asset as pixels in physical memory
  * @param designImageBase - target design image base
  * @param key - identifying key of the image asset
  * @param bitmap - bitmap reference to the image data - does not have to remain in memory after this call
  */
 ODE_Result ODE_API ode_design_loadImagePixels(ODE_DesignImageBaseHandle designImageBase, ODE_StringRef key, ODE_BitmapRef bitmap);
-
-/**
- * PROTOTYPE - exports a stored image as PNG into the specified buffer
- * @param designImageBase - target design image base
- * @param key - identifying key of the image asset
- * @param data - memory buffer that will be filled with the PNG binary data
- */
-ODE_Result ODE_API ode_pr1_design_exportPngImage(ODE_DesignImageBaseHandle designImageBase, ODE_StringRef key, ODE_INOUT ODE_MemoryBuffer *data);
 
 /**
  * PROTOTYPE - draws a component into a bitmap in physical memory
@@ -135,6 +119,22 @@ ODE_Result ODE_API ode_pr1_destroyAnimationRenderer(ODE_PR1_AnimationRendererHan
  * @param time - the timepoint of the animation in seconds
  */
 ODE_Result ODE_API ode_pr1_animation_drawFrame(ODE_PR1_AnimationRendererHandle renderer, ODE_PR1_FrameView frameView, ODE_Scalar time);
+
+/**
+ * Loads a design from a comprehensive binary file representation - deallocate with ode_destroyDesign
+ * @param engine - instance of engine
+ * @param design - output argument for the new design handle
+ * @param path - path to design file
+ * @param parseError - output argument to store details of parse error if ODE_RESULT_OCTOPUS_PARSE_ERROR or ODE_RESULT_OCTOPUS_MANIFEST_PARSE_ERROR is returned. Can be null if this information is not needed.
+ */
+ODE_Result ODE_NATIVE_API ode_loadDesignFromFile_Media(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_DesignHandle *design, ODE_StringRef path, ODE_DesignImageBaseHandle designImageBase, ODE_OUT ODE_ParseError *parseError);
+
+/**
+ * Saves a design to binary octopus file
+ * @param design - the design handle
+ * @param path - path to the new octopus file
+ */
+ODE_Result ODE_NATIVE_API ode_pr1_saveDesignToFile_Media(ODE_DesignHandle design, ODE_StringRef path, ODE_DesignImageBaseHandle designImageBase);
 
 #ifdef __cplusplus
 }

@@ -87,18 +87,6 @@ ODE_Result ODE_API ode_destroyDesignImageBase(ODE_DesignImageBaseHandle designIm
     return ODE_RESULT_OK;
 }
 
-ODE_Result ODE_API ode_design_loadImageBytes(ODE_DesignImageBaseHandle designImageBase, ODE_StringRef key, ODE_MemoryBuffer data) {
-    ODE_ASSERT(key.data && data.data);
-    const ode::Bitmap bitmap = loadImage(reinterpret_cast<const unsigned char*>(data.data), data.length);
-    if (!bitmap.empty()) {
-        ODE_BitmapRef bitmapRef { static_cast<int>(bitmap.format()), bitmap.pixels(), bitmap.width(), bitmap.height() };
-        return ode_design_loadImagePixels(designImageBase, key, bitmapRef);
-    } else {
-        // TODO: ODE_RESULT_IMAGE_ERROR ?
-        return ODE_RESULT_UNKNOWN_ERROR;
-    }
-}
-
 ODE_Result ODE_API ode_design_loadImagePixels(ODE_DesignImageBaseHandle designImageBase, ODE_StringRef key, ODE_BitmapRef bitmap) {
     ODE_ASSERT(key.data && bitmap.pixels);
     if (!designImageBase.ptr)
@@ -119,32 +107,6 @@ ODE_Result ODE_API ode_design_loadImagePixels(ODE_DesignImageBaseHandle designIm
     imageRef.ref.value = ode_stringDeref(key);
     designImageBase.ptr->imageBase.add(imageRef, bitmapRef);
     return ODE_RESULT_OK;
-}
-
-ODE_Result ODE_API ode_pr1_design_exportPngImage(ODE_DesignImageBaseHandle designImageBase, ODE_StringRef key, ODE_INOUT ODE_MemoryBuffer *data) {
-    ODE_ASSERT(key.data && data);
-    if (!designImageBase.ptr)
-        return ODE_RESULT_INVALID_IMAGE_BASE;
-    octopus::Image imageRef = { };
-    imageRef.ref.type = octopus::ImageRef::Type::PATH;
-    imageRef.ref.value = ode_stringDeref(key);
-    const ImagePtr image = designImageBase.ptr->imageBase.get(imageRef);
-    if (image == nullptr) {
-        // TODO: Some other error.
-        return ODE_RESULT_UNKNOWN_ERROR;
-    }
-    BitmapPtr bitmap = image->asBitmap();
-    bitmapUnpremultiply(*bitmap);
-    const SparseBitmapConstRef sparseBitmapConstRef (bitmap->format(), bitmap->pixels(), bitmap->dimensions(), 0);
-    std::vector<byte> pngData;
-    if (writePng(sparseBitmapConstRef, pngData)) {
-        data->data = std::move(pngData.data());
-        data->length = pngData.size();
-        return ODE_RESULT_OK;
-    } else {
-        // TODO: Some other error.
-        return ODE_RESULT_UNKNOWN_ERROR;
-    }
 }
 
 ODE_Result ODE_API ode_pr1_drawComponent(ODE_RendererContextHandle rendererContext, ODE_ComponentHandle component, ODE_DesignImageBaseHandle designImageBase, ODE_Bitmap *outputBitmap, ODE_PR1_FrameView frameView) {
@@ -214,4 +176,46 @@ ODE_Result ODE_API ode_pr1_animation_drawFrame(ODE_PR1_AnimationRendererHandle r
     } else
         return ODE_RESULT_UNKNOWN_ERROR;
     return ODE_RESULT_OK;
+}
+
+ODE_Result ODE_NATIVE_API ode_loadDesignFromFile_Media(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_DesignHandle *design, ODE_StringRef path, ODE_DesignImageBaseHandle designImageBase, ODE_OUT ODE_ParseError *parseError) {
+    return loadOctopusDesignFromFile(design, ode_stringDeref(path), [&designImageBase](ODE_StringRef filePath, ODE_MemoryBuffer &imageData) {
+        ODE_ASSERT(filePath.data && imageData.data);
+        const ode::Bitmap bitmap = loadImage(reinterpret_cast<const unsigned char*>(imageData.data), imageData.length);
+        if (!bitmap.empty()) {
+            ODE_BitmapRef bitmapRef { static_cast<int>(bitmap.format()), bitmap.pixels(), bitmap.width(), bitmap.height() };
+            return ode_design_loadImagePixels(designImageBase, filePath, bitmapRef);
+        } else {
+            // TODO: ODE_RESULT_IMAGE_ERROR ?
+            return ODE_RESULT_UNKNOWN_ERROR;
+        }
+    }, parseError);
+}
+
+ODE_Result ODE_NATIVE_API ode_pr1_saveDesignToFile_Media(ODE_DesignHandle design, ODE_StringRef path, ODE_DesignImageBaseHandle designImageBase) {
+    return saveOctopusDesignToFile(design, path, [&designImageBase](ODE_StringRef filePath, ODE_MemoryBuffer &imageData) {
+        ODE_ASSERT(filePath.data && imageData.data);
+        if (!designImageBase.ptr)
+            return ODE_RESULT_INVALID_IMAGE_BASE;
+        octopus::Image imageRef = { };
+        imageRef.ref.type = octopus::ImageRef::Type::PATH;
+        imageRef.ref.value = ode_stringDeref(filePath);
+        const ImagePtr image = designImageBase.ptr->imageBase.get(imageRef);
+        if (image == nullptr) {
+            // TODO: Some other error.
+            return ODE_RESULT_UNKNOWN_ERROR;
+        }
+        BitmapPtr bitmap = image->asBitmap();
+        bitmapUnpremultiply(*bitmap);
+        const SparseBitmapConstRef sparseBitmapConstRef (bitmap->format(), bitmap->pixels(), bitmap->dimensions(), 0);
+        std::vector<byte> pngData;
+        if (writePng(sparseBitmapConstRef, pngData)) {
+            imageData.data = std::move(pngData.data());
+            imageData.length = pngData.size();
+            return ODE_RESULT_OK;
+        } else {
+            // TODO: Some other error.
+            return ODE_RESULT_UNKNOWN_ERROR;
+        }
+    });
 }

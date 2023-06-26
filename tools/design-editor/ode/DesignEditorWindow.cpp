@@ -515,31 +515,8 @@ int DesignEditorWindow::reloadOctopus(const FilePath &octopusPath, const FilePat
     ODE_StringList componentIds;
 
     if (isOctopusFile) {
-        // TODO: Read Octopus design file - duplicated in ode_loadDesignFromFile
-        OctopusFile octopusFile;
-        if (!octopusFile.load(octopusPath)) {
-            // TODO: A better error type
-            return -1;
-        }
-
         // Load design to context (incl. components+metadata)
-        CHECK(ode_loadDesignFromFile(context.engine, &context.design.design, ode_stringRef(octopusPathStr), &parseError));
-
-        // TODO: Image directory in the memory filesystem
-        context.design.imageDirectory = imageDirectory;
-        // TODO: set imageBase directory using the ODE API
-        reinterpret_cast<ImageBase *>(context.design.imageBase.ptr)->setImageDirectory(context.design.imageDirectory.parent());
-
-        // TODO: Move octopus file image loading inside the ode_loadDesignFromFile function?
-        // Load images - must be outside of ode_loadDesignFromFile because it uses renderer-api instead of logic-api
-        for (const ode::FilePath &filePath : octopusFile.filePaths()) {
-            const std::optional<std::string> fileData = octopusFile.getFileData(filePath);
-            if (fileData.has_value()) {
-                ODE_MemoryBuffer imageData = ode_makeMemoryBuffer(fileData->c_str(), fileData->size());
-                ode_design_loadImageBytes(context.design.imageBase, ode_stringRef((std::string)filePath), imageData);
-            }
-        }
-
+        CHECK(ode_loadDesignFromFile_Media(context.engine, &context.design.design, ode_stringRef(octopusPathStr), context.design.imageBase, &parseError));
         // Get loaded components list
         CHECK(ode_design_listComponents(context.design.design, &componentIds));
         context.design.components.resize(componentIds.n, {});
