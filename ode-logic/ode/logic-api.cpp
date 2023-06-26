@@ -245,7 +245,7 @@ ODE_Result ODE_NATIVE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_De
     return loadDesignFromOctopusFile(design, ode_stringDeref(path), nullptr, parseError);
 }
 
-ODE_Result ODE_NATIVE_API ode_pr1_saveDesignToFile(ODE_DesignHandle design, ODE_StringRef path) {
+ODE_Result ODE_NATIVE_API ode_saveDesignToFile(ODE_DesignHandle design, ODE_StringRef path) {
     return saveDesignToOctopusFile(design, ode_stringDeref(path), nullptr);
 }
 

@@ -136,7 +136,7 @@ ODE_Result ODE_NATIVE_API ode_loadDesignFromFileWithImages(ODE_EngineHandle engi
  * @param path - path to the new octopus file
  * @param designImageBase - the image database of the design
  */
-ODE_Result ODE_NATIVE_API ode_pr1_saveDesignToFileWithImages(ODE_DesignHandle design, ODE_StringRef path, ODE_DesignImageBaseHandle designImageBase);
+ODE_Result ODE_NATIVE_API ode_saveDesignToFileWithImages(ODE_DesignHandle design, ODE_StringRef path, ODE_DesignImageBaseHandle designImageBase);
 
 #ifdef __cplusplus
 }

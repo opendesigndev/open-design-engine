@@ -129,13 +129,11 @@ ODE_Result ode::loadDesignFromOctopusFile(ODE_DesignHandle *design, const FilePa
     // Read Octopus design file
     OctopusFile octopusFile;
     if (!octopusFile.load(path)) {
-        // TODO: A better error type
-        return ODE_RESULT_OCTOPUS_UNAVAILABLE;
+        return ODE_RESULT_FILE_READ_ERROR;
     }
     // Read the manifest
     const std::optional<std::string> manifestFileData = octopusFile.getFileData("octopus-manifest.json");
     if (!manifestFileData.has_value()) {
-        // TODO: A better error type
         return ODE_RESULT_OCTOPUS_UNAVAILABLE;
     }
     octopus::OctopusManifest manifest;
@@ -277,7 +275,6 @@ ODE_Result ode::saveDesignToOctopusFile(ODE_DesignHandle design, const FilePath 
                         ODE_MemoryBuffer imageData;
                         if (imageExporter(ode_stringRef(assetImage.location.path.value()), imageData) == ODE_RESULT_OK) {
                             if (!octopusFile.add(assetImage.location.path.value(), std::string(static_cast<const char *>(imageData.data), imageData.length), MemoryFileSystem::CompressionMethod::NONE)) {
-                                // TODO: Error saving PNG to octopus file
                                 continue;
                             }
                         }
@@ -298,7 +295,6 @@ ODE_Result ode::saveDesignToOctopusFile(ODE_DesignHandle design, const FilePath 
                                 nonstd::nullopt };
                             if (!octopusFile.exists(assetFont.location->path.value())) {
                                 if (!octopusFile.add(assetFont.location->path.value(), std::string(static_cast<const char *>(fontData.data), fontData.length), MemoryFileSystem::CompressionMethod::NONE)) {
-                                    // TODO: Error saving Font to octopus file
                                     continue;
                                 }
                             }

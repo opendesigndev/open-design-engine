@@ -192,7 +192,7 @@ ODE_Result ODE_NATIVE_API ode_loadDesignFromFileWithImages(ODE_EngineHandle engi
     }, parseError);
 }
 
-ODE_Result ODE_NATIVE_API ode_pr1_saveDesignToFileWithImages(ODE_DesignHandle design, ODE_StringRef path, ODE_DesignImageBaseHandle designImageBase) {
+ODE_Result ODE_NATIVE_API ode_saveDesignToFileWithImages(ODE_DesignHandle design, ODE_StringRef path, ODE_DesignImageBaseHandle designImageBase) {
     return saveDesignToOctopusFile(design, ode_stringDeref(path), [&designImageBase](ODE_StringRef filePath, ODE_MemoryBuffer &imageData) {
         ODE_ASSERT(filePath.data && imageData.data);
         if (!designImageBase.ptr)

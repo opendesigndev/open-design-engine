@@ -67,7 +67,7 @@ void drawControlsWidget(DesignEditorDesign &design,
 
             if (ImGuiFileDialog::Instance()->IsOk()) {
                 const std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
-                ode_pr1_saveDesignToFileWithImages(design.design, ode_stringRef(filePathName), design.imageBase);
+                ode_saveDesignToFileWithImages(design.design, ode_stringRef(filePathName), design.imageBase);
             }
 
             ImGuiFileDialog::Instance()->Close();
