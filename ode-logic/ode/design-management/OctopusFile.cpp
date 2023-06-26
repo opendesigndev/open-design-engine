@@ -8,6 +8,9 @@
 
 namespace ode {
 
+#define OCTOPUS_FILE_SIGNATURE_NAME             "Octopus"
+#define OCTOPUS_FILE_SIGNATURE_CONTENTS         " is universal design format. opendesign.dev."
+
 #define PK_CENTRAL_DIR_FILE_HEADER_SIGNATURE    "PK\x01\x02"
 #define PK_LOCAL_FILE_HEADER_SIGNATURE          "PK\x03\x04"
 #define PK_END_OF_CENTRAL_DIRECTORY_SIGNATURE   "PK\x05\x06"
@@ -249,7 +252,7 @@ bool OctopusFile::checkOctopusFileHeader(std::ifstream &file, Error *error) {
     CHECK_HEADER(26, std::string(1, 7), 1);
     CHECK_HEADER(27, std::string(3, 0), 3);
     // File name and file data
-    CHECK_HEADER(30, "Octopus is universal design format. opendesign.dev.", 51);
+    CHECK_HEADER(30, OCTOPUS_FILE_SIGNATURE_NAME OCTOPUS_FILE_SIGNATURE_CONTENTS, 51);
 
     // General purpose bit flag
     file.seekg(6, std::ios::beg);

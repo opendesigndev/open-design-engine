@@ -13,6 +13,10 @@ using namespace ode;
 
 namespace {
 
+#define OCTOPUS_FILE_SIGNATURE_NAME             "Octopus"
+#define OCTOPUS_FILE_SIGNATURE_CONTENTS         " is universal design format. opendesign.dev."
+#define OCTOPUS_MANIFEST_FILENAME               "octopus-manifest.json"
+
 // TODO: Unify with logic-api.cpp?
 template <typename ErrorType>
 static ODE_ParseError::Type ode_parseErrorType(ErrorType type) {
@@ -132,7 +136,7 @@ ODE_Result ode::loadDesignFromOctopusFile(ODE_DesignHandle *design, const FilePa
         return ODE_RESULT_FILE_READ_ERROR;
     }
     // Read the manifest
-    const std::optional<std::string> manifestFileData = octopusFile.getFileData("octopus-manifest.json");
+    const std::optional<std::string> manifestFileData = octopusFile.getFileData(OCTOPUS_MANIFEST_FILENAME);
     if (!manifestFileData.has_value()) {
         return ODE_RESULT_OCTOPUS_UNAVAILABLE;
     }
@@ -150,7 +154,7 @@ ODE_Result ode::loadDesignFromOctopusFile(ODE_DesignHandle *design, const FilePa
         const std::string filePathStr = (std::string)filePath;
         const bool isJson = (filePathStr.substr(filePathStr.find_last_of(".")+1) == "json");
         const bool isOctopus = (filePathStr.substr() == "json");;
-        const bool isOctopusComponentFile = isJson && filePathStr != "octopus-manifest.json";
+        const bool isOctopusComponentFile = isJson && filePathStr != OCTOPUS_MANIFEST_FILENAME;
 
         if (isOctopusComponentFile) {
             const std::optional<std::string> fileData = octopusFile.getFileData(filePath);
@@ -217,7 +221,7 @@ ODE_Result ode::saveDesignToOctopusFile(ODE_DesignHandle design, const FilePath 
     const std::string cleanFileName = (extPos == std::string::npos) ? fileName : fileName.substr(0, extPos);
 
     OctopusFile octopusFile;
-    octopusFile.add("Octopus", " is universal design format. opendesign.dev.", MemoryFileSystem::CompressionMethod::NONE);
+    octopusFile.add(OCTOPUS_FILE_SIGNATURE_NAME, OCTOPUS_FILE_SIGNATURE_CONTENTS, MemoryFileSystem::CompressionMethod::NONE);
 
     octopus::OctopusManifest manifest;
     manifest.version = OCTOPUS_MANIFEST_VERSION;
@@ -307,7 +311,7 @@ ODE_Result ode::saveDesignToOctopusFile(ODE_DesignHandle design, const FilePath 
 
     std::string manifestJson;
     if (octopus::ManifestSerializer::serialize(manifestJson, manifest) == octopus::ManifestSerializer::Error::OK) {
-        if (octopusFile.add("octopus-manifest.json", manifestJson, MemoryFileSystem::CompressionMethod::DEFLATE).has_value()) {
+        if (octopusFile.add(OCTOPUS_MANIFEST_FILENAME, manifestJson, MemoryFileSystem::CompressionMethod::DEFLATE).has_value()) {
             const bool isSaved = octopusFile.save(path);
             if (!isSaved) {
                 fprintf(stderr, "Internal error (saving Octopus json to filesystem)\n");

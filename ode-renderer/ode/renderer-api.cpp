@@ -181,7 +181,7 @@ ODE_Result ODE_API ode_pr1_animation_drawFrame(ODE_PR1_AnimationRendererHandle r
 ODE_Result ODE_NATIVE_API ode_loadDesignFromFileWithImages(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_DesignHandle *design, ODE_StringRef path, ODE_DesignImageBaseHandle designImageBase, ODE_OUT ODE_ParseError *parseError) {
     return loadDesignFromOctopusFile(design, ode_stringDeref(path), [&designImageBase](ODE_StringRef filePath, ODE_MemoryBuffer &imageData) {
         ODE_ASSERT(filePath.data && imageData.data);
-        const ode::Bitmap bitmap = loadImage(reinterpret_cast<const unsigned char*>(imageData.data), imageData.length);
+        const ode::Bitmap bitmap = loadImage(reinterpret_cast<const byte*>(imageData.data), imageData.length);
         if (!bitmap.empty()) {
             ODE_BitmapRef bitmapRef { static_cast<int>(bitmap.format()), bitmap.pixels(), bitmap.width(), bitmap.height() };
             return ode_design_loadImagePixels(designImageBase, filePath, bitmapRef);
@@ -214,8 +214,7 @@ ODE_Result ODE_NATIVE_API ode_saveDesignToFileWithImages(ODE_DesignHandle design
             imageData.length = pngData.size();
             return ODE_RESULT_OK;
         } else {
-            // TODO: Some other error.
-            return ODE_RESULT_UNKNOWN_ERROR;
+            return ODE_RESULT_FILE_WRITE_ERROR;
         }
     });
 }
