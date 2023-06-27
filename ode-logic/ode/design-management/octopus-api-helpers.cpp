@@ -127,7 +127,7 @@ std::string fontFileExtension(const ODE_MemoryBuffer &fontBuffer) {
 
 }
 
-ODE_Result ode::loadDesignFromOctopusFile(ODE_DesignHandle *design, const FilePath &path, const ImageFunction &imageLoader, ODE_ParseError *parseError) {
+ODE_Result ode::loadDesignFromOctopusFile(ODE_DesignHandle *design, const FilePath &path, const ImageFunction &loadImage, ODE_ParseError *parseError) {
     ODE_ASSERT(design && design->ptr);
 
     // Read Octopus design file
@@ -179,10 +179,10 @@ ODE_Result ode::loadDesignFromOctopusFile(ODE_DesignHandle *design, const FilePa
     }
 
     // Load images if image loader function is supplied
-    if (imageLoader) {
+    if (loadImage) {
         for (const MemoryFileSystem::File &file : octopusFile.files()) {
             ODE_MemoryBuffer imageData = ode_makeMemoryBuffer(file.data.data(), file.data.size());
-            imageLoader(ode_stringRef((std::string)file.path), imageData);
+            loadImage(ode_stringRef((std::string)file.path), imageData);
         }
     }
 
@@ -208,7 +208,7 @@ ODE_Result ode::loadDesignFromOctopusFile(ODE_DesignHandle *design, const FilePa
     return ODE_RESULT_OK;
 }
 
-ODE_Result ode::saveDesignToOctopusFile(ODE_DesignHandle design, const FilePath &path, const ImageFunction &imageExporter) {
+ODE_Result ode::saveDesignToOctopusFile(ODE_DesignHandle design, const FilePath &path, const ImageFunction &exportImage) {
     const std::string fileName = path.filename();
     const size_t extPos = fileName.rfind('.', fileName.length());
     const std::string cleanFileName = (extPos == std::string::npos) ? fileName : fileName.substr(0, extPos);
@@ -266,11 +266,11 @@ ODE_Result ode::saveDesignToOctopusFile(ODE_DesignHandle design, const FilePath 
             octopusComponent.assets = octopus.content.has_value() ? listAllAssets(*octopus.content) : octopus::Assets{};
 
             // Save images if image exporter function is supplied
-            if (imageExporter) {
+            if (exportImage) {
                 for (const octopus::AssetImage &assetImage : octopusComponent.assets->images) {
                     if (assetImage.location.path.has_value()) {
                         ODE_MemoryBuffer imageData;
-                        if (imageExporter(ode_stringRef(assetImage.location.path.value()), imageData) == ODE_RESULT_OK) {
+                        if (exportImage(ode_stringRef(assetImage.location.path.value()), imageData) == ODE_RESULT_OK) {
                             if (!octopusFile.add(assetImage.location.path.value(), std::string(static_cast<const char *>(imageData.data), imageData.length), MemoryFileSystem::CompressionMethod::NONE)) {
                                 continue;
                             }

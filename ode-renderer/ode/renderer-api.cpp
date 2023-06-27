@@ -183,7 +183,7 @@ ODE_Result ODE_NATIVE_API ode_loadDesignFromFileWithImages(ODE_EngineHandle engi
         ODE_ASSERT(filePath.data && imageData.data);
         const ode::Bitmap bitmap = loadImage(reinterpret_cast<const byte*>(imageData.data), imageData.length);
         if (!bitmap.empty()) {
-            ODE_BitmapRef bitmapRef { static_cast<int>(bitmap.format()), bitmap.pixels(), bitmap.width(), bitmap.height() };
+            const ODE_BitmapRef bitmapRef { static_cast<int>(bitmap.format()), bitmap.pixels(), bitmap.width(), bitmap.height() };
             return ode_design_loadImagePixels(designImageBase, filePath, bitmapRef);
         } else {
             // TODO: ODE_RESULT_IMAGE_ERROR ?

@@ -11,8 +11,8 @@ namespace ode {
 using ImageFunction = std::function<ODE_Result(ODE_StringRef, ODE_MemoryBuffer &)>;
 
 /// Load a design from the specified octopus file.
-ODE_Result loadDesignFromOctopusFile(ODE_DesignHandle *design, const FilePath &path, const ImageFunction &imageLoader, ODE_ParseError *parseError);
+ODE_Result loadDesignFromOctopusFile(ODE_DesignHandle *design, const FilePath &path, const ImageFunction &loadImage, ODE_ParseError *parseError);
 /// Save the specified design to an octopus file.
-ODE_Result saveDesignToOctopusFile(ODE_DesignHandle design, const FilePath &path, const ImageFunction &imageExporter);
+ODE_Result saveDesignToOctopusFile(ODE_DesignHandle design, const FilePath &path, const ImageFunction &exportImage);
 
 }
