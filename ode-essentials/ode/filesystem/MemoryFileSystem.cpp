@@ -19,12 +19,16 @@ namespace ode {
         return std::nullopt; \
     }
 
-const std::vector<MemoryFileSystem::File> &MemoryFileSystem::files() const {
-    return files_;
+const std::vector<FilePath> MemoryFileSystem::filePaths() const {
+    std::vector<FilePath> result;
+    for (const File &file : files) {
+        result.emplace_back(file.path);
+    }
+    return result;
 }
 
 bool MemoryFileSystem::exists(const FilePath& filePath) const {
-    return std::any_of(files_.begin(), files_.end(), [&filePath](const File &file) {
+    return std::any_of(files.begin(), files.end(), [&filePath](const File &file) {
         return file.path == filePath;
     });
 }
@@ -33,10 +37,10 @@ std::optional<std::vector<byte>> MemoryFileSystem::getFileData(const FilePath& f
     if (error)
         *error = Error::OK;
 
-    const std::vector<File>::const_iterator fileIt = std::find_if(files_.begin(), files_.end(), [&filePath](const File &file) {
+    const std::vector<File>::const_iterator fileIt = std::find_if(files.begin(), files.end(), [&filePath](const File &file) {
         return file.path == filePath;
     });
-    if (fileIt == files_.end()) {
+    if (fileIt == files.end()) {
         return std::nullopt;
     }
 
@@ -51,7 +55,7 @@ std::optional<MemoryFileSystem::FileRef> MemoryFileSystem::add(const FilePath &f
         // CRC-32 of the uncompressed data
         const uLong crc32Checksum = crc32(0L, (Bytef*)data.data(), (uInt)data.size());
 
-        return files_.emplace_back(File {
+        return files.emplace_back(File {
             filePath,
             compressionMethod,
             static_cast<uint32_t>(crc32Checksum),
@@ -68,7 +72,7 @@ std::optional<MemoryFileSystem::FileRef> MemoryFileSystem::add(const FilePath &f
 }
 
 void MemoryFileSystem::clear() {
-    files_.clear();
+    files.clear();
 }
 
 std::optional<std::vector<byte>> MemoryFileSystem::compress(const std::vector<byte> &data, CompressionMethod compressionMethod, Error *error) const {

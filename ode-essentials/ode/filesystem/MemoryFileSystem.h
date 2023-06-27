@@ -40,8 +40,8 @@ public:
     using FileRef = std::reference_wrapper<File>;
     using Files = std::vector<File>;
 
-    /// Provide read-only access to the files.
-    const std::vector<File> &files() const;
+    /// Get list of all contained files as their paths.
+    const std::vector<FilePath> filePaths() const;
     /// Detects if the specified file exists.
     bool exists(const FilePath& filePath) const;
     /// Read a single specified file. Decompress if the loaded file data is compressed.
@@ -58,7 +58,7 @@ protected:
     std::optional<std::vector<byte>> compress(const std::vector<byte> &data, CompressionMethod compressionMethod, Error *error = nullptr) const;
     std::optional<std::vector<byte>> decompress(const std::vector<byte> &data, CompressionMethod compressionMethod, Error *error = nullptr) const;
 
-    Files files_;
+    Files files;
 };
 
 } // namespace ode

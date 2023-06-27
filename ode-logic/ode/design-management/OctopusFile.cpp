@@ -85,7 +85,7 @@ bool OctopusFile::load(const FilePath &octopusFilePath, Error *error) {
         CHECK(signature == PK_LOCAL_FILE_HEADER_SIGNATURE, INVALID_OCTOPUS_FILE);
 
         // Create a new file entry after central dir file header verified
-        File &newFile = files_.emplace_back();
+        File &newFile = files.emplace_back();
 
         newFile.crc32 = CENTRAL_DIR_FILE_DATA(uint32_t, 16);
         newFile.compressionMethod = CENTRAL_DIR_FILE_DATA(CompressionMethod, 10);
@@ -119,11 +119,11 @@ bool OctopusFile::save(const FilePath &octopusFilePath, Error *error) {
     std::ofstream outputFile((std::string)octopusFilePath, std::ios::binary);
     CHECK(outputFile, ERROR_OPENING_FILE);
 
-    const uint16_t filesCount = files_.size();
+    const uint16_t filesCount = files.size();
     std::map<std::string, uint32_t> fileHeadersOffsets;
 
     // Individual file data
-    for (const File &file : files_) {
+    for (const File &file : files) {
         fileHeadersOffsets[(std::string)file.path] = static_cast<uint32_t>(outputFile.tellp());
         const size_t fileNameLength = ((std::string)file.path).size();
 
@@ -165,7 +165,7 @@ bool OctopusFile::save(const FilePath &octopusFilePath, Error *error) {
 
     // Zip central directory
     const uint32_t centralDirectoryOffset = static_cast<uint32_t>(outputFile.tellp());
-    for (const File &file : files_) {
+    for (const File &file : files) {
         const uint32_t fileHeaderOffset = fileHeadersOffsets[(std::string)file.path];
         const size_t fileNameLength = ((std::string)file.path).size();
 
