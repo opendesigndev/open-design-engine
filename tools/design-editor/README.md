@@ -2,7 +2,7 @@
 
 The **Internal Design Editor** is a small utility tool that tests the completeness of the [Open Design Engine](https://github.com/opendesigndev/open-design-engine) public API, the engine’s editing capabilities and its performance. It is a C++ desktop application, the user interface is built using the [Dear ImGui](https://github.com/ocornut/imgui) library.
 
-It allows opening and saving **Octopus** component files (`*.json`). Working with **Octopus** binary files (`*.octopus`) is as of *May 24, 2023* partially supported.
+It allows opening and saving binary **Octopus** files (`*.octopus`) as well as **Octopus** component files (`*.json`).
 
 The Editor can be used from the command line:
 ```
