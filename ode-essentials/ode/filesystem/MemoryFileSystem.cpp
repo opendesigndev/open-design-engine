@@ -19,16 +19,12 @@ namespace ode {
         return std::nullopt; \
     }
 
-const std::vector<FilePath> MemoryFileSystem::filePaths() const {
-    std::vector<FilePath> result;
-    for (const File &file : files) {
-        result.emplace_back(file.path);
-    }
-    return result;
+const std::vector<MemoryFileSystem::File> &MemoryFileSystem::files() const {
+    return files_;
 }
 
 bool MemoryFileSystem::exists(const FilePath& filePath) const {
-    return std::any_of(files.begin(), files.end(), [&filePath](const File &file) {
+    return std::any_of(files_.begin(), files_.end(), [&filePath](const File &file) {
         return file.path == filePath;
     });
 }
@@ -37,10 +33,10 @@ std::optional<std::vector<byte>> MemoryFileSystem::getFileData(const FilePath& f
     if (error)
         *error = Error::OK;
 
-    const std::vector<File>::const_iterator fileIt = std::find_if(files.begin(), files.end(), [&filePath](const File &file) {
+    const std::vector<File>::const_iterator fileIt = std::find_if(files_.begin(), files_.end(), [&filePath](const File &file) {
         return file.path == filePath;
     });
-    if (fileIt == files.end()) {
+    if (fileIt == files_.end()) {
         return std::nullopt;
     }
 
@@ -55,7 +51,7 @@ std::optional<MemoryFileSystem::FileRef> MemoryFileSystem::add(const FilePath &f
         // CRC-32 of the uncompressed data
         const uLong crc32Checksum = crc32(0L, (Bytef*)data.data(), (uInt)data.size());
 
-        return files.emplace_back(File {
+        return files_.emplace_back(File {
             filePath,
             compressionMethod,
             static_cast<uint32_t>(crc32Checksum),
@@ -69,6 +65,10 @@ std::optional<MemoryFileSystem::FileRef> MemoryFileSystem::add(const FilePath &f
 
 std::optional<MemoryFileSystem::FileRef> MemoryFileSystem::add(const FilePath &filePath, const std::string &data, CompressionMethod compressionMethod, Error *error) {
     return add(filePath, std::vector<byte>(data.data(), data.data() + data.size()), compressionMethod);
+}
+
+void MemoryFileSystem::clear() {
+    files_.clear();
 }
 
 std::optional<std::vector<byte>> MemoryFileSystem::compress(const std::vector<byte> &data, CompressionMethod compressionMethod, Error *error) const {
@@ -145,10 +145,6 @@ std::optional<std::vector<byte>> MemoryFileSystem::decompress(const std::vector<
             CHECK(false, UNSUPPORTED_COMPRESSION_METHOD);
     }
     return std::nullopt;
-}
-
-void MemoryFileSystem::clear() {
-    files.clear();
 }
 
 } // namespace ode
