@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <functional>
 #include <ode/api-base.h>
 #include <ode-essentials.h>
 #include "../logic-api.h"

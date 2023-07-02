@@ -17,6 +17,9 @@ target_include_directories(ode-essentials INTERFACE
     $<INSTALL_INTERFACE:include>
 )
 
+# This module's dependencies
+target_link_libraries(ode-essentials PRIVATE ZLIB::ZLIB)
+
 if (MSVC)
     # Ignore LNK4099 - PDB not found
     target_link_options(ode-essentials INTERFACE "/ignore:4099")

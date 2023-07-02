@@ -30,7 +30,7 @@ RUN apt-get update \
 # Vckpg
 RUN git clone https://github.com/microsoft/vcpkg /opt/vcpkg && cd /opt/vcpkg && git checkout `cat /home/vcpkg-commit`
 RUN /opt/vcpkg/bootstrap-vcpkg.sh -disableMetrics && ln -s /opt/vcpkg/vcpkg /usr/bin/vcpkg
-RUN vcpkg --triplet x64-linux-release --host-triplet x64-linux-release install freetype harfbuzz[icu] icu libpng libjpeg-turbo tiff giflib libwebp skia[core,freetype] msdfgen node-api[core] node-addon-api
+RUN vcpkg --triplet x64-linux-release --host-triplet x64-linux-release install freetype harfbuzz[icu] icu zlib libpng libjpeg-turbo tiff giflib libwebp skia[core,freetype] msdfgen node-api-headers[core] node-addon-api
 ENV VCPKG_ROOT=/opt/vcpkg
 
 # Build GLFW with OSMesa support
