@@ -39,7 +39,10 @@ if(ODE_REALTIME_TEXT)
 endif()
 
 # Module dependencies
-target_link_libraries(ode-renderer PUBLIC liboctopus open-design-text-renderer ode-essentials ode-rasterizer ode-logic ode-graphics ode-media)
+target_link_libraries(ode-renderer PUBLIC liboctopus open-design-text-renderer ode-essentials ode-rasterizer ode-logic ode-graphics)
+if(NOT EMSCRIPTEN)
+    target_link_libraries(ode-renderer PUBLIC ode-media)
+endif()
 
 # EXECUTABLE
 if(NOT EMSCRIPTEN)

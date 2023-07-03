@@ -14,15 +14,12 @@ bool detectRgbaFormat(const byte *data, size_t length) {
     return length >= HEADER_SIZE && memcmp(data, HEADER_SIGNATURE, HEADER_SIGNATURE_SIZE) == 0;
 }
 
-#ifndef __EMSCRIPTEN__
 Bitmap loadRgba(const FilePath &path) {
     if (FilePtr file = openFile(path, false))
         return loadRgba(file);
     return Bitmap();
 }
-#endif
 
-#ifndef __EMSCRIPTEN__
 Bitmap loadRgba(FILE *file) {
     ODE_ASSERT(file);
     byte header[HEADER_SIZE];
@@ -38,7 +35,6 @@ Bitmap loadRgba(FILE *file) {
     }
     return Bitmap();
 }
-#endif
 
 Bitmap loadRgba(const byte *data, size_t length) {
     ODE_ASSERT(data);
@@ -54,7 +50,6 @@ Bitmap loadRgba(const byte *data, size_t length) {
     return Bitmap();
 }
 
-#ifndef __EMSCRIPTEN__
 bool saveRgba(const FilePath &path, SparseBitmapConstRef bitmap) {
     ODE_ASSERT(bitmap.format == PixelFormat::RGBA);
     if (bitmap.format != PixelFormat::RGBA)
@@ -81,6 +76,5 @@ bool saveRgba(const FilePath &path, SparseBitmapConstRef bitmap) {
     }
     return false;
 }
-#endif
 
 }

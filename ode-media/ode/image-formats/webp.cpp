@@ -2,7 +2,6 @@
 #include "webp.h"
 
 #ifdef ODE_MEDIA_WEBP_SUPPORT
-#ifndef __EMSCRIPTEN__
 
 #include <webp/decode.h>
 
@@ -54,5 +53,4 @@ Bitmap loadWebp(const byte *data, size_t length) {
 
 }
 
-#endif
 #endif

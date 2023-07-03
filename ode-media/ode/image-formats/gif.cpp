@@ -2,7 +2,6 @@
 #include "gif.h"
 
 #ifdef ODE_MEDIA_GIF_SUPPORT
-#ifndef __EMSCRIPTEN__
 
 #include <gif_lib.h>
 
@@ -57,12 +56,10 @@ static Bitmap loadGif(GifFileType *gif) {
 }
 
 
-#ifndef __EMSCRIPTEN__
 static int gifFileRead(GifFileType *context, GifByteType *data, int length) {
     FILE *file = reinterpret_cast<FILE *>(context->UserData);
     return (int) fread(data, 1, length, file);
 }
-#endif
 
 static int gifMemoryRead(GifFileType* context, GifByteType* data, int length) {
     ReadDataHandle *dataHandle = reinterpret_cast<ReadDataHandle *>(context->UserData);
@@ -101,5 +98,4 @@ Bitmap loadGif(const byte *data, size_t length) {
 
 }
 
-#endif
 #endif

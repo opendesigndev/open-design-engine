@@ -1,6 +1,8 @@
 
 #pragma once
 
+#ifndef __EMSCRIPTEN__
+
 #include <functional>
 #include <ode/api-base.h>
 #include <ode-essentials.h>
@@ -17,3 +19,5 @@ ODE_Result loadDesignFromOctopusFile(ODE_DesignHandle *design, const FilePath &p
 ODE_Result saveDesignToOctopusFile(ODE_DesignHandle design, const FilePath &path, const ImageFunction &exportImage);
 
 }
+
+#endif

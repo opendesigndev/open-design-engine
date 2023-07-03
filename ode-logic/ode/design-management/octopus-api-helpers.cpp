@@ -1,6 +1,8 @@
 
 #include "octopus-api-helpers.h"
 
+#ifndef __EMSCRIPTEN__
+
 #include <octopus/octopus.h>
 #include <octopus-manifest/octopus-manifest.h>
 #include <octopus/parser.h>
@@ -322,3 +324,5 @@ ODE_Result ode::saveDesignToOctopusFile(ODE_DesignHandle design, const FilePath 
 
     return ODE_RESULT_OK;
 }
+
+#endif

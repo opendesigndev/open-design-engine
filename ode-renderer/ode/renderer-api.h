@@ -120,6 +120,8 @@ ODE_Result ODE_API ode_pr1_destroyAnimationRenderer(ODE_PR1_AnimationRendererHan
  */
 ODE_Result ODE_API ode_pr1_animation_drawFrame(ODE_PR1_AnimationRendererHandle renderer, ODE_PR1_FrameView frameView, ODE_Scalar time);
 
+#ifndef __EMSCRIPTEN__
+
 /**
  * Loads a design from a comprehensive binary file representation - deallocate with ode_destroyDesign
  * @param engine - instance of engine
@@ -137,6 +139,8 @@ ODE_Result ODE_NATIVE_API ode_loadDesignFromFileWithImages(ODE_EngineHandle engi
  * @param designImageBase - the image database of the design
  */
 ODE_Result ODE_NATIVE_API ode_saveDesignToFileWithImages(ODE_DesignHandle design, ODE_StringRef path, ODE_DesignImageBaseHandle designImageBase);
+
+#endif
 
 #ifdef __cplusplus
 }

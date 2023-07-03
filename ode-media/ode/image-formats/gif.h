@@ -2,7 +2,6 @@
 #pragma once
 
 #ifdef ODE_MEDIA_GIF_SUPPORT
-#ifndef __EMSCRIPTEN__
 
 #include <cstdio>
 #include <ode-essentials.h>
@@ -17,5 +16,4 @@ Bitmap loadGif(const byte *data, size_t length);
 
 }
 
-#endif
 #endif

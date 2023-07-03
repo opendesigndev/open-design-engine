@@ -2,7 +2,6 @@
 #include "jpeg.h"
 
 #ifdef ODE_MEDIA_JPEG_SUPPORT
-#ifndef __EMSCRIPTEN__
 
 #include <cstdint>
 #include <csetjmp>
@@ -250,5 +249,4 @@ static Bitmap applyJpegOrientation(SparseBitmapConstRef bitmap, JpegOrientation 
 
 }
 
-#endif
 #endif

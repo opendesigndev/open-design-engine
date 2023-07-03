@@ -2,7 +2,6 @@
 #pragma once
 
 #ifdef ODE_MEDIA_TIFF_SUPPORT
-#ifndef __EMSCRIPTEN__
 
 #include <cstdio>
 #include <ode-essentials.h>
@@ -20,5 +19,4 @@ bool saveTiff(const FilePath &path, SparseBitmapConstRef bitmap);
 
 }
 
-#endif
 #endif

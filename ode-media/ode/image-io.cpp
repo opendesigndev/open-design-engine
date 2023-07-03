@@ -3,7 +3,6 @@
 
 namespace ode {
 
-#ifndef __EMSCRIPTEN__
 Bitmap loadImage(const FilePath &path) {
     if (FilePtr file = openFile(path, false)) {
         byte buffer[16] = { };
@@ -24,12 +23,10 @@ Bitmap loadImage(const FilePath &path) {
     }
     return Bitmap();
 }
-#endif
 
 Bitmap loadImage(const byte *data, size_t length) {
     if (detectPngFormat(data, length))
         return loadPng(data, length);
-#ifndef __EMSCRIPTEN__
     if (detectJpegFormat(data, length))
         return loadJpeg(data, length);
     if (detectWebpFormat(data, length))
@@ -38,7 +35,6 @@ Bitmap loadImage(const byte *data, size_t length) {
         return loadGif(data, length);
     if (detectTiffFormat(data, length))
         return loadTiff(data, length);
-#endif
     if (detectRgbaFormat(data, length))
         return loadRgba(data, length);
     return Bitmap();

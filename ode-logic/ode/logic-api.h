@@ -158,6 +158,8 @@ ODE_Result ODE_API ode_destroyEngine(ODE_EngineHandle engine);
  */
 ODE_Result ODE_API ode_createDesign(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_DesignHandle *design);
 
+#ifndef __EMSCRIPTEN__
+
 /**
  * Loads a design from a comprehensive binary file representation - deallocate with ode_destroyDesign
  * @param engine - instance of engine
@@ -173,6 +175,8 @@ ODE_Result ODE_NATIVE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_OU
  * @param path - path to the new octopus file
  */
 ODE_Result ODE_NATIVE_API ode_saveDesignToFile(ODE_DesignHandle design, ODE_StringRef path);
+
+#endif
 
 /**
  * Loads a design from an Octopus Manifest file - deallocate with ode_destroyDesign

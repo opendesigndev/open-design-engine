@@ -241,6 +241,8 @@ ODE_Result ODE_API ode_createDesign(ODE_EngineHandle engine, ODE_DesignHandle *d
     return ODE_RESULT_OK;
 }
 
+#ifndef __EMSCRIPTEN__
+
 ODE_Result ODE_NATIVE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_DesignHandle *design, ODE_StringRef path, ODE_ParseError *parseError) {
     return loadDesignFromOctopusFile(design, ode_stringDeref(path), nullptr, parseError);
 }
@@ -248,6 +250,8 @@ ODE_Result ODE_NATIVE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_De
 ODE_Result ODE_NATIVE_API ode_saveDesignToFile(ODE_DesignHandle design, ODE_StringRef path) {
     return saveDesignToOctopusFile(design, ode_stringDeref(path), nullptr);
 }
+
+#endif
 
 ODE_Result ODE_NATIVE_API ode_loadDesignFromManifestFile(ODE_EngineHandle engine, ODE_DesignHandle *design, ODE_StringRef path, ODE_ParseError *parseError) {
     ODE_ASSERT(design && path.data);

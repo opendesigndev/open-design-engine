@@ -4,7 +4,11 @@
 #include <memory>
 #include <octopus/octopus.h>
 #include <ode-logic.h>
+
+#ifndef __EMSCRIPTEN__
 #include <ode-media.h>
+#endif
+
 #include "image/Image.h"
 #include "image/ImageBase.h"
 #include "optimized-renderer/Renderer.h"
@@ -178,6 +182,8 @@ ODE_Result ODE_API ode_pr1_animation_drawFrame(ODE_PR1_AnimationRendererHandle r
     return ODE_RESULT_OK;
 }
 
+#ifndef __EMSCRIPTEN__
+
 ODE_Result ODE_NATIVE_API ode_loadDesignFromFileWithImages(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_DesignHandle *design, ODE_StringRef path, ODE_DesignImageBaseHandle designImageBase, ODE_OUT ODE_ParseError *parseError) {
     return loadDesignFromOctopusFile(design, ode_stringDeref(path), [&designImageBase](ODE_StringRef filePath, ODE_MemoryBuffer &imageData) {
         ODE_ASSERT(filePath.data && imageData.data);
@@ -218,3 +224,5 @@ ODE_Result ODE_NATIVE_API ode_saveDesignToFileWithImages(ODE_DesignHandle design
         }
     });
 }
+
+#endif
