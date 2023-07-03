@@ -13,9 +13,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          # Personal token with read-only access to liboctopus and open-design-text-renderer
-          # https://github.com/organizations/opendesigndev/settings/personal-access-tokens/39049
-          token: ${{ secrets.ODE_REPOS_TOKEN }}
           submodules: true
       - uses: ./.github/actions/determine-version
         id: npm-version
