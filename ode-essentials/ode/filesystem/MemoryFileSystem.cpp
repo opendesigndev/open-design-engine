@@ -7,9 +7,9 @@
 
 namespace ode {
 
-#define COMPRESSION_BUFFER_SIZE     1<<15
-#define COMPRESSION_WINDOW_SIZE     -15
-#define COMPRESSION_LEVEL           9
+#define COMPRESSION_BUFFER_SIZE     ( 1<<15 )
+#define COMPRESSION_WINDOW_SIZE     ( -15 )
+#define COMPRESSION_LEVEL           ( 9 )
 
 #define CHECK(condition, err) \
     if (!(condition)) { \
