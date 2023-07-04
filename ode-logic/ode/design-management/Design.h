@@ -44,6 +44,7 @@ public:
         const std::string &getId() const;
         int revision() const;
         const octopus::Octopus &getOctopus() const;
+        const Vector2d &getPositon() const;
         Result<const octopus::Layer *, DesignError> getLayerOctopus(const std::string &id);
         Result<octopus::Octopus, DesignError> buildOctopus() const; // "expanded"
         Result<octopus::Octopus, DesignError> buildLayerOctopus(const std::string &id, bool recursive) const; // "expanded"

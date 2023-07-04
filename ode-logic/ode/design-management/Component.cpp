@@ -302,6 +302,10 @@ const octopus::Octopus &Component::getOctopus() const {
     return octopus;
 }
 
+const Vector2d &Component::getPosition() const {
+    return position;
+}
+
 Result<octopus::Octopus, DesignError> Component::buildOctopus() {
     return DesignError::NOT_IMPLEMENTED;
 }
@@ -598,7 +602,8 @@ bool Component::identifyLayer(std::string &id, const LayerInstance &instance, co
         }
     }
     if (instance->type == octopus::Layer::Type::SHAPE || instance->type == octopus::Layer::Type::TEXT) {
-        if (intersects(instance.bounds().untransformedBounds, instance.transformation(), position, radius)) {
+        const UntransformedBounds &bounds = instance.bounds().untransformedBounds;
+        if (bounds && intersects(bounds, instance.transformation(), position, radius)) {
             id = instance->id;
             return true;
         }

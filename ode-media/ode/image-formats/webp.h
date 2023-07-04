@@ -12,6 +12,7 @@ bool detectWebpFormat(const byte *data, size_t length);
 
 Bitmap loadWebp(const FilePath &path);
 Bitmap loadWebp(FILE *file);
+Bitmap loadWebp(const byte *data, size_t length);
 
 }
 

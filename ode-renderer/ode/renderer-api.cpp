@@ -4,6 +4,11 @@
 #include <memory>
 #include <octopus/octopus.h>
 #include <ode-logic.h>
+
+#ifndef __EMSCRIPTEN__
+#include <ode-media.h>
+#endif
+
 #include "image/Image.h"
 #include "image/ImageBase.h"
 #include "optimized-renderer/Renderer.h"
@@ -11,6 +16,7 @@
 
 using namespace ode;
 
+const int ODE_PIXEL_FORMAT_RGB = int(PixelFormat::RGB);
 const int ODE_PIXEL_FORMAT_RGBA = int(PixelFormat::RGBA);
 const int ODE_PIXEL_FORMAT_PREMULTIPLIED_RGBA = int(PixelFormat::PREMULTIPLIED_RGBA);
 
@@ -92,6 +98,7 @@ ODE_Result ODE_API ode_design_loadImagePixels(ODE_DesignImageBaseHandle designIm
     if (!(bitmap.width > 0 && bitmap.height > 0))
         return ODE_RESULT_INVALID_BITMAP_DIMENSIONS;
     switch (bitmap.format) {
+        case ODE_PIXEL_FORMAT_RGB:
         case ODE_PIXEL_FORMAT_RGBA:
         case ODE_PIXEL_FORMAT_PREMULTIPLIED_RGBA:
             break;
@@ -174,3 +181,48 @@ ODE_Result ODE_API ode_pr1_animation_drawFrame(ODE_PR1_AnimationRendererHandle r
         return ODE_RESULT_UNKNOWN_ERROR;
     return ODE_RESULT_OK;
 }
+
+#ifndef __EMSCRIPTEN__
+
+ODE_Result ODE_NATIVE_API ode_loadDesignFromFileWithImages(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_DesignHandle *design, ODE_StringRef path, ODE_DesignImageBaseHandle designImageBase, ODE_OUT ODE_ParseError *parseError) {
+    return loadDesignFromOctopusFile(design, ode_stringDeref(path), [&designImageBase](ODE_StringRef filePath, ODE_MemoryBuffer &imageData) {
+        ODE_ASSERT(filePath.data && imageData.data);
+        const ode::Bitmap bitmap = loadImage(reinterpret_cast<const byte*>(imageData.data), imageData.length);
+        if (!bitmap.empty()) {
+            const ODE_BitmapRef bitmapRef { static_cast<int>(bitmap.format()), bitmap.pixels(), bitmap.width(), bitmap.height() };
+            return ode_design_loadImagePixels(designImageBase, filePath, bitmapRef);
+        } else {
+            // TODO: ODE_RESULT_IMAGE_ERROR ?
+            return ODE_RESULT_UNKNOWN_ERROR;
+        }
+    }, parseError);
+}
+
+ODE_Result ODE_NATIVE_API ode_saveDesignToFileWithImages(ODE_DesignHandle design, ODE_StringRef path, ODE_DesignImageBaseHandle designImageBase) {
+    return saveDesignToOctopusFile(design, ode_stringDeref(path), [&designImageBase](ODE_StringRef filePath, ODE_MemoryBuffer &imageData) {
+        ODE_ASSERT(filePath.data && imageData.data);
+        if (!designImageBase.ptr)
+            return ODE_RESULT_INVALID_IMAGE_BASE;
+        octopus::Image imageRef = { };
+        imageRef.ref.type = octopus::ImageRef::Type::PATH;
+        imageRef.ref.value = ode_stringDeref(filePath);
+        const ImagePtr image = designImageBase.ptr->imageBase.get(imageRef);
+        if (image == nullptr) {
+            // TODO: Some other error.
+            return ODE_RESULT_UNKNOWN_ERROR;
+        }
+        BitmapPtr bitmap = image->asBitmap();
+        bitmapUnpremultiply(*bitmap);
+        const SparseBitmapConstRef sparseBitmapConstRef (bitmap->format(), bitmap->pixels(), bitmap->dimensions(), 0);
+        std::vector<byte> pngData;
+        if (writePng(sparseBitmapConstRef, pngData)) {
+            imageData.data = std::move(pngData.data());
+            imageData.length = pngData.size();
+            return ODE_RESULT_OK;
+        } else {
+            return ODE_RESULT_FILE_WRITE_ERROR;
+        }
+    });
+}
+
+#endif

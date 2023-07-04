@@ -24,13 +24,13 @@ ENV VCPKG_DEFAULT_TRIPLET x64-linux-release
 ENV VCPKG_DEFAULT_HOST_TRIPLET x64-linux-release
 
 RUN apt-get update \
-    && apt-get install -y curl zip unzip tar clang make cmake wget git python3 bison automake autoconf autoconf-archive libosmesa6-dev pkg-config python3-distutils patchelf nodejs \
+    && apt-get install -y curl zip unzip tar clang make cmake wget git python3 bison automake autoconf autoconf-archive libosmesa6-dev pkg-config python3-distutils patchelf nodejs zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Vckpg
 RUN git clone https://github.com/microsoft/vcpkg /opt/vcpkg && cd /opt/vcpkg && git checkout `cat /home/vcpkg-commit`
 RUN /opt/vcpkg/bootstrap-vcpkg.sh -disableMetrics && ln -s /opt/vcpkg/vcpkg /usr/bin/vcpkg
-RUN vcpkg --triplet x64-linux-release --host-triplet x64-linux-release install freetype harfbuzz[icu] icu libpng libjpeg-turbo tiff giflib libwebp skia[core,freetype] msdfgen node-api-headers[core] node-addon-api
+RUN vcpkg --triplet x64-linux-release --host-triplet x64-linux-release install freetype harfbuzz[icu] icu zlib libpng libjpeg-turbo tiff giflib libwebp skia[core,freetype] msdfgen node-api-headers[core] node-addon-api
 ENV VCPKG_ROOT=/opt/vcpkg
 
 # Build GLFW with OSMesa support

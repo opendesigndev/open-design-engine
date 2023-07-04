@@ -26,6 +26,17 @@ struct JpegErrorHandlerData : jpeg_error_mgr {
     jmp_buf jumpDst;
 };
 
+class JpegDecompressGuard {
+    j_decompress_ptr cinfo;
+public:
+    inline explicit JpegDecompressGuard(j_decompress_ptr cinfo) : cinfo(cinfo) { }
+    JpegDecompressGuard(const JpegDecompressGuard &) = delete;
+    inline ~JpegDecompressGuard() {
+        jpeg_destroy_decompress(cinfo);
+    }
+};
+
+static Bitmap loadJpeg(jpeg_decompress_struct &cinfo);
 static Bitmap applyJpegOrientation(SparseBitmapConstRef bitmap, JpegOrientation orientation);
 
 static uint16_t readUint16(const byte *data, bool bigEndian) {
@@ -119,16 +130,6 @@ Bitmap loadJpeg(const FilePath &path) {
 }
 
 Bitmap loadJpeg(FILE *file) {
-    class JpegDecompressGuard {
-        j_decompress_ptr cinfo;
-    public:
-        inline explicit JpegDecompressGuard(j_decompress_ptr cinfo) : cinfo(cinfo) { }
-        JpegDecompressGuard(const JpegDecompressGuard &) = delete;
-        inline ~JpegDecompressGuard() {
-            jpeg_destroy_decompress(cinfo);
-        }
-    };
-
     ODE_ASSERT(file);
     jpeg_decompress_struct cinfo;
     JpegErrorHandlerData jerr;
@@ -140,6 +141,28 @@ Bitmap loadJpeg(FILE *file) {
     if (setjmp(jerr.jumpDst))
         return Bitmap();
     jpeg_stdio_src(&cinfo, file);
+    return loadJpeg(cinfo);
+}
+
+Bitmap loadJpeg(const byte *data, size_t length) {
+    ODE_ASSERT(data);
+    ODE_ASSERT(length > 0);
+    jpeg_decompress_struct cinfo;
+    JpegErrorHandlerData jerr;
+    jerr.error_exit = &jpegErrorExit;
+    jerr.output_message = &jpegLogMessage;
+    cinfo.err = jpeg_std_error(&jerr);
+    jpeg_create_decompress(&cinfo);
+    JpegDecompressGuard jpegGuard(&cinfo);
+    if (setjmp(jerr.jumpDst))
+        return Bitmap();
+    jpeg_mem_src(&cinfo, data, length);
+    return loadJpeg(cinfo);
+}
+
+// Load jpeg helper
+
+static Bitmap loadJpeg(jpeg_decompress_struct &cinfo) {
     JpegOrientation orientation = JpegOrientation::NONE;
     jpeg_save_markers(&cinfo, JPEG_APP0+1, 0xffff);
     if (jpeg_read_header(&cinfo, TRUE) != JPEG_HEADER_OK)

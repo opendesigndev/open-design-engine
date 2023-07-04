@@ -12,6 +12,7 @@ bool detectGifFormat(const byte *data, size_t length);
 
 Bitmap loadGif(const FilePath &path);
 Bitmap loadGif(FILE *file);
+Bitmap loadGif(const byte *data, size_t length);
 
 }
 

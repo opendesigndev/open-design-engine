@@ -69,6 +69,9 @@ void drawLayerListRecursiveStep(const ODE_LayerList &layerList,
 
 void drawLayerListWidget(const ODE_LayerList &layerList,
                          DesignEditorUIState::LayerSelection &layerSelection) {
+    ImGui::SetNextWindowSize(ImVec2(420, 600), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(0, 270), ImGuiCond_FirstUseEver);
+
     ImGui::Begin("Layer List");
 
     if (layerList.entries != nullptr) {

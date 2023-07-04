@@ -2,6 +2,13 @@
 #include "DesignEditorUIState.h"
 
 
+void DesignEditorUIState::Textures::clear() {
+    for (std::pair<const std::string, ode::TextureFrameBufferPtr> &texture : textures) {
+        texture.second.reset();
+    }
+    textures.clear();
+}
+
 bool DesignEditorUIState::LayerSelection::empty() const {
     return layerIDs.empty();
 }

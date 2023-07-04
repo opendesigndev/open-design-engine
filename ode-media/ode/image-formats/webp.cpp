@@ -33,12 +33,18 @@ Bitmap loadWebp(const FilePath &path) {
 }
 
 Bitmap loadWebp(FILE *file) {
-    std::vector<byte> fileBytes = readWholeFile(file);
+    const std::vector<byte> fileBytes = readWholeFile(file);
+    return loadWebp(fileBytes.data(), fileBytes.size());
+}
+
+Bitmap loadWebp(const byte *data, size_t length) {
+    ODE_ASSERT(data);
+    ODE_ASSERT(length > 0);
     Vector2i dimensions;
-    if (WebPGetInfo(fileBytes.data(), fileBytes.size(), &dimensions.x, &dimensions.y)) {
+    if (WebPGetInfo(data, length, &dimensions.x, &dimensions.y)) {
         Bitmap bitmap(PixelFormat::RGBA, dimensions);
         if (bitmap) {
-            if (WebPDecodeRGBAInto(fileBytes.data(), fileBytes.size(), (byte *) bitmap, bitmap.size(), pixelSize(bitmap.format())*bitmap.width()))
+            if (WebPDecodeRGBAInto(data, length, (byte *) bitmap, bitmap.size(), static_cast<int>(pixelSize(bitmap.format())) * bitmap.width()))
                 return bitmap;
         }
     }

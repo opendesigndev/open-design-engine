@@ -13,11 +13,13 @@
 #include "animation/DocumentAnimation.h"
 #include "animation/AnimationParser.h"
 #include "design-management/Design.h"
+#include "design-management/OctopusFile.h"
+#include "design-management/octopus-api-helpers.h"
 
 using namespace ode;
 
 struct ODE_internal_Engine {
-    std::vector<void *> fontDataBuffers;
+    std::vector<std::pair<ODE_String, ODE_MemoryBuffer>> fontDataBuffers;
 };
 
 struct ODE_internal_Design {
@@ -221,8 +223,10 @@ ODE_Result ODE_API ode_createEngine(ODE_EngineHandle *engine, const ODE_EngineAt
 
 ODE_Result ODE_API ode_destroyEngine(ODE_EngineHandle engine) {
     if (engine.ptr) {
-        for (void *dataPtr : engine.ptr->fontDataBuffers)
-            free(dataPtr);
+        for (std::pair<ODE_String, ODE_MemoryBuffer> &fontRecord : engine.ptr->fontDataBuffers) {
+            ode_destroyString(fontRecord.first);
+            ode_destroyMemoryBuffer(&fontRecord.second);
+        }
         // TODO check that all designs destroyed
         delete engine.ptr;
     }
@@ -237,8 +241,17 @@ ODE_Result ODE_API ode_createDesign(ODE_EngineHandle engine, ODE_DesignHandle *d
     return ODE_RESULT_OK;
 }
 
-// Design file format does not exist yet
-//ODE_Result ODE_NATIVE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_DesignHandle *design, ODE_StringRef path, ODE_ParseError *parseError);
+#ifndef __EMSCRIPTEN__
+
+ODE_Result ODE_NATIVE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_DesignHandle *design, ODE_StringRef path, ODE_ParseError *parseError) {
+    return loadDesignFromOctopusFile(design, ode_stringDeref(path), nullptr, parseError);
+}
+
+ODE_Result ODE_NATIVE_API ode_saveDesignToFile(ODE_DesignHandle design, ODE_StringRef path) {
+    return saveDesignToOctopusFile(design, ode_stringDeref(path), nullptr);
+}
+
+#endif
 
 ODE_Result ODE_NATIVE_API ode_loadDesignFromManifestFile(ODE_EngineHandle engine, ODE_DesignHandle *design, ODE_StringRef path, ODE_ParseError *parseError) {
     ODE_ASSERT(design && path.data);
@@ -363,9 +376,20 @@ ODE_Result ODE_API ode_design_loadFontBytes(ODE_DesignHandle design, ODE_StringR
     if (!odtr::addFontBytes(TEXT_RENDERER_CONTEXT, ode_stringDeref(name), ode_stringDeref(faceName), reinterpret_cast<const uint8_t *>(data->data), data->length, false))
         return ODE_RESULT_FONT_ERROR;
     // Transfer data pointer from memory buffer to engine
-    design.ptr->engine->fontDataBuffers.push_back(reinterpret_cast<void *>(data->data));
+    design.ptr->engine->fontDataBuffers.push_back(std::make_pair(ode_makeString(name), *data));
     data->data = ODE_VarDataPtr();
     data->length = 0;
+    return ODE_RESULT_OK;
+}
+
+ODE_Result ODE_API ode_pr1_design_exportFontBytes(ODE_DesignHandle design, ODE_StringRef name, ODE_MemoryBuffer *data) {
+    ODE_ASSERT(data);
+    const std::vector<std::pair<ODE_String, ODE_MemoryBuffer>>::const_iterator it = std::find_if(design.ptr->engine->fontDataBuffers.begin(), design.ptr->engine->fontDataBuffers.end(), [&name](const std::pair<ODE_String, ODE_MemoryBuffer> &fontRecord) {
+        return strcmp(fontRecord.first.data, name.data) == 0;
+    });
+    if (it != design.ptr->engine->fontDataBuffers.end()) {
+        *data = it->second;
+    }
     return ODE_RESULT_OK;
 }
 
@@ -375,6 +399,21 @@ ODE_Result ODE_API ode_design_getComponent(ODE_DesignHandle design, ODE_Componen
         return ODE_RESULT_INVALID_DESIGN;
     if (Design::ComponentAccessor accessor = design.ptr->design.getComponent(ode_stringDeref(componentId))) {
         component->ptr = new ODE_internal_Component(accessor);
+        return ODE_RESULT_OK;
+    }
+    return ODE_RESULT_COMPONENT_NOT_FOUND;
+}
+
+ODE_Result ODE_API ode_design_getComponentMetadata(ODE_DesignHandle design, ODE_ComponentMetadata *metadata, ODE_StringRef componentId) {
+    ODE_ASSERT(metadata && componentId.data);
+    if (!design.ptr)
+        return ODE_RESULT_INVALID_DESIGN;
+    if (Design::ComponentAccessor accessor = design.ptr->design.getComponent(ode_stringDeref(componentId))) {
+        const ode::Vector2d &position = accessor.getPositon();
+        metadata->id = componentId;
+        metadata->position = ODE_Vector2 { position.x, position.y };
+        // TODO: metadata page
+        // metadata->page = ...;
         return ODE_RESULT_OK;
     }
     return ODE_RESULT_COMPONENT_NOT_FOUND;

@@ -22,6 +22,10 @@
             "description": "OpenGL extension management by GLEW",
             "dependencies": [ "glew" ]
         },
+        "zip": {
+            "description": "Zip compression support",
+            "dependencies": [ "zlib" ]
+        },
         "skia": {
             "description": "Shape rasterization by Skia",
             "dependencies": [ "skia" ]

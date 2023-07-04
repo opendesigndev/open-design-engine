@@ -33,7 +33,9 @@ void drawImGuiWidgetTexture(GLuint textureHandle,
 
     const ImVec2 newImageSize(float(std::max(scaling * width, 0.0) * zoom), float(std::max(scaling * height, 0.0) * zoom));
 
+#ifdef ODE_DEBUG
     ImGui::Text("GL Handle:        %d", textureHandle);
+#endif
     ImGui::Text("Texture size:     %d x %d", width, height);
     ImGui::Text("Display size:     %d x %d", static_cast<int>(std::round(newImageSize.x)), static_cast<int>(std::round(newImageSize.y)));
     ImGui::SliderFloat("Zoom [-S][+W]", &zoom, 1.0f, 10.0f);
@@ -62,39 +64,52 @@ void drawImGuiWidgetTexture(GLuint textureHandle,
 }
 
 void drawDesignViewWidget(const ODE_ComponentHandle &component,
+                          const ODE_StringRef &componentId,
                           const ODE_Bitmap &bitmap,
                           DesignEditorRenderer &renderer,
+                          ode::TextureFrameBufferPtr &texture,
                           DesignEditorUIState::Mode uiMode,
-                          DesignEditorUIState::Textures &texturesContext,
-                          DesignEditorUIState::Canvas &canvasContext,
+                          DesignEditorUIState::Canvas &canvas,
+                          DesignEditorUIState::ComponentSelection &componentSelection,
                           const DesignEditorUIState::LayerSelection &layerSelection,
-                          int selectedDisplayMode) {
-    ImGui::Begin("Design View");
+                          int selectedDisplayMode,
+                          const ImVec2 &designViewPosition,
+                          const ImVec2 &designViewSize) {
+    ImGui::SetNextWindowPos(designViewPosition, ImGuiCond_Appearing);
+    ImGui::SetNextWindowSize(designViewSize, ImGuiCond_Appearing);
+
+    ImGui::Begin(componentId.data);
+
+    const bool isWidgetFocused = ImGui::IsWindowFocused();
+    if (isWidgetFocused) {
+        componentSelection.componentId = componentId;
+    }
 
     if (bitmap.width > 0 && bitmap.height > 0) {
         ode::Bitmap bmp(PixelFormat::PREMULTIPLIED_RGBA, reinterpret_cast<const void*>(bitmap.pixels), bitmap.width, bitmap.height);
 
         const ScaledBounds placement {0,0,static_cast<double>(bmp.width()),static_cast<double>(bmp.height())};
 
-        const auto toCanvasSpace = [&canvasContext](const ImVec2 &posInScreenSpace)->ImVec2 {
+        const auto toCanvasSpace = [&canvas](const ImVec2 &posInScreenSpace)->ImVec2 {
             return ImVec2 {
-                (posInScreenSpace.x - canvasContext.bbMin.x) / canvasContext.bbSize.x,
-                (posInScreenSpace.y - canvasContext.bbMin.y) / canvasContext.bbSize.y,
+                (posInScreenSpace.x - canvas.bbMin.x) / canvas.bbSize.x,
+                (posInScreenSpace.y - canvas.bbMin.y) / canvas.bbSize.y,
             };
         };
 
         AnnotationRectangleOpt selectionRectangle = std::nullopt;
         if (uiMode == DesignEditorUIState::Mode::SELECT &&
-            canvasContext.mouseClickPos.has_value() &&
-            canvasContext.mouseDragPos.has_value()) {
-            const ImVec2 rectStart = toCanvasSpace(*canvasContext.mouseClickPos);
-            const ImVec2 rectEnd = toCanvasSpace(*canvasContext.mouseDragPos);
+            canvas.mouseClickPos.has_value() &&
+            canvas.mouseDragPos.has_value()) {
+            const ImVec2 rectStart = toCanvasSpace(*canvas.mouseClickPos);
+            const ImVec2 rectEnd = toCanvasSpace(*canvas.mouseDragPos);
 
             selectionRectangle = AnnotationRectangle {
                 std::min(rectStart.x, rectEnd.x),
                 std::min(rectStart.y, rectEnd.y),
                 std::max(rectStart.x, rectEnd.x),
-                std::max(rectStart.y, rectEnd.y) };
+                std::max(rectStart.y, rectEnd.y)
+            };
         }
 
         AnnotationRectangles highlightRectangles;
@@ -110,20 +125,20 @@ void drawDesignViewWidget(const ODE_ComponentHandle &component,
             });
         }
 
-        texturesContext.designImageTexture = renderer.blendImageToTexture(std::move(bmp), placement, selectedDisplayMode, selectionRectangle, highlightRectangles);
+        texture = renderer.blendImageToTexture(std::move(bmp), placement, selectedDisplayMode, selectionRectangle, highlightRectangles);
 
-        drawImGuiWidgetTexture(texturesContext.designImageTexture->getInternalGLHandle(),
-                               texturesContext.designImageTexture->dimensions().x,
-                               texturesContext.designImageTexture->dimensions().y,
-                               canvasContext.zoom,
-                               canvasContext.mouseClickPos,
-                               canvasContext.mouseDragPos,
-                               canvasContext.prevMouseDragPos);
+        drawImGuiWidgetTexture(texture->getInternalGLHandle(),
+                               texture->dimensions().x,
+                               texture->dimensions().y,
+                               canvas.zoom,
+                               canvas.mouseClickPos,
+                               canvas.mouseDragPos,
+                               canvas.prevMouseDragPos);
 
-        canvasContext.isMouseOver = ImGui::IsItemHovered();
-        canvasContext.bbSize = ImGui::GetItemRectSize();
-        canvasContext.bbMin = ImGui::GetItemRectMin();
-        canvasContext.bbMax = ImGui::GetItemRectMax();
+        canvas.isMouseOver = ImGui::IsItemHovered();
+        canvas.bbSize = ImGui::GetItemRectSize();
+        canvas.bbMin = ImGui::GetItemRectMin();
+        canvas.bbMax = ImGui::GetItemRectMax();
     }
 
     ImGui::End();

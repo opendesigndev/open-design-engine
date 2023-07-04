@@ -45,7 +45,9 @@ struct DesignEditorUIState {
 
     /// Textures used by the design editor
     struct Textures {
-        ode::TextureFrameBufferPtr designImageTexture = nullptr;
+        std::map<std::string, ode::TextureFrameBufferPtr> textures;
+
+        void clear();
     } textures;
 
     /// Canvas state
@@ -58,7 +60,8 @@ struct DesignEditorUIState {
         std::optional<ImVec2> mouseClickPos;
         std::optional<ImVec2> mouseDragPos;
         std::optional<ImVec2> prevMouseDragPos;
-    } canvas;
+    };
+    std::map<std::string, Canvas> canvases;
 
     /// Layer selection
     struct LayerSelection {
@@ -72,6 +75,11 @@ struct DesignEditorUIState {
 
         bool isSelected(const char *layerID);
     } layerSelection;
+
+    /// Component selection
+    struct ComponentSelection {
+        ODE_StringRef componentId;
+    } componentSelection;
 
     /// Current image visualization params
     DesignEditorImageVisualizationParams imageVisualizationParams;

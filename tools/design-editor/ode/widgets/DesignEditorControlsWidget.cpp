@@ -6,8 +6,12 @@
 
 #include "../DesignEditorWindow.h"
 
+
 void drawControlsWidget(DesignEditorDesign &design,
                         DesignEditorUIState &ui) {
+    ImGui::SetNextWindowSize(ImVec2(420, 170), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_FirstUseEver);
+
     ImGui::Begin("Controls");
 
     ImGui::Columns(3);
@@ -18,16 +22,22 @@ void drawControlsWidget(DesignEditorDesign &design,
     }
 
     // Open "Open Octopus File" file dialog on button press
-    if (ImGui::Button("Open Octopus File")) {
-        const char* filters = ".json";
-        ImGuiFileDialog::Instance()->OpenDialog("ChooseOctopusFileDlgKey", "Choose Octopus *.json File", filters, ui.fileDialog.octopusFilePath, ui.fileDialog.octopusFileName);
+    if (ImGui::Button("Open")) {
+        ImGui::SetNextWindowSize(ImVec2(1000, 500), ImGuiCond_Once);
+        ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_Once);
+
+        const char* filters = "Octopus files (*.octopus){.octopus},Octopus component files (*.json){.json}";
+        ImGuiFileDialog::Instance()->OpenDialog("ChooseOctopusFileDlgKey", "Open a file", filters, ui.fileDialog.octopusFilePath, ui.fileDialog.octopusFileName);
     }
 
     if (!design.empty()) {
         // Open "Save Octopus File" file dialog on button press
-        if (ImGui::Button("Save Octopus File")) {
-            const char* filters = ".json";
-            ImGuiFileDialog::Instance()->OpenDialog("SaveOctopusFileDlgKey", "Save as *.json", filters, ui.fileDialog.octopusFilePath, ui.fileDialog.octopusFileName);
+        if (ImGui::Button("Save")) {
+            ImGui::SetNextWindowSize(ImVec2(1000, 500), ImGuiCond_Once);
+            ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_Once);
+
+            const char* filters = ".octopus";
+            ImGuiFileDialog::Instance()->OpenDialog("SaveOctopusFileDlgKey", "Save as *.octopus file", filters, ui.fileDialog.octopusFilePath, ui.fileDialog.octopusFileName);
         }
     }
 
@@ -56,17 +66,8 @@ void drawControlsWidget(DesignEditorDesign &design,
             ui.fileDialog.octopusFileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
 
             if (ImGuiFileDialog::Instance()->IsOk()) {
-                const ODE_ComponentHandle &component = design.components.back().component;
-
                 const std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
-
-                ODE_String octopusString;
-                ode_component_getOctopus(component, &octopusString);
-
-                const bool isSaved = ode::writeFile(filePathName, octopusString.data, octopusString.length);
-                if (!isSaved) {
-                    fprintf(stderr, "Internal error (saving Octopus json to filesystem)\n");
-                }
+                ode_saveDesignToFileWithImages(design.design, ode_stringRef(filePathName), design.imageBase);
             }
 
             ImGuiFileDialog::Instance()->Close();

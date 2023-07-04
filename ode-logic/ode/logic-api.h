@@ -158,6 +158,8 @@ ODE_Result ODE_API ode_destroyEngine(ODE_EngineHandle engine);
  */
 ODE_Result ODE_API ode_createDesign(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_DesignHandle *design);
 
+#ifndef __EMSCRIPTEN__
+
 /**
  * Loads a design from a comprehensive binary file representation - deallocate with ode_destroyDesign
  * @param engine - instance of engine
@@ -165,7 +167,16 @@ ODE_Result ODE_API ode_createDesign(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_
  * @param path - path to design file
  * @param parseError - output argument to store details of parse error if ODE_RESULT_OCTOPUS_PARSE_ERROR or ODE_RESULT_OCTOPUS_MANIFEST_PARSE_ERROR is returned. Can be null if this information is not needed.
  */
-ODE_Result ODE_FUTURE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_DesignHandle *design, ODE_StringRef path, ODE_OUT ODE_ParseError *parseError);
+ODE_Result ODE_NATIVE_API ode_loadDesignFromFile(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_DesignHandle *design, ODE_StringRef path, ODE_OUT ODE_ParseError *parseError);
+
+/**
+ * Saves a design to binary octopus file
+ * @param design - the design handle
+ * @param path - path to the new octopus file
+ */
+ODE_Result ODE_NATIVE_API ode_saveDesignToFile(ODE_DesignHandle design, ODE_StringRef path);
+
+#endif
 
 /**
  * Loads a design from an Octopus Manifest file - deallocate with ode_destroyDesign
@@ -258,11 +269,26 @@ ODE_Result ODE_NATIVE_API ode_design_loadFontFile(ODE_DesignHandle design, ODE_S
 ODE_Result ODE_API ode_design_loadFontBytes(ODE_DesignHandle design, ODE_StringRef name, ODE_INOUT ODE_MemoryBuffer *data, ODE_StringRef faceName);
 
 /**
+ * PROTOTYPE - exports a stored font data into the specified buffer
+ * @param design - target design
+ * @param name - font name identifier (post-script name)
+ * @param data - memory buffer that will be filled with the font binary data
+ */
+ODE_Result ODE_API ode_pr1_design_exportFontBytes(ODE_DesignHandle design, ODE_StringRef name, ODE_INOUT ODE_MemoryBuffer *data);
+
+/**
  * Finds component within a design by ID and outputs its handle
  * @param component - output argument for the component handle
  * @param componentId - component ID string reference
  */
 ODE_Result ODE_API ode_design_getComponent(ODE_DesignHandle design, ODE_OUT_RETURN ODE_ComponentHandle *component, ODE_StringRef componentId);
+
+/**
+ * Finds component within a design by ID and fills its metadata
+ * @param metadata - output argument for the component metadata
+ * @param componentId - component ID string reference
+ */
+ODE_Result ODE_API ode_design_getComponentMetadata(ODE_DesignHandle design, ODE_OUT_RETURN ODE_ComponentMetadata *metadata, ODE_StringRef componentId);
 
 // Component
 

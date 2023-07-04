@@ -7,6 +7,9 @@
 struct DesignEditorDesign {
     bool empty() const;
 
+    int create(ODE_EngineHandle engine, ODE_RendererContextHandle rc);
+    int destroy();
+
     /// A single design
     ODE_DesignHandle design;
     /// A single image base for the design

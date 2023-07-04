@@ -11,6 +11,8 @@
 extern "C" {
 #endif
 
+/// Pixel format of 3 channels - red, green, blue, each channel represented by 8-bit unsigned integer (0 to 255 range)
+extern ODE_API const int ODE_PIXEL_FORMAT_RGB;
 /// Pixel format of 4 channels - red, green, blue, alpha, each channel represented by 8-bit unsigned integer (0 to 255 range)
 extern ODE_API const int ODE_PIXEL_FORMAT_RGBA;
 /// Pixel format of 4 channels - red, green, blue, alpha, color channels are alpha-premultiplied, each channel represented by 8-bit unsigned integer (0 to 255 range)
@@ -117,6 +119,28 @@ ODE_Result ODE_API ode_pr1_destroyAnimationRenderer(ODE_PR1_AnimationRendererHan
  * @param time - the timepoint of the animation in seconds
  */
 ODE_Result ODE_API ode_pr1_animation_drawFrame(ODE_PR1_AnimationRendererHandle renderer, ODE_PR1_FrameView frameView, ODE_Scalar time);
+
+#ifndef __EMSCRIPTEN__
+
+/**
+ * Loads a design from a comprehensive binary file representation - deallocate with ode_destroyDesign
+ * @param engine - instance of engine
+ * @param design - output argument for the new design handle
+ * @param path - path to design file
+ * @param designImageBase - the image database of the design
+ * @param parseError - output argument to store details of parse error if ODE_RESULT_OCTOPUS_PARSE_ERROR or ODE_RESULT_OCTOPUS_MANIFEST_PARSE_ERROR is returned. Can be null if this information is not needed.
+ */
+ODE_Result ODE_NATIVE_API ode_loadDesignFromFileWithImages(ODE_EngineHandle engine, ODE_OUT_RETURN ODE_DesignHandle *design, ODE_StringRef path, ODE_DesignImageBaseHandle designImageBase, ODE_OUT ODE_ParseError *parseError);
+
+/**
+ * Saves a design to binary octopus file
+ * @param design - the design handle
+ * @param path - path to the new octopus file
+ * @param designImageBase - the image database of the design
+ */
+ODE_Result ODE_NATIVE_API ode_saveDesignToFileWithImages(ODE_DesignHandle design, ODE_StringRef path, ODE_DesignImageBaseHandle designImageBase);
+
+#endif
 
 #ifdef __cplusplus
 }

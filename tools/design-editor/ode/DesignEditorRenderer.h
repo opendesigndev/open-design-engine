@@ -14,10 +14,10 @@ public:
 
     /// Blend image on a background by the specified selectedDisplayMode and set to texture
     TextureFrameBufferPtr blendImageToTexture(Bitmap &&bitmap,
-                                   const ScaledBounds &placement,
-                                   int selectedDisplayMode,
-                                   const AnnotationRectangleOpt &selectionRectangle,
-                                   const AnnotationRectangles &highlightRectangles);
+                                              const ScaledBounds &placement,
+                                              int selectedDisplayMode,
+                                              const AnnotationRectangleOpt &selectionRectangle,
+                                              const AnnotationRectangles &highlightRectangles);
 
 private:
     void bind();

@@ -3,6 +3,8 @@
 
 #ifdef ODE_MEDIA_TIFF_SUPPORT
 
+#include <sstream>
+
 #include <tiffio.h>
 
 namespace ode {
@@ -17,30 +19,101 @@ public:
     }
 };
 
+static Bitmap loadTiff(TIFF *tiff) {
+    TiffFileGuard tiffGuard(tiff);
+    TIFF_UINT32_T width = 0, height = 0;
+    TIFFGetField(tiff, TIFFTAG_IMAGEWIDTH, &width);
+    TIFFGetField(tiff, TIFFTAG_IMAGELENGTH, &height);
+    if (width && height) {
+        Bitmap bitmap(PixelFormat::RGBA, width, height);
+        if (bitmap) {
+            if (TIFFReadRGBAImageOriented(tiff, width, height, reinterpret_cast<uint32_t *>(bitmap.pixels()), ORIENTATION_TOPLEFT) == 1)
+                return bitmap;
+        }
+    }
+    return Bitmap();
+}
+
+struct ReadDataHandle {
+    const void* data;
+    const size_t size;
+    size_t offset;
+};
+
+static tmsize_t tiffReadProc(thandle_t fd, void *buf, tmsize_t size) {
+    ReadDataHandle *dataHandle = reinterpret_cast<ReadDataHandle *>(fd);
+    memcpy(buf, reinterpret_cast<const byte*>(dataHandle->data) + dataHandle->offset, size);
+    dataHandle->offset += size;
+    return size;
+}
+
+static tmsize_t tiffWriteProc(thandle_t, void *, tmsize_t) {
+    return 0;
+}
+
+static uint64_t tiffSeekProc(thandle_t fd, uint64_t off, int whence) {
+    ReadDataHandle *data = reinterpret_cast<ReadDataHandle *>(fd);
+    switch (whence) {
+        case SEEK_SET: {
+            data->offset = off;
+            break;
+        }
+        case SEEK_CUR: {
+            data->offset += off;
+            break;
+        }
+        case SEEK_END: {
+            data->offset = data->size + off;
+            break;
+        }
+    }
+    return data->offset;
+}
+
+static uint64_t tiffSizeProc(thandle_t fd) {
+    ReadDataHandle *data = reinterpret_cast<ReadDataHandle *>(fd);
+    return data->size;
+}
+
+static int tiffCloseProc(thandle_t) {
+    return 0;
+}
+
+static int tiffMapProc(thandle_t, tdata_t*, toff_t*) {
+    return 0;
+}
+
+static void tiffUnmapProc(thandle_t, tdata_t, toff_t) {
+    return;
+}
+
 bool detectTiffFormat(const byte *data, size_t length) {
     return length >= 2 && (data[0] == 'I' || data[0] == 'M') && data[1] == data[0];
 }
 
 Bitmap loadTiff(const FilePath &path) {
-    if (FilePtr file = openFile(path, false))
-        return loadTiff(file);
+    if (TIFF *tiff = TIFFOpen(((std::string)path).c_str(), "r")) {
+        return loadTiff(tiff);
+    }
     return Bitmap();
 }
 
 Bitmap loadTiff(FILE *file) {
     ODE_ASSERT(file);
     if (TIFF *tiff = TIFFFdOpen(fileno(file), "", "r")) {
-        TiffFileGuard tiffGuard(tiff);
-        TIFF_UINT32_T width = 0, height = 0;
-        TIFFGetField(tiff, TIFFTAG_IMAGEWIDTH, &width);
-        TIFFGetField(tiff, TIFFTAG_IMAGELENGTH, &height);
-        if (width && height) {
-            Bitmap bitmap(PixelFormat::RGBA, width, height);
-            if (bitmap) {
-                if (TIFFReadRGBAImageOriented(tiff, width, height, reinterpret_cast<uint32_t *>(bitmap.pixels()), ORIENTATION_TOPLEFT) == 1)
-                    return bitmap;
-            }
-        }
+        return loadTiff(tiff);
+    }
+    return Bitmap();
+}
+
+Bitmap loadTiff(const byte *data, size_t length) {
+    ODE_ASSERT(data);
+    ODE_ASSERT(length > 0);
+    ReadDataHandle dataHandle { data, length, 0 };
+    if (TIFF *tiff = TIFFClientOpen("memoryFile", "rm", reinterpret_cast<thandle_t>(&dataHandle), tiffReadProc,
+                                    tiffWriteProc, tiffSeekProc, tiffCloseProc,
+                                    tiffSizeProc, tiffMapProc, tiffUnmapProc)) {
+        return loadTiff(tiff);
     }
     return Bitmap();
 }

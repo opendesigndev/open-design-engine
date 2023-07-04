@@ -84,6 +84,8 @@ public:
 
     /// Returns the current Octopus representation with unresolved references
     const octopus::Octopus &getOctopus() const;
+    /// Provides read-only access to component's position on the artboard.
+    const Vector2d &getPosition() const;
     /// Compiles the complete Octopus representation with references replaced by their content
     Result<octopus::Octopus, DesignError> buildOctopus();
     /// Returns the pointer to the Octopus representation of a given layer
