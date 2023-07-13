@@ -77,6 +77,14 @@ ODE_Result ode_result(DesignError::Error error) {
             return ODE_RESULT_TEXT_LAYER_ERROR;
         case DesignError::WRONG_LAYER_TYPE:
             return ODE_RESULT_WRONG_LAYER_TYPE;
+        case DesignError::LAYER_CHANGE_INVALID_OP:
+            return ODE_RESULT_LAYER_CHANGE_INVALID_OP;
+        case DesignError::LAYER_CHANGE_INVALID_SUBJECT:
+            return ODE_RESULT_LAYER_CHANGE_INVALID_SUBJECT;
+        case DesignError::LAYER_CHANGE_INVALID_INDEX:
+            return ODE_RESULT_LAYER_CHANGE_INVALID_INDEX;
+        case DesignError::LAYER_CHANGE_MISSING_VALUE:
+            return ODE_RESULT_LAYER_CHANGE_MISSING_VALUE;
         case DesignError::SINGULAR_TRANSFORMATION:
             return ODE_RESULT_SINGULAR_TRANSFORMATION;
         case DesignError::INVALID_DESIGN:
@@ -122,10 +130,14 @@ static ODE_ParseError::Type ode_parseErrorType(ErrorType type) {
             return ODE_ParseError::TYPE_MISMATCH;
         case ErrorType::ARRAY_SIZE_MISMATCH:
             return ODE_ParseError::ARRAY_SIZE_MISMATCH;
-        case ErrorType::UNKNOWN_KEY:
-            return ODE_ParseError::UNKNOWN_KEY;
         case ErrorType::UNKNOWN_ENUM_VALUE:
             return ODE_ParseError::UNKNOWN_ENUM_VALUE;
+        case ErrorType::UNKNOWN_KEY:
+            return ODE_ParseError::UNKNOWN_KEY;
+        case ErrorType::MISSING_KEY:
+            return ODE_ParseError::MISSING_KEY;
+        case ErrorType::REPEATED_KEY:
+            return ODE_ParseError::REPEATED_KEY;
         case ErrorType::VALUE_OUT_OF_RANGE:
             return ODE_ParseError::VALUE_OUT_OF_RANGE;
         case ErrorType::STRING_EXPECTED:

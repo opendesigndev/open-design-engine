@@ -108,10 +108,14 @@ typedef struct {
         TYPE_MISMATCH = 3,
         /// Fixed-length array expected a different length than in the JSON
         ARRAY_SIZE_MISMATCH = 4,
-        /// An unknown key in object
-        UNKNOWN_KEY = 5,
         /// Value of an enum field does not match any known enumeration value
         UNKNOWN_ENUM_VALUE = 6,
+        /// An unknown key in object
+        UNKNOWN_KEY = 5,
+        /// An expected field's key is missing in object
+        MISSING_KEY = 10,
+        /// The same key appears twice in one object
+        REPEATED_KEY = 11,
         /// A numerical value written in JSON cannot be represented by the target variable type (e.g. too large value for int)
         VALUE_OUT_OF_RANGE = 7,
         /// The beginning of a string was expected but not encountered

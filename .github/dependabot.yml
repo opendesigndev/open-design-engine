@@ -2,9 +2,11 @@ version: 2
 updates:
   - package-ecosystem: "docker"
     directory: "/dockerfiles/debian-build"
+    open-pull-requests-limit: 0
     schedule:
       interval: "daily"
   - package-ecosystem: "docker"
     directory: "/dockerfiles/wasm-build"
+    open-pull-requests-limit: 0
     schedule:
       interval: "daily"

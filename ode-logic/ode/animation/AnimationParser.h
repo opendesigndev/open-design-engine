@@ -19,8 +19,10 @@ public:
             UNEXPECTED_END_OF_FILE,
             TYPE_MISMATCH,
             ARRAY_SIZE_MISMATCH,
-            UNKNOWN_KEY,
             UNKNOWN_ENUM_VALUE,
+            UNKNOWN_KEY,
+            MISSING_KEY,
+            REPEATED_KEY,
             VALUE_OUT_OF_RANGE,
             STRING_EXPECTED,
             UTF16_ENCODING_ERROR
@@ -37,6 +39,7 @@ public:
 
 protected:
     const char *cur;
+    std::string buffer;
 
     explicit AnimationParser(const char *str);
     void skipWhitespace();
@@ -50,13 +53,13 @@ protected:
     Error::Type parseStdString(std::string &value);
     Error::Type parseOdeLayerAnimationType(ode::LayerAnimation::Type &value);
     Error::Type parseDouble(double &value);
-    Error::Type parseStdVectorDouble(std::vector<double> &value);
-    Error::Type parseNonstdOptionalStdVectorDouble(nonstd::optional<std::vector<double> > &value);
-    Error::Type parseStdArrayDouble6(std::array<double, 6> &value);
-    Error::Type parseNonstdOptionalStdArrayDouble6(nonstd::optional<std::array<double, 6> > &value);
-    Error::Type parseNonstdOptionalDouble(nonstd::optional<double> &value);
     Error::Type parseOctopusColor(octopus::Color &value);
     Error::Type parseNonstdOptionalOctopusColor(nonstd::optional<octopus::Color> &value);
+    Error::Type parseStdVectorDouble(std::vector<double> &value);
+    Error::Type parseNonstdOptionalStdVectorDouble(nonstd::optional<std::vector<double> > &value);
+    Error::Type parseNonstdOptionalDouble(nonstd::optional<double> &value);
+    Error::Type parseStdArrayDouble6(std::array<double, 6> &value);
+    Error::Type parseNonstdOptionalStdArrayDouble6(nonstd::optional<std::array<double, 6> > &value);
     Error::Type parseOdeLayerAnimationKeyframe(ode::LayerAnimation::Keyframe &value);
     Error::Type parseStdVectorOdeLayerAnimationKeyframe(std::vector<ode::LayerAnimation::Keyframe> &value);
     Error::Type parseStdArrayDouble2(std::array<double, 2> &value);

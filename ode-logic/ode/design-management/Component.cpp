@@ -2,8 +2,8 @@
 #include "Component.h"
 
 #include <cstring>
-#include <algorithm> // TODO move along with circle polygon intersection
 #include <octopus/parser.h>
+#include "../core/planar-intersections.h"
 #include "../core/octopus-type-conversions.h"
 #include "../render-assembly/assembly.h"
 #include "../render-assembly/graph-transform.h"
@@ -12,8 +12,8 @@
 
 namespace ode {
 
-// TODO MOVE
-void listLayerMissingFonts(std::set<std::string> &names, const octopus::Layer &layer) {
+// TODO MOVE?
+static void listLayerMissingFonts(std::set<std::string> &names, const octopus::Layer &layer) {
     switch (layer.type) {
         case octopus::Layer::Type::TEXT:
             if (layer.text.has_value()) {
@@ -34,11 +34,6 @@ void listLayerMissingFonts(std::set<std::string> &names, const octopus::Layer &l
             break;
         default:;
     }
-}
-
-// TODO MOVE
-const std::string *ResourceBase::getOctopus(const octopus::ResourceLocation) {
-    return nullptr;
 }
 
 Result<ComponentPtr, DesignError> Component::create(const octopus::Component &componentManifest, ResourceBase *resourceBase) {
@@ -545,37 +540,6 @@ RendexSubtree Component::assembleLayer(const LayerInstance &instance, const nons
             break;
     }
     return RendexSubtree();
-}
-
-// TODO move to some utils
-static bool convexPolygonCircleIntersection(const Vector2d *vertices, int sides, const Vector2d &center, double radius) {
-    // ADAPTED FROM ARTERY ENGINE
-    bool cInside = true;
-    for (int i = 0; i < sides; ++i) {
-        Vector2d ic = center-vertices[i];
-        Vector2d edge = vertices[i+1]-vertices[i];
-        if ((ic-std::min(std::max((dotProduct(ic, edge)/dotProduct(edge, edge)), 0.), 1.)*edge).squaredLength() <= radius*radius)
-            return true;
-        if (cInside && crossProduct(ic, edge) > 0)
-            cInside = false;
-    }
-    return cInside;
-}
-
-static bool intersects(const UntransformedBounds &bounds, const TransformationMatrix &transformation, const Vector2d &center, double radius) {
-    Vector2d polygon[5] = {
-        bounds.a,
-        Vector2d(bounds.b.x, bounds.a.y),
-        bounds.b,
-        Vector2d(bounds.a.x, bounds.b.y),
-        bounds.a
-    };
-    if (transformation[0][0]*transformation[1][1] < transformation[0][1]*transformation[1][0]) { // negative determinant - inversion transform
-        std::swap(polygon[1], polygon[3]);
-    }
-    for (Vector2d &v : polygon)
-        v = transformation*Vector3d(v.x, v.y, 1);
-    return convexPolygonCircleIntersection(polygon, 4, center, radius);
 }
 
 bool Component::identifyLayer(std::string &id, const LayerInstance &instance, const Vector2d &position, double radius) {

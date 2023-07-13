@@ -27,10 +27,14 @@ const char *AnimationParser::Error::typeString() const {
             return "TYPE_MISMATCH";
         case Error::ARRAY_SIZE_MISMATCH:
             return "ARRAY_SIZE_MISMATCH";
-        case Error::UNKNOWN_KEY:
-            return "UNKNOWN_KEY";
         case Error::UNKNOWN_ENUM_VALUE:
             return "UNKNOWN_ENUM_VALUE";
+        case Error::UNKNOWN_KEY:
+            return "UNKNOWN_KEY";
+        case Error::MISSING_KEY:
+            return "MISSING_KEY";
+        case Error::REPEATED_KEY:
+            return "REPEATED_KEY";
         case Error::VALUE_OUT_OF_RANGE:
             return "VALUE_OUT_OF_RANGE";
         case Error::STRING_EXPECTED:
@@ -105,7 +109,7 @@ bool AnimationParser::readHexQuad(int &value) {
         (value += 0x0010*decodeHexDigit(cur[2])) >= 0 &&
         (value += 0x0100*decodeHexDigit(cur[1])) >= 0 &&
         (value += 0x1000*decodeHexDigit(cur[0])) >= 0 &&
-        (cur += 4)
+        (cur += 4, true)
     );
 }
 
@@ -197,17 +201,15 @@ AnimationParser::Error AnimationParser::parse(ode::DocumentAnimation &output, co
 }
 
 AnimationParser::Error::Type AnimationParser::parseStdString(std::string &value) {
-    skipWhitespace();
-    if (*cur != '"')
+    if (!matchSymbol('"'))
         return Error::STRING_EXPECTED;
     value.clear();
-    ++cur;
     while (*cur != '"') {
         if (*cur == '\\') {
-            char buffer[8];
-            if (Error error = unescape(buffer))
+            char utfBuffer[8];
+            if (Error error = unescape(utfBuffer))
                 return error;
-            value += buffer;
+            value += utfBuffer;
             continue;
         }
         if (!*cur)
@@ -220,20 +222,35 @@ AnimationParser::Error::Type AnimationParser::parseStdString(std::string &value)
 }
 
 AnimationParser::Error::Type AnimationParser::parseOdeLayerAnimationType(ode::LayerAnimation::Type &value) {
-    std::string str;
-    if (Error::Type error = parseStdString(str))
+    if (Error::Type error = parseStdString(buffer))
         return error;
-    if (str == "TRANSFORM")
-        value = ode::LayerAnimation::TRANSFORM;
-    else if (str == "ROTATION")
-        value = ode::LayerAnimation::ROTATION;
-    else if (str == "OPACITY")
-        value = ode::LayerAnimation::OPACITY;
-    else if (str == "FILL_COLOR")
-        value = ode::LayerAnimation::FILL_COLOR;
-    else
-        return Error::UNKNOWN_ENUM_VALUE;
-    return Error::OK;
+    switch (buffer.size()) {
+        case 7:
+            if (buffer == "OPACITY") {
+                value = ode::LayerAnimation::OPACITY;
+                return Error::OK; 
+            }
+            break;
+        case 8:
+            if (buffer == "ROTATION") {
+                value = ode::LayerAnimation::ROTATION;
+                return Error::OK; 
+            }
+            break;
+        case 9:
+            if (buffer == "TRANSFORM") {
+                value = ode::LayerAnimation::TRANSFORM;
+                return Error::OK; 
+            }
+            break;
+        case 10:
+            if (buffer == "FILL_COLOR") {
+                value = ode::LayerAnimation::FILL_COLOR;
+                return Error::OK; 
+            }
+            break;
+    }
+    return Error::UNKNOWN_ENUM_VALUE;
 }
 
 AnimationParser::Error::Type AnimationParser::parseDouble(double &value) {
@@ -245,6 +262,66 @@ AnimationParser::Error::Type AnimationParser::parseDouble(double &value) {
     return Error::OK;
 }
 
+AnimationParser::Error::Type AnimationParser::parseOctopusColor(octopus::Color &value) {
+    if (!matchSymbol('{'))
+        return Error::TYPE_MISMATCH;
+    int separatorCheck = -1;
+    for (; !matchSymbol('}'); separatorCheck = matchSymbol(',')) {
+        if (!separatorCheck)
+            return Error::JSON_SYNTAX_ERROR;
+        if (Error::Type error = parseStdString(buffer))
+            return error;
+        if (!matchSymbol(':'))
+            return Error::JSON_SYNTAX_ERROR;
+        if (buffer.size() > 0) {
+            switch (buffer[0]) {
+                case 'a':
+                    if (buffer == "a") {
+                        if (Error error = parseDouble(value.a))
+                            return error;
+                        continue;
+                    }
+                    break;
+                case 'b':
+                    if (buffer == "b") {
+                        if (Error error = parseDouble(value.b))
+                            return error;
+                        continue;
+                    }
+                    break;
+                case 'g':
+                    if (buffer == "g") {
+                        if (Error error = parseDouble(value.g))
+                            return error;
+                        continue;
+                    }
+                    break;
+                case 'r':
+                    if (buffer == "r") {
+                        if (Error error = parseDouble(value.r))
+                            return error;
+                        continue;
+                    }
+                    break;
+            }
+        }
+        if (Error error = skipValue())
+            return error;
+    }
+    if (separatorCheck == 1)
+        return Error::JSON_SYNTAX_ERROR;
+    return Error::OK;
+}
+
+AnimationParser::Error::Type AnimationParser::parseNonstdOptionalOctopusColor(nonstd::optional<octopus::Color> &value) {
+    skipWhitespace();
+    if (cur[0] == 'n' && cur[1] == 'u' && cur[2] == 'l' && cur[3] == 'l' && !isAlphanumeric(cur[4]) && cur[4] != '_' && (cur += 4, true))
+        value.reset();
+    else if (Error error = parseOctopusColor((value = octopus::Color()).value()))
+        return error;
+    return Error::OK;
+}
+
 AnimationParser::Error::Type AnimationParser::parseStdVectorDouble(std::vector<double> &value) {
     if (!matchSymbol('['))
         return Error::TYPE_MISMATCH;
@@ -253,7 +330,7 @@ AnimationParser::Error::Type AnimationParser::parseStdVectorDouble(std::vector<d
     while (!matchSymbol(']')) {
         if (!separatorCheck)
             return Error::JSON_SYNTAX_ERROR;
-        if (Error::Type error = parseDouble((value.emplace_back(), value.back())))
+        if (Error::Type error = parseDouble((value.resize(value.size()+1), value.back())))
             return error;
         separatorCheck = matchSymbol(',');
     }
@@ -264,9 +341,18 @@ AnimationParser::Error::Type AnimationParser::parseStdVectorDouble(std::vector<d
 
 AnimationParser::Error::Type AnimationParser::parseNonstdOptionalStdVectorDouble(nonstd::optional<std::vector<double> > &value) {
     skipWhitespace();
-    if (cur[0] == 'n' && cur[1] == 'u' && cur[2] == 'l' && cur[3] == 'l' && !isAlphanumeric(cur[4]) && cur[4] != '_' && ((cur += 4), true))
+    if (cur[0] == 'n' && cur[1] == 'u' && cur[2] == 'l' && cur[3] == 'l' && !isAlphanumeric(cur[4]) && cur[4] != '_' && (cur += 4, true))
         value.reset();
     else if (Error error = parseStdVectorDouble((value = std::vector<double>()).value()))
+        return error;
+    return Error::OK;
+}
+
+AnimationParser::Error::Type AnimationParser::parseNonstdOptionalDouble(nonstd::optional<double> &value) {
+    skipWhitespace();
+    if (cur[0] == 'n' && cur[1] == 'u' && cur[2] == 'l' && cur[3] == 'l' && !isAlphanumeric(cur[4]) && cur[4] != '_' && (cur += 4, true))
+        value.reset();
+    else if (Error error = parseDouble((value = double()).value()))
         return error;
     return Error::OK;
 }
@@ -295,101 +381,72 @@ AnimationParser::Error::Type AnimationParser::parseStdArrayDouble6(std::array<do
 
 AnimationParser::Error::Type AnimationParser::parseNonstdOptionalStdArrayDouble6(nonstd::optional<std::array<double, 6> > &value) {
     skipWhitespace();
-    if (cur[0] == 'n' && cur[1] == 'u' && cur[2] == 'l' && cur[3] == 'l' && !isAlphanumeric(cur[4]) && cur[4] != '_' && ((cur += 4), true))
+    if (cur[0] == 'n' && cur[1] == 'u' && cur[2] == 'l' && cur[3] == 'l' && !isAlphanumeric(cur[4]) && cur[4] != '_' && (cur += 4, true))
         value.reset();
     else if (Error error = parseStdArrayDouble6((value = std::array<double, 6>()).value()))
         return error;
     return Error::OK;
 }
 
-AnimationParser::Error::Type AnimationParser::parseNonstdOptionalDouble(nonstd::optional<double> &value) {
-    skipWhitespace();
-    if (cur[0] == 'n' && cur[1] == 'u' && cur[2] == 'l' && cur[3] == 'l' && !isAlphanumeric(cur[4]) && cur[4] != '_' && ((cur += 4), true))
-        value.reset();
-    else if (Error error = parseDouble((value = double()).value()))
-        return error;
-    return Error::OK;
-}
-
-AnimationParser::Error::Type AnimationParser::parseOctopusColor(octopus::Color &value) {
-    std::string key;
-    if (!matchSymbol('{'))
-        return Error::TYPE_MISMATCH;
-    int separatorCheck = -1;
-    while (!matchSymbol('}')) {
-        if (!separatorCheck)
-            return Error::JSON_SYNTAX_ERROR;
-        if (Error::Type error = parseStdString(key))
-            return error;
-        if (!matchSymbol(':'))
-            return Error::JSON_SYNTAX_ERROR;
-        if (key == "r") {
-            if (Error error = parseDouble(value.r))
-                return error;
-        } else if (key == "g") {
-            if (Error error = parseDouble(value.g))
-                return error;
-        } else if (key == "b") {
-            if (Error error = parseDouble(value.b))
-                return error;
-        } else if (key == "a") {
-            if (Error error = parseDouble(value.a))
-                return error;
-        } else {
-            if (Error error = skipValue())
-                return error;
-        }
-        separatorCheck = matchSymbol(',');
-    }
-    if (separatorCheck == 1)
-        return Error::JSON_SYNTAX_ERROR;
-    return Error::OK;
-}
-
-AnimationParser::Error::Type AnimationParser::parseNonstdOptionalOctopusColor(nonstd::optional<octopus::Color> &value) {
-    skipWhitespace();
-    if (cur[0] == 'n' && cur[1] == 'u' && cur[2] == 'l' && cur[3] == 'l' && !isAlphanumeric(cur[4]) && cur[4] != '_' && ((cur += 4), true))
-        value.reset();
-    else if (Error error = parseOctopusColor((value = octopus::Color()).value()))
-        return error;
-    return Error::OK;
-}
-
 AnimationParser::Error::Type AnimationParser::parseOdeLayerAnimationKeyframe(ode::LayerAnimation::Keyframe &value) {
-    std::string key;
     if (!matchSymbol('{'))
         return Error::TYPE_MISMATCH;
     int separatorCheck = -1;
-    while (!matchSymbol('}')) {
+    for (; !matchSymbol('}'); separatorCheck = matchSymbol(',')) {
         if (!separatorCheck)
             return Error::JSON_SYNTAX_ERROR;
-        if (Error::Type error = parseStdString(key))
+        if (Error::Type error = parseStdString(buffer))
             return error;
         if (!matchSymbol(':'))
             return Error::JSON_SYNTAX_ERROR;
-        if (key == "delay") {
-            if (Error error = parseDouble(value.delay))
-                return error;
-        } else if (key == "easing") {
-            if (Error error = parseNonstdOptionalStdVectorDouble(value.easing))
-                return error;
-        } else if (key == "transform") {
-            if (Error error = parseNonstdOptionalStdArrayDouble6(value.transform))
-                return error;
-        } else if (key == "rotation") {
-            if (Error error = parseNonstdOptionalDouble(value.rotation))
-                return error;
-        } else if (key == "opacity") {
-            if (Error error = parseNonstdOptionalDouble(value.opacity))
-                return error;
-        } else if (key == "color") {
-            if (Error error = parseNonstdOptionalOctopusColor(value.color))
-                return error;
-        } else {
-            if (Error error = skipValue())
-                return error;
+        if (buffer.size() > 0) {
+            switch (buffer[0]) {
+                case 'c':
+                    if (buffer == "color") {
+                        if (Error error = parseNonstdOptionalOctopusColor(value.color))
+                            return error;
+                        continue;
+                    }
+                    break;
+                case 'd':
+                    if (buffer == "delay") {
+                        if (Error error = parseDouble(value.delay))
+                            return error;
+                        continue;
+                    }
+                    break;
+                case 'e':
+                    if (buffer == "easing") {
+                        if (Error error = parseNonstdOptionalStdVectorDouble(value.easing))
+                            return error;
+                        continue;
+                    }
+                    break;
+                case 'o':
+                    if (buffer == "opacity") {
+                        if (Error error = parseNonstdOptionalDouble(value.opacity))
+                            return error;
+                        continue;
+                    }
+                    break;
+                case 'r':
+                    if (buffer == "rotation") {
+                        if (Error error = parseNonstdOptionalDouble(value.rotation))
+                            return error;
+                        continue;
+                    }
+                    break;
+                case 't':
+                    if (buffer == "transform") {
+                        if (Error error = parseNonstdOptionalStdArrayDouble6(value.transform))
+                            return error;
+                        continue;
+                    }
+                    break;
+            }
         }
-        separatorCheck = matchSymbol(',');
+        if (Error error = skipValue())
+            return error;
     }
     if (separatorCheck == 1)
         return Error::JSON_SYNTAX_ERROR;
@@ -404,7 +461,7 @@ AnimationParser::Error::Type AnimationParser::parseStdVectorOdeLayerAnimationKey
     while (!matchSymbol(']')) {
         if (!separatorCheck)
             return Error::JSON_SYNTAX_ERROR;
-        if (Error::Type error = parseOdeLayerAnimationKeyframe((value.emplace_back(), value.back())))
+        if (Error::Type error = parseOdeLayerAnimationKeyframe((value.resize(value.size()+1), value.back())))
             return error;
         separatorCheck = matchSymbol(',');
     }
@@ -437,7 +494,7 @@ AnimationParser::Error::Type AnimationParser::parseStdArrayDouble2(std::array<do
 
 AnimationParser::Error::Type AnimationParser::parseNonstdOptionalStdArrayDouble2(nonstd::optional<std::array<double, 2> > &value) {
     skipWhitespace();
-    if (cur[0] == 'n' && cur[1] == 'u' && cur[2] == 'l' && cur[3] == 'l' && !isAlphanumeric(cur[4]) && cur[4] != '_' && ((cur += 4), true))
+    if (cur[0] == 'n' && cur[1] == 'u' && cur[2] == 'l' && cur[3] == 'l' && !isAlphanumeric(cur[4]) && cur[4] != '_' && (cur += 4, true))
         value.reset();
     else if (Error error = parseStdArrayDouble2((value = std::array<double, 2>()).value()))
         return error;
@@ -445,34 +502,48 @@ AnimationParser::Error::Type AnimationParser::parseNonstdOptionalStdArrayDouble2
 }
 
 AnimationParser::Error::Type AnimationParser::parseOdeLayerAnimation(ode::LayerAnimation &value) {
-    std::string key;
     if (!matchSymbol('{'))
         return Error::TYPE_MISMATCH;
     int separatorCheck = -1;
-    while (!matchSymbol('}')) {
+    for (; !matchSymbol('}'); separatorCheck = matchSymbol(',')) {
         if (!separatorCheck)
             return Error::JSON_SYNTAX_ERROR;
-        if (Error::Type error = parseStdString(key))
+        if (Error::Type error = parseStdString(buffer))
             return error;
         if (!matchSymbol(':'))
             return Error::JSON_SYNTAX_ERROR;
-        if (key == "layer") {
-            if (Error error = parseStdString(value.layer))
-                return error;
-        } else if (key == "type") {
-            if (Error error = parseOdeLayerAnimationType(value.type))
-                return error;
-        } else if (key == "keyframes") {
-            if (Error error = parseStdVectorOdeLayerAnimationKeyframe(value.keyframes))
-                return error;
-        } else if (key == "rotationCenter") {
-            if (Error error = parseNonstdOptionalStdArrayDouble2(value.rotationCenter))
-                return error;
-        } else {
-            if (Error error = skipValue())
-                return error;
+        switch (buffer.size()) {
+            case 4:
+                if (buffer == "type") {
+                    if (Error error = parseOdeLayerAnimationType(value.type))
+                        return error;
+                    continue;
+                }
+                break;
+            case 5:
+                if (buffer == "layer") {
+                    if (Error error = parseStdString(value.layer))
+                        return error;
+                    continue;
+                }
+                break;
+            case 9:
+                if (buffer == "keyframes") {
+                    if (Error error = parseStdVectorOdeLayerAnimationKeyframe(value.keyframes))
+                        return error;
+                    continue;
+                }
+                break;
+            case 14:
+                if (buffer == "rotationCenter") {
+                    if (Error error = parseNonstdOptionalStdArrayDouble2(value.rotationCenter))
+                        return error;
+                    continue;
+                }
+                break;
         }
-        separatorCheck = matchSymbol(',');
+        if (Error error = skipValue())
+            return error;
     }
     if (separatorCheck == 1)
         return Error::JSON_SYNTAX_ERROR;
@@ -487,7 +558,7 @@ AnimationParser::Error::Type AnimationParser::parseStdVectorOdeLayerAnimation(st
     while (!matchSymbol(']')) {
         if (!separatorCheck)
             return Error::JSON_SYNTAX_ERROR;
-        if (Error::Type error = parseOdeLayerAnimation((value.emplace_back(), value.back())))
+        if (Error::Type error = parseOdeLayerAnimation((value.resize(value.size()+1), value.back())))
             return error;
         separatorCheck = matchSymbol(',');
     }
@@ -497,25 +568,23 @@ AnimationParser::Error::Type AnimationParser::parseStdVectorOdeLayerAnimation(st
 }
 
 AnimationParser::Error::Type AnimationParser::parseOdeDocumentAnimation(ode::DocumentAnimation &value) {
-    std::string key;
     if (!matchSymbol('{'))
         return Error::TYPE_MISMATCH;
     int separatorCheck = -1;
-    while (!matchSymbol('}')) {
+    for (; !matchSymbol('}'); separatorCheck = matchSymbol(',')) {
         if (!separatorCheck)
             return Error::JSON_SYNTAX_ERROR;
-        if (Error::Type error = parseStdString(key))
+        if (Error::Type error = parseStdString(buffer))
             return error;
         if (!matchSymbol(':'))
             return Error::JSON_SYNTAX_ERROR;
-        if (key == "animations") {
+        if (buffer == "animations") {
             if (Error error = parseStdVectorOdeLayerAnimation(value.animations))
                 return error;
-        } else {
-            if (Error error = skipValue())
-                return error;
+            continue;
         }
-        separatorCheck = matchSymbol(',');
+        if (Error error = skipValue())
+            return error;
     }
     if (separatorCheck == 1)
         return Error::JSON_SYNTAX_ERROR;

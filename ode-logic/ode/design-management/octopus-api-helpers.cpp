@@ -33,10 +33,14 @@ static ODE_ParseError::Type ode_parseErrorType(ErrorType type) {
             return ODE_ParseError::TYPE_MISMATCH;
         case ErrorType::ARRAY_SIZE_MISMATCH:
             return ODE_ParseError::ARRAY_SIZE_MISMATCH;
-        case ErrorType::UNKNOWN_KEY:
-            return ODE_ParseError::UNKNOWN_KEY;
         case ErrorType::UNKNOWN_ENUM_VALUE:
             return ODE_ParseError::UNKNOWN_ENUM_VALUE;
+        case ErrorType::UNKNOWN_KEY:
+            return ODE_ParseError::UNKNOWN_KEY;
+        case ErrorType::MISSING_KEY:
+            return ODE_ParseError::MISSING_KEY;
+        case ErrorType::REPEATED_KEY:
+            return ODE_ParseError::REPEATED_KEY;
         case ErrorType::VALUE_OUT_OF_RANGE:
             return ODE_ParseError::VALUE_OUT_OF_RANGE;
         case ErrorType::STRING_EXPECTED:

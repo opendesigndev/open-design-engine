@@ -28,28 +28,26 @@ public:
         const char *typeString() const;
     };
 
-    static Error serialize(std::string &jsonString, ode::DocumentAnimation const &input);
+    static Error serialize(std::string &jsonString, const ode::DocumentAnimation &input);
 
 protected:
     std::string &json;
 
     AnimationSerializer(std::string &json);
-    void write(char c);
-    void write(const char *str);
     void writeEscaped(char c);
 
-    Error serializeStdString(std::string const &value);
-    Error serializeOdeLayerAnimationType(ode::LayerAnimation::Type const &value);
-    Error serializeDouble(double const &value);
-    Error serializeStdVectorDouble(std::vector<double> const &value);
-    Error serializeStdArrayDouble6(std::array<double, 6> const &value);
-    Error serializeOctopusColor(octopus::Color const &value);
-    Error serializeOdeLayerAnimationKeyframe(ode::LayerAnimation::Keyframe const &value);
-    Error serializeStdVectorOdeLayerAnimationKeyframe(std::vector<ode::LayerAnimation::Keyframe> const &value);
-    Error serializeStdArrayDouble2(std::array<double, 2> const &value);
-    Error serializeOdeLayerAnimation(ode::LayerAnimation const &value);
-    Error serializeStdVectorOdeLayerAnimation(std::vector<ode::LayerAnimation> const &value);
-    Error serializeOdeDocumentAnimation(ode::DocumentAnimation const &value);
+    Error serializeStdString(const std::string &value);
+    Error serializeOdeLayerAnimationType(const ode::LayerAnimation::Type &value);
+    Error serializeDouble(const double &value);
+    Error serializeStdVectorDouble(const std::vector<double> &value);
+    Error serializeStdArrayDouble6(const std::array<double, 6> &value);
+    Error serializeOctopusColor(const octopus::Color &value);
+    Error serializeOdeLayerAnimationKeyframe(const ode::LayerAnimation::Keyframe &value);
+    Error serializeStdVectorOdeLayerAnimationKeyframe(const std::vector<ode::LayerAnimation::Keyframe> &value);
+    Error serializeStdArrayDouble2(const std::array<double, 2> &value);
+    Error serializeOdeLayerAnimation(const ode::LayerAnimation &value);
+    Error serializeStdVectorOdeLayerAnimation(const std::vector<ode::LayerAnimation> &value);
+    Error serializeOdeDocumentAnimation(const ode::DocumentAnimation &value);
 
 };
 
